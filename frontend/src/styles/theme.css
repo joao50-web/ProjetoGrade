@@ -1,0 +1,14 @@
+:root {
+  --azul-escuro: #0b3a4a;
+  --azul-header: #133a4f;
+  --azul-botao: #143a4f;
+  --azul-hover: #1f566f;
+
+  --azul-claro-bg: #eaf2f6;
+  --azul-claro-card: #f7fbfd;
+
+  --branco: #ffffff;
+  --cinza-texto: #2e2e2e;
+  --cinza-borda: #d6e1e8;
+  --dourado: #d6a44c;
+}
