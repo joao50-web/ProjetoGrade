@@ -16,67 +16,89 @@ module.exports = function renderGradeHTML({
 }) {
   return `
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 
 <style>
 @page {
   size: A4;
-  margin: 18mm 15mm 22mm 15mm;
+  margin: 20mm 15mm 22mm 15mm;
 }
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
+  font-size: 11.5px;
   margin: 0;
   padding: 0;
-  color: #000;
+  color: #093e5e; /* texto principal mais escuro */
 }
 
 /* ================= HEADER ================= */
 
 .header {
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 26px;
 }
 
 .logo {
-  width: 65px;
-  margin-bottom: 6px;
+  width: 102px;
+  margin-bottom: 14px;
 }
 
 .header h1 {
-  font-size: 14px;
+  font-size: 14.5px;
   margin: 0;
+  font-weight: bold;
+  color: #093e5e;
 }
 
 .header h2 {
-  font-size: 12px;
-  margin: 2px 0 8px;
+  font-size: 12.5px;
+  margin-top: 8px;
   font-weight: normal;
+  color: #093e5e;
 }
 
 /* ================= INFO ================= */
 
 .info {
-  margin-bottom: 12px;
+  margin: 0 auto 28px;
+  padding: 10px 16px;
+  background-color: #eef3f8; /* fundo claro e neutro */
+  border-left: 4px solid #093e5e;
 }
 
-.info div {
-  margin-bottom: 2px;
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 8px;
+  column-gap: 20px;
 }
 
-/* ================= SEMESTRE ================= */
+.info-item {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #093e5e;
+}
+
+.info-item strong {
+  font-weight: bold;
+}
+
+/* ================= SEMESTRE + TABELA ================= */
+
+.semester {
+  margin-bottom: 32px;
+  page-break-inside: avoid;
+}
 
 .semester-title {
-  margin-top: 14px;
-  margin-bottom: 6px;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: bold;
-  border-bottom: 1px solid #999;
-  padding-bottom: 3px;
-  color: #333;
+  padding: 8px 10px;
+  background-color: #093e5e;
+  color: #ffffff;
 }
 
 /* ================= TABLE ================= */
@@ -84,44 +106,47 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 18px;
-  table-layout: fixed; /* 🔥 ISSO resolve o problema do meio */
-  page-break-inside: avoid;
+  table-layout: fixed;
 }
 
 th, td {
-  border: 1px solid #444;
-  padding: 6px 6px;
+  border: 1px solid #3f5261;
+  padding: 6px;
   text-align: center;
   vertical-align: middle;
-  font-size: 10px;
+  font-size: 10.5px;
+  color: #0d3148;
 }
 
 /* Cabeçalho */
 thead th {
-  background-color: #e4f0fb;
-  color: #000;
+  background-color: #ccdceb;
   font-weight: bold;
 }
 
-/* Coluna de horário */
+/* Horário */
 th.horario,
 td.horario {
-  background-color: #e4f0fb;
+  width: 80px;
   font-weight: bold;
-  width: 80px;              /* largura fixa */
+  background-color: #ccdceb;
   white-space: nowrap;
 }
 
 /* Disciplinas */
 td.disciplina {
-  line-height: 1.25;
-  white-space: normal;
+  line-height: 1.35;
   word-wrap: break-word;
-  padding: 6px;
+  white-space: normal;
+  background-color: #ffffff;
 }
 
-/* Evita quebra feia no PDF */
+/* Destaque leve sem perder leitura */
+td.disciplina:not(:empty) {
+  background-color: #f7f9fc;
+}
+
+/* Evita quebra feia */
 tr {
   page-break-inside: avoid;
 }
@@ -129,12 +154,12 @@ tr {
 /* ================= FOOTER ================= */
 
 footer {
-  font-size: 9px;
+  font-size: 9.5px;
   text-align: center;
-  margin-top: 20px;
-  color: #666;
-  border-top: 1px solid #cccccc;
-  padding-top: 4px;
+  margin-top: 32px;
+  color: #093e5e;
+  border-top: 1px solid #7f96a9;
+  padding-top: 6px;
 }
 
 </style>
@@ -149,10 +174,12 @@ footer {
 </div>
 
 <div class="info">
-  <div><strong>Curso:</strong> ${curso}</div>
-  <div><strong>Currículo:</strong> ${curriculo}</div>
-  <div><strong>Ano Letivo:</strong> ${anoLetivo}</div>
-  <div><strong>Coordenador:</strong> ${coordenador}</div>
+  <div class="info-grid">
+    <div class="info-item"><strong>Curso:</strong> ${curso}</div>
+    <div class="info-item"><strong>Currículo:</strong> ${curriculo}</div>
+    <div class="info-item"><strong>Ano Letivo:</strong> ${anoLetivo}</div>
+    <div class="info-item"><strong>Coordenação:</strong> ${coordenador}</div>
+  </div>
 </div>
 
 ${semestres.map(semestre => `
@@ -163,15 +190,15 @@ ${semestres.map(semestre => `
       <thead>
         <tr>
           <th class="horario">Horário</th>
-          ${semestre.dias.map(d => `<th>${d}</th>`).join('')}
+          ${semestre.dias.map(dia => `<th>${dia}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
         ${semestre.linhas.map(linha => `
           <tr>
             <td class="horario">${linha.horario}</td>
-            ${linha.celulas.map(c => `
-              <td class="disciplina">${c || ''}</td>
+            ${linha.celulas.map(celula => `
+              <td class="disciplina">${celula || ''}</td>
             `).join('')}
           </tr>
         `).join('')}
