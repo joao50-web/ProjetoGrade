@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
-  Card,
   Table,
   Button,
   Modal,
   Form,
   Input,
   Popconfirm,
-  message
+  message,
+  Space
 } from 'antd';
 
 import {
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
@@ -25,26 +27,24 @@ export default function Cargos() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
-  const filterByText = (value, fields) =>
-    fields.some(field =>
-      field?.toLowerCase().includes(value.toLowerCase())
-    );
-
-
   const load = async () => {
-    setCargos((await api.get('/cargos')).data);
+    try {
+      const response = await api.get('/cargos');
+      setCargos(response.data);
+    } catch {
+      message.error('Erro ao carregar cargos');
+    }
   };
+
+  useEffect(() => { load(); }, []);
 
   const submit = async (values) => {
     try {
-      if (editing) {
-        await api.put(`/cargos/${editing.id}`, values);
-        message.success('Cargo atualizado');
-      } else {
-        await api.post('/cargos', values);
-        message.success('Cargo criado');
-      }
+      editing
+        ? await api.put(`/cargos/${editing.id}`, values)
+        : await api.post('/cargos', values);
 
+      message.success(editing ? 'Cargo atualizado' : 'Cargo criado');
       closeModal();
       load();
     } catch {
@@ -57,16 +57,14 @@ export default function Cargos() {
       await api.delete(`/cargos/${id}`);
       message.success('Cargo removido');
       load();
-    } catch (err) {
-      message.error(err.response?.data?.error || 'Erro ao excluir cargo');
+    } catch {
+      message.error('Erro ao excluir cargo');
     }
   };
 
   const edit = (cargo) => {
     setEditing(cargo);
-    form.setFieldsValue({
-      descricao: cargo.descricao
-    });
+    form.setFieldsValue({ descricao: cargo.descricao });
     setOpen(true);
   };
 
@@ -76,76 +74,101 @@ export default function Cargos() {
     form.resetFields();
   };
 
-  useEffect(() => { load(); }, []);
-
-  const filteredCargos = cargos.filter(c =>
-    filterByText(search, [c.descricao])
+  const filtered = cargos.filter(c =>
+    c.descricao?.toLowerCase().includes(search.toLowerCase())
   );
-
 
   return (
     <AppLayout>
-      <Card
-        title="Cargos"
-        extra={
-          <Button type="primary" onClick={() => setOpen(true)}>
-            Novo Cargo
-          </Button>
-          
-        }
+      {/* TOPO */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 16
+        }}
       >
-      <Input.Search
-          placeholder="Buscar cargos"
+        <Input
+          placeholder="Buscar cargo"
+          prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 300, marginBottom: 16 }}
+          style={{ width: 260 }}
           onChange={e => setSearch(e.target.value)}
         />
-        <Table
-          rowKey="id"
-          dataSource={filteredCargos}
-          columns={[
-            { title: 'Descrição', dataIndex: 'descricao' },
-            {
-              title: 'Ações',
-              align: 'center',
-              render: (_, r) => (
-                <>
-                  <Button
-                    type="link"
-                    icon={<EditOutlined />}
-                    onClick={() => edit(r)}
-                  />
-                  <Popconfirm
-                    title="Tem certeza que deseja excluir este cargo?"
-                    onConfirm={() => remove(r.id)}
-                  >
-                    <Button
-                      type="link"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
-                  </Popconfirm>
-                </>
-              )
-            }
-          ]}
-        />
-      </Card>
 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setOpen(true)}
+          style={{ borderRadius: 6 }}
+        >
+          Novo Cargo
+        </Button>
+      </div>
+
+      {/* TABELA */}
+      <Table
+        rowKey="id"
+        dataSource={filtered}
+        pagination={{ pageSize: 6 }}
+        bordered={false}
+        columns={[
+          {
+            title: 'Descrição',
+            dataIndex: 'descricao',
+            render: text => (
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 500
+                }}
+              >
+                {text}
+              </span>
+            )
+          },
+          {
+            title: 'Ações',
+            align: 'center',
+            render: (_, record) => (
+              <Space size={14}>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => edit(record)}
+                  style={{ borderRadius: 6 }}
+                />
+                <Popconfirm
+                  title="Excluir este cargo?"
+                  onConfirm={() => remove(record.id)}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    style={{ borderRadius: 6 }}
+                  />
+                </Popconfirm>
+              </Space>
+            )
+          }
+        ]}
+      />
+
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Cargo' : 'Novo Cargo'}
         open={open}
         onCancel={closeModal}
-        okText="Salvar"
         onOk={() => form.submit()}
+        okText="Salvar"
+        cancelText="Cancelar"
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item
             name="descricao"
             label="Descrição"
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: 'Campo obrigatório' }]}
           >
-            <Input />
+            <Input placeholder="Digite a descrição do cargo" />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Card,
   Table,
   Button,
   Modal,
@@ -8,13 +7,16 @@ import {
   Input,
   Popconfirm,
   message,
+  Space,
   Badge
 } from 'antd';
 
 import {
   EditOutlined,
   DeleteOutlined,
-  BookOutlined
+  BookOutlined,
+  PlusOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 
 import { useNavigate } from 'react-router-dom';
@@ -25,17 +27,8 @@ export default function Cursos() {
   const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form] = Form.useForm();
   const [search, setSearch] = useState('');
-
-  const filterByText = (value, fields) =>
-    fields.some(field =>
-      field?.toLowerCase().includes(value.toLowerCase())
-    );
-
-  const filteredCursos = cursos.filter(c =>
-      filterByText(search, [c.nome])
-    );
+  const [form] = Form.useForm();
 
   const navigate = useNavigate();
 
@@ -48,16 +41,17 @@ export default function Cursos() {
     }
   };
 
+  useEffect(() => {
+    load();
+  }, []);
+
   const submit = async (values) => {
     try {
-      if (editing) {
-        await api.put(`/cursos/${editing.id}`, values);
-        message.success('Curso atualizado');
-      } else {
-        await api.post('/cursos', values);
-        message.success('Curso criado');
-      }
+      editing
+        ? await api.put(`/cursos/${editing.id}`, values)
+        : await api.post('/cursos', values);
 
+      message.success(editing ? 'Curso atualizado' : 'Curso criado');
       closeModal();
       load();
     } catch {
@@ -87,90 +81,109 @@ export default function Cursos() {
     form.resetFields();
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  const filtered = cursos.filter(c =>
+    c.nome?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <AppLayout>
-      <Card
-        title="Cursos"
-        extra={
-          <Button type="primary" onClick={() => setOpen(true)}>
-            Novo Curso
-          </Button>
-        }
+      {/* TOPO */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 16
+        }}
       >
-
-        <Input.Search
-        placeholder="Buscar curso"
-        allowClear
-        style={{ width: 300, marginBottom: 16 }}
-        onChange={e => setSearch(e.target.value)}
-      />
-        <Table
-          rowKey="id"
-          dataSource={filteredCursos}
-          columns={[
-            {
-              title: 'Nome',
-              dataIndex: 'nome'
-            },
-            {
-              title: 'Disciplinas',
-              dataIndex: 'disciplinas',
-              align: 'center',
-              width: 120,
-              render: (disciplinas = []) => (
-                <Badge
-                  count={disciplinas.length}
-                  showZero
-                  style={{ backgroundColor: '#0B3A4A' }}
-                />
-              )
-            },
-            {
-              title: 'Ações',
-              align: 'center',
-              width: 220,
-              render: (_, r) => (
-                <>
-                  
-                  <Button
-                    type="link"
-                    icon={<BookOutlined />}
-                    onClick={() =>
-                      navigate(`/cursos/${r.id}/disciplinas`)
-                    }
-                  >
-                    Disciplinas
-                  </Button>
-                  
-                  <Button
-                    type="link"
-                    icon={<EditOutlined />}
-                    onClick={() => edit(r)}
-                  />
-
-                  <Popconfirm
-                    title="Tem certeza que deseja excluir este curso?"
-                    onConfirm={() => remove(r.id)}
-                  >
-                    <Button
-                      type="link"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
-                  </Popconfirm>
-                </>
-              )
-            },
-
-
-          ]}
+        <Input
+          placeholder="Buscar curso"
+          prefix={<SearchOutlined />}
+          allowClear
+          style={{ width: 260 }}
+          onChange={e => setSearch(e.target.value)}
         />
-      </Card>
 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setOpen(true)}
+          style={{ borderRadius: 6 }}
+        >
+          Novo Curso
+        </Button>
+      </div>
+
+      {/* TABELA */}
+      <Table
+        rowKey="id"
+        dataSource={filtered}
+        pagination={{ pageSize: 6 }}
+        bordered={false}
+        columns={[
+          {
+            title: 'Nome',
+            dataIndex: 'nome',
+            render: text => (
+              <span style={{ fontSize: 16, fontWeight: 500 }}>
+                {text}
+              </span>
+            )
+          },
+          {
+            title: 'Disciplinas',
+            dataIndex: 'disciplinas',
+            align: 'center',
+            width: 140,
+            render: (disciplinas = []) => (
+              <Badge
+                count={disciplinas.length}
+                showZero
+                style={{
+                  backgroundColor: '#093e5e',
+                  fontSize: 13
+                }}
+              />
+            )
+          },
+          {
+            title: 'Ações',
+            align: 'center',
+            width: 260,
+            render: (_, r) => (
+              <Space size={14}>
+                <Button
+                  icon={<BookOutlined />}
+                  onClick={() =>
+                    navigate(`/cursos/${r.id}/disciplinas`)
+                  }
+                  style={{ borderRadius: 6 }}
+                >
+                  Disciplinas
+                </Button>
+
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => edit(r)}
+                  style={{ borderRadius: 6 }}
+                />
+
+                <Popconfirm
+                  title="Excluir este curso?"
+                  onConfirm={() => remove(r.id)}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    style={{ borderRadius: 6 }}
+                  />
+                </Popconfirm>
+              </Space>
+            )
+          }
+        ]}
+      />
+
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Curso' : 'Novo Curso'}
         open={open}

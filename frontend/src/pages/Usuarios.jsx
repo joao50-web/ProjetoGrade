@@ -9,16 +9,28 @@ import {
   Select,
   Radio,
   Popconfirm,
-  message
+  message,
+  Space,
+  Tag
 } from 'antd';
 
 import {
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
+
+const hierarquiaColors = {
+  Coordenador: 'gold',
+  Professor: 'blue',
+  Estagiario: 'green',
+  Estagiário: 'green',
+  Admin: 'volcano'
+};
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -33,8 +45,6 @@ export default function Usuarios() {
     fields.some(field =>
       field?.toLowerCase().includes(value.toLowerCase())
     );
-
-
 
   const load = async () => {
     setUsuarios((await api.get('/usuarios')).data);
@@ -51,7 +61,6 @@ export default function Usuarios() {
         await api.post('/usuarios', values);
         message.success('Usuário criado');
       }
-
       closeModal();
       load();
     } catch (err) {
@@ -71,13 +80,11 @@ export default function Usuarios() {
 
   const edit = (usuario) => {
     setEditing(usuario);
-
     form.setFieldsValue({
       login: usuario.login,
       pessoa_id: usuario.pessoa?.id,
       hierarquia_id: usuario.hierarquia?.id
     });
-
     setOpen(true);
   };
 
@@ -95,52 +102,127 @@ export default function Usuarios() {
     ])
   );
 
-
   useEffect(() => { load(); }, []);
 
   return (
     <AppLayout>
-      <Card
-        title="Usuários"
-        extra={<Button type="primary" onClick={() => setOpen(true)}>Novo Usuário</Button>}
-      >
-        <Input.Search
+      {/* TOPO */}
+      <div style={{
+        marginBottom: 16,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Input
           placeholder="Buscar usuários"
           allowClear
-          style={{ width: 300, marginBottom: 16 }}
+          prefix={<SearchOutlined />}
+          style={{ width: 300, borderRadius: 6 }}
           onChange={e => setSearch(e.target.value)}
         />
-        <Table
-          rowKey="id"
-          dataSource={filteredUsuarios}
-          columns={[
-            { title: 'Login', dataIndex: 'login' },
-            { title: 'Pessoa', dataIndex: ['pessoa', 'nome'] },
-            { title: 'Hierarquia', dataIndex: ['hierarquia', 'descricao'] },
-            {
-              title: 'Ações',
-              align: 'center',
-              render: (_, r) => (
-                <>
-                  <Button type="link" icon={<EditOutlined />} onClick={() => edit(r)} />
-                  <Popconfirm
-                    title="Tem certeza que deseja excluir este usuário?"
-                    onConfirm={() => remove(r.id)}
-                  >
-                    <Button type="link" danger icon={<DeleteOutlined />} />
-                  </Popconfirm>
-                </>
-              )
-            }
-          ]}
-        />
-      </Card>
 
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setOpen(true)}
+          style={{ borderRadius: 6 }}
+        >
+          Novo Usuário
+        </Button>
+      </div>
+
+      {/* TABELA */}
+      <Table
+        rowKey="id"
+        dataSource={filteredUsuarios}
+        pagination={{ pageSize: 5 }}
+        bordered
+        style={{
+          borderRadius: 6,
+          overflow: 'hidden',
+          fontSize: 100   // ⬅️ AQUI
+        }}
+        columns={[
+          {
+
+            title: 'Login',
+            dataIndex: 'login',
+            render: text => (
+              <span style={{ fontSize: 16, fontWeight: 600 }}>
+                {text}
+              </span>
+            )
+
+          },
+          {
+
+            title: 'Pessoa',
+            dataIndex: ['pessoa', 'nome'],
+            render: nome => (
+              <span style={{ fontSize: 16 }}>
+                {nome}
+              </span>
+            )
+
+          },
+
+          {
+            title: 'Hierarquia',
+            dataIndex: ['hierarquia', 'descricao'],
+            render: descricao => (
+              <Tag
+                color={hierarquiaColors[descricao] || 'default'}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  padding: '4px 10px'
+                }}
+              >
+                {descricao}
+              </Tag>
+            )
+          },
+          {
+            title: 'Ações',
+            align: 'center',
+            render: (_, r) => (
+              <Space>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => edit(r)}
+                  style={{ borderRadius: 6 }}
+                />
+                <Popconfirm
+                  title="Tem certeza que deseja excluir este usuário?"
+                  onConfirm={() => remove(r.id)}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    style={{ borderRadius: 6 }}
+                  />
+                </Popconfirm>
+              </Space>
+            )
+          }
+        ]}
+      />
+
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Usuário' : 'Novo Usuário'}
         open={open}
         onCancel={closeModal}
         okText="Salvar"
+        cancelText="Cancelar"
+        okButtonProps={{
+          style: {
+            borderRadius: 6,
+            backgroundColor: '#093e5e',
+            border: 'none'
+          }
+        }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
         onOk={() => form.submit()}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
@@ -150,7 +232,7 @@ export default function Usuarios() {
               label="Pessoa"
               rules={[{ required: true }]}
             >
-              <Select>
+              <Select placeholder="Selecione a pessoa">
                 {pessoas.map(p => (
                   <Select.Option key={p.id} value={p.id}>
                     {p.nome}
