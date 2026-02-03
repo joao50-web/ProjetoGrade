@@ -16,14 +16,14 @@ const sequelize = require('../src/config/database');
     const hierarquia = await Hierarquia.create({ descricao: 'Visualização' });
 
     const pessoa = await Pessoa.create({
-      nome: 'Rodrigo',
-      email: 'rodrigo@ufcspa.edu.br',
+      nome: 'joao',
+      email: 'joao@ufcspa.edu.br',
       cargo_id: cargo.id
     });
 
     await Usuario.create({
-      login: 'rodrigo.matos',
-      senha: await bcrypt.hash('rodrigo123', 10),
+      login: 'joao.marcos',
+      senha: await bcrypt.hash('joao123', 10),
       pessoa_id: pessoa.id,
       hierarquia_id: hierarquia.id
     });

@@ -15,7 +15,7 @@ const {
 
 exports.gerarPDF = async (req, res) => {
   try {
-    const { curso_id, ano_id, curriculo_id } = req.query;
+    const { curso_id, ano_id, curriculo_id, semestre_id, todos } = req.query;
 
     if (!curso_id || !ano_id || !curriculo_id) {
       return res.status(400).json({
@@ -23,7 +23,6 @@ exports.gerarPDF = async (req, res) => {
       });
     }
 
-    // ===== DADOS FIXOS =====
     const curso = await Curso.findByPk(curso_id);
     const ano = await Ano.findByPk(ano_id);
     const curriculo = await Curriculo.findByPk(curriculo_id);
@@ -36,11 +35,29 @@ exports.gerarPDF = async (req, res) => {
 
     const horarios = await Horario.findAll({ order: [['id', 'ASC']] });
     const dias = await DiaSemana.findAll({ order: [['id', 'ASC']] });
-    const semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
 
-    // ===== BUSCAR TODA A GRADE =====
+    // 🔹 SEMESTRES
+    let semestres;
+
+    if (todos === 'true') {
+      semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
+    } else {
+      if (!semestre_id) {
+        return res.status(400).json({
+          error: 'semestre_id é obrigatório quando todos=false'
+        });
+      }
+
+      const semestre = await Semestre.findByPk(semestre_id);
+      semestres = semestre ? [semestre] : [];
+    }
+
     const grades = await GradeHoraria.findAll({
-      where: { curso_id, ano_id, curriculo_id },
+      where: {
+        curso_id,
+        ano_id,
+        curriculo_id
+      },
       include: [
         { model: Disciplina, as: 'disciplina', required: false },
         { model: Pessoa, as: 'professor', required: false },
@@ -50,7 +67,6 @@ exports.gerarPDF = async (req, res) => {
       ]
     });
 
-    // ===== MONTAR SEMESTRES =====
     const semestresRender = semestres.map(sem => {
       const registrosSemestre = grades.filter(
         g => g.semestre_id === sem.id
@@ -87,7 +103,6 @@ exports.gerarPDF = async (req, res) => {
       };
     });
 
-    // ===== HTML =====
     const html = renderTemplate({
       universidade: 'Universidade Federal de Ciências da Saúde',
       curso: curso.nome,
@@ -97,7 +112,6 @@ exports.gerarPDF = async (req, res) => {
       semestres: semestresRender
     });
 
-    // ===== PDF =====
     const pdf = await generatePDF(html);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -109,11 +123,6 @@ exports.gerarPDF = async (req, res) => {
     return res.end(pdf);
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
-
-    if (!res.headersSent) {
-      return res.status(500).json({
-        error: 'Erro interno ao gerar PDF'
-      });
-    }
+    return res.status(500).json({ error: 'Erro interno ao gerar PDF' });
   }
 };
