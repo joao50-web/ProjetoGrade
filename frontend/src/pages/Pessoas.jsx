@@ -24,9 +24,20 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+/* ================= CORES DOS CARGOS ================= */
 const cargoColors = {
-  Coordenador: { bg: '#e6f4ff', color: '#0958d9' },
-  Professor: { bg: '#fff7e6', color: '#ad6800' }
+  Coordenador: { bg: '#e6f4ff' },
+  Professor: { bg: '#fff7e6' }
+};
+
+/* ================= ESTILO DO CABEÇALHO ================= */
+const headerCellStyle = {
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '3px 30px',
+  fontSize: 14,
+  textAlign: 'center'
 };
 
 export default function Pessoas() {
@@ -37,6 +48,7 @@ export default function Pessoas() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
+  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const [pessoasRes, cargosRes] = await Promise.all([
@@ -52,6 +64,7 @@ export default function Pessoas() {
 
   useEffect(() => { load(); }, []);
 
+  /* ================= CRUD ================= */
   const save = async () => {
     try {
       const values = form.getFieldsValue();
@@ -93,26 +106,26 @@ export default function Pessoas() {
     form.resetFields();
   };
 
+  /* ================= FILTRO ================= */
   const filtered = pessoas.filter(p =>
     [p.nome, p.email, p.cargo?.descricao]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
+  /* ================= RENDER CARGO ================= */
   const renderCargo = (descricao) => {
-    const style = cargoColors[descricao] || {
-      bg: '#f0f0f0',
-      color: '#595959'
-    };
+    const style = cargoColors[descricao] || { bg: '#f0f0f0' };
 
     return (
       <Tag
         style={{
           background: style.bg,
-          color: style.color,
+          color: '#000000',
           borderRadius: 12,
-          padding: '4px 12px',
+          padding: '4px 14px',
           fontSize: 13,
-          fontWeight: 500
+          fontWeight: 500,
+          border: '1px solid #d9d9d9'
         }}
       >
         {descricao}
@@ -122,12 +135,14 @@ export default function Pessoas() {
 
   return (
     <AppLayout>
-      {/* TOPO */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 16
-      }}>
+      {/* ================= TOPO ================= */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 16
+        }}
+      >
         <Input
           placeholder="Buscar pessoa"
           prefix={<SearchOutlined />}
@@ -146,18 +161,19 @@ export default function Pessoas() {
         </Button>
       </div>
 
-      {/* TABELA */}
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
-        bordered={false}
+        bordered
         columns={[
           {
             title: 'Nome',
             dataIndex: 'nome',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 16, fontWeight: 500 }}>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>
                 {text}
               </span>
             )
@@ -165,20 +181,24 @@ export default function Pessoas() {
           {
             title: 'Email',
             dataIndex: 'email',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 16, color: '#1677ff' }}>
+              <span style={{ fontSize: 14, color: '#1d4ed8' }}>
                 {text}
               </span>
             )
           },
           {
             title: 'Cargo',
+             align: 'center',
             dataIndex: ['cargo', 'descricao'],
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderCargo
           },
           {
             title: 'Usuário',
             align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) =>
               r.usuario
                 ? <CheckCircleTwoTone twoToneColor="#52c41a" />
@@ -187,6 +207,7 @@ export default function Pessoas() {
           {
             title: 'Ações',
             align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
               <Space size={14}>
                 <Button
@@ -210,7 +231,7 @@ export default function Pessoas() {
         ]}
       />
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={open}

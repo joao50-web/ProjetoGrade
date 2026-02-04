@@ -23,6 +23,16 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+/* ================= ESTILO DO HEADER ================= */
+const headerCellStyle = {
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '3px 16px',
+  fontSize: 14,
+  textAlign: 'center'
+};
+
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);
@@ -32,6 +42,7 @@ export default function Cursos() {
 
   const navigate = useNavigate();
 
+  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const res = await api.get('/cursos');
@@ -41,10 +52,9 @@ export default function Cursos() {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
+  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       editing
@@ -81,13 +91,14 @@ export default function Cursos() {
     form.resetFields();
   };
 
+  /* ================= FILTRO ================= */
   const filtered = cursos.filter(c =>
     c.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <AppLayout>
-      {/* TOPO */}
+      {/* ================= TOPO ================= */}
       <div
         style={{
           display: 'flex',
@@ -113,18 +124,19 @@ export default function Cursos() {
         </Button>
       </div>
 
-      {/* TABELA */}
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
-        bordered={false}
+        bordered
         columns={[
           {
             title: 'Nome',
             dataIndex: 'nome',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 16, fontWeight: 500 }}>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>
                 {text}
               </span>
             )
@@ -133,14 +145,15 @@ export default function Cursos() {
             title: 'Disciplinas',
             dataIndex: 'disciplinas',
             align: 'center',
-            width: 140,
+            width: 160,
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (disciplinas = []) => (
               <Badge
                 count={disciplinas.length}
                 showZero
                 style={{
                   backgroundColor: '#093e5e',
-                  fontSize: 13
+                  fontSize: 15
                 }}
               />
             )
@@ -148,7 +161,8 @@ export default function Cursos() {
           {
             title: 'Ações',
             align: 'center',
-            width: 260,
+            width: 300,
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
               <Space size={14}>
                 <Button
@@ -183,13 +197,22 @@ export default function Cursos() {
         ]}
       />
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? 'Editar Curso' : 'Novo Curso'}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
         okText="Salvar"
+        cancelText="Cancelar"
+        okButtonProps={{
+          style: {
+            borderRadius: 6,
+            backgroundColor: '#093e5e',
+            border: 'none'
+          }
+        }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item

@@ -3,7 +3,8 @@ import { Layout, Menu, Typography } from 'antd';
 import {
   TeamOutlined,
   ApartmentOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  HomeOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import logoBranco from '../assets/ufcspa-logo-branco.png';
@@ -18,9 +19,11 @@ export default function AppLayout({ children }) {
   const rootSubmenuKeys = ['cadastro-admin', 'cadastro-academico'];
   const [openKeys, setOpenKeys] = useState(rootSubmenuKeys);
 
-  // 🔹 TÍTULO DINÂMICO DA PÁGINA
+  /* ================= TÍTULO DINÂMICO ================= */
   const currentPage = useMemo(() => {
     switch (location.pathname) {
+      case '/home':
+        return 'Início';
       case '/pessoas':
         return 'Pessoas';
       case '/usuarios':
@@ -49,13 +52,13 @@ export default function AppLayout({ children }) {
 
   return (
     <Layout style={{ minHeight: '100vh', backgroundColor: '#e8ebf0' }}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <Header
         style={{
           backgroundColor: '#093e5e',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 30px',
+          padding: '0 32px',
           boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
         }}
       >
@@ -63,15 +66,33 @@ export default function AppLayout({ children }) {
       </Header>
 
       <Layout>
-        {/* SIDEBAR */}
+        {/* ================= SIDEBAR ================= */}
         <Sider
           width={220}
           style={{
             backgroundColor: '#e1edf6',
-            borderRight: '1px solid #d3dce6',
-            boxShadow: '2px 0 5px rgba(0,0,0,0.05)'
+            borderRight: '1px solid #d3dce6'
           }}
         >
+          {/* ESTILOS DE HOVER E SELEÇÃO */}
+          <style>
+            {`
+              .ant-menu-item:hover,
+              .ant-menu-submenu-title:hover {
+                background-color: #f1f5f9 !important;
+              }
+
+              .ant-menu-item-selected {
+                background-color: #dbeafe !important;
+                font-weight: 600;
+              }
+
+              .ant-menu-item-selected::after {
+                border-right: 3px solid #093e5e;
+              }
+            `}
+          </style>
+
           <Menu
             mode="inline"
             selectedKeys={[location.pathname]}
@@ -87,20 +108,44 @@ export default function AppLayout({ children }) {
             }}
             theme="light"
           >
+            {/* INÍCIO */}
+            <Menu.Item
+              key="/home"
+              icon={<HomeOutlined style={{ color: '#093e5e', fontSize: 12 }} />}
+            >
+              <Text style={{ color: '#093e5e', fontSize: 13 }}>
+                Início
+              </Text>
+            </Menu.Item>
+
+            {/* CADASTRO ADMINISTRATIVO */}
             <Menu.SubMenu
               key="cadastro-admin"
               icon={<TeamOutlined style={{ color: '#093e5e', fontSize: 12 }} />}
               title={
-                <Text strong style={{ color: '#093e5e', fontSize: 12 }}>
+                <Text style={{ color: '#093e5e', fontSize: 13 }}>
                   Cadastro Administrativo
                 </Text>
               }
             >
-              <Menu.Item key="/pessoas">Pessoas</Menu.Item>
-              <Menu.Item key="/usuarios">Usuários</Menu.Item>
-              <Menu.Item key="/cargos">Cargos</Menu.Item>
+              <Menu.Item key="/pessoas">
+                <Text style={{ color: '#1e293b', fontSize: 13 }}>
+                  Pessoas
+                </Text>
+              </Menu.Item>
+              <Menu.Item key="/usuarios">
+                <Text style={{ color: '#1e293b', fontSize: 13 }}>
+                  Usuários
+                </Text>
+              </Menu.Item>
+              <Menu.Item key="/cargos">
+                <Text style={{ color: '#1e293b', fontSize: 13 }}>
+                  Cargos
+                </Text>
+              </Menu.Item>
             </Menu.SubMenu>
 
+            {/* CADASTRO ACADÊMICO */}
             <Menu.SubMenu
               key="cadastro-academico"
               icon={
@@ -109,16 +154,24 @@ export default function AppLayout({ children }) {
                 />
               }
               title={
-                <Text strong style={{ color: '#093e5e', fontSize: 12 }}>
+                <Text style={{ color: '#093e5e', fontSize: 13 }}>
                   Cadastro Acadêmico
                 </Text>
               }
             >
-              <Menu.Item key="/cursos">Cursos</Menu.Item>
-              <Menu.Item key="/disciplinas">Disciplinas</Menu.Item>
+              <Menu.Item key="/cursos">
+                <Text style={{ color: '#1e293b', fontSize: 13 }}>
+                  Cursos
+                </Text>
+              </Menu.Item>
+              <Menu.Item key="/disciplinas">
+                <Text style={{ color: '#1e293b', fontSize: 13 }}>
+                  Disciplinas
+                </Text>
+              </Menu.Item>
             </Menu.SubMenu>
 
-            {/* 📊 GRADE HORÁRIA – PÁGINA SEPARADA */}
+            {/* GRADE HORÁRIA */}
             <Menu.Item
               key="/grade-horaria"
               icon={
@@ -127,41 +180,42 @@ export default function AppLayout({ children }) {
                 />
               }
             >
-              Grade Horária
+              <Text style={{ color: '#093e5e', fontSize: 13 }}>
+                Grade Horária
+              </Text>
             </Menu.Item>
           </Menu>
         </Sider>
 
-        {/* CONTENT */}
+        {/* ================= CONTEÚDO ================= */}
         <Content
           style={{
-            padding: '20px 42px',
+            padding: '24px 48px',
             backgroundColor: '#e8ebf0'
           }}
         >
           {/* TÍTULO */}
-          <div style={{ marginBottom: 10 }}>
-            <Title
-              level={2}
-              style={{
-                margin: 0,
-                color: '#093e5e',
-                fontSize: 26
-              }}
-            >
-              {currentPage}
-            </Title>
-          </div>
+          <Title
+            level={2}
+            style={{
+              margin: '0 0 12px',
+              color: '#093e5e',
+              fontSize: 24,
+              fontWeight: 600,
+              letterSpacing: 0.2
+            }}
+          >
+            {currentPage}
+          </Title>
 
-          {/* CONTEÚDO CENTRAL */}
+          {/* CONTAINER CENTRAL */}
           <div
             style={{
-              borderRadius: 12,
-              padding: 24,
-              backgroundColor: '#fff',
-              boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
-              borderLeft: '4px solid #093e5e',
-              transition: 'all 0.3s'
+              backgroundColor: '#ffffff',
+              borderRadius: 8,
+              padding: '28px 32px',
+              border: '1px solid #e2e8f0',
+              borderTop: '4px solid #093e5e'
             }}
           >
             {children}
@@ -169,11 +223,11 @@ export default function AppLayout({ children }) {
         </Content>
       </Layout>
 
-      {/* FOOTER */}
+      {/* ================= FOOTER ================= */}
       <Footer
         style={{
           backgroundColor: '#093e5e',
-          color: '#fff',
+          color: '#ffffff',
           textAlign: 'center',
           fontSize: 12,
           padding: '12px 0'

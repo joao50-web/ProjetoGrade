@@ -20,6 +20,16 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+/* ================= ESTILO DO HEADER ================= */
+const headerCellStyle = {
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '3px 16px',
+  fontSize: 14,
+  textAlign: 'center'
+};
+
 export default function Cargos() {
   const [cargos, setCargos] = useState([]);
   const [open, setOpen] = useState(false);
@@ -27,6 +37,7 @@ export default function Cargos() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
+  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const response = await api.get('/cargos');
@@ -38,6 +49,7 @@ export default function Cargos() {
 
   useEffect(() => { load(); }, []);
 
+  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       editing
@@ -74,13 +86,14 @@ export default function Cargos() {
     form.resetFields();
   };
 
+  /* ================= FILTRO ================= */
   const filtered = cargos.filter(c =>
     c.descricao?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <AppLayout>
-      {/* TOPO */}
+      {/* ================= TOPO ================= */}
       <div
         style={{
           display: 'flex',
@@ -106,23 +119,19 @@ export default function Cargos() {
         </Button>
       </div>
 
-      {/* TABELA */}
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
-        bordered={false}
+        bordered
         columns={[
           {
             title: 'Descrição',
             dataIndex: 'descricao',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span
-                style={{
-                  fontSize: 16,
-                  fontWeight: 500
-                }}
-              >
+              <span style={{ fontSize: 15, fontWeight: 500 }}>
                 {text}
               </span>
             )
@@ -130,6 +139,7 @@ export default function Cargos() {
           {
             title: 'Ações',
             align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, record) => (
               <Space size={14}>
                 <Button
@@ -153,7 +163,7 @@ export default function Cargos() {
         ]}
       />
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? 'Editar Cargo' : 'Novo Cargo'}
         open={open}
@@ -161,6 +171,14 @@ export default function Cargos() {
         onOk={() => form.submit()}
         okText="Salvar"
         cancelText="Cancelar"
+        okButtonProps={{
+          style: {
+            borderRadius: 6,
+            backgroundColor: '#093e5e',
+            border: 'none'
+          }
+        }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item

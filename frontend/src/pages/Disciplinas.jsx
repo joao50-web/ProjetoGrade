@@ -21,6 +21,16 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+/* ================= ESTILO DO HEADER ================= */
+const headerCellStyle = {
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '3px 16px',
+  fontSize: 14,
+  textAlign: 'center'
+};
+
 export default function Disciplinas() {
   const [disciplinas, setDisciplinas] = useState([]);
   const [cursos, setCursos] = useState([]);
@@ -30,6 +40,7 @@ export default function Disciplinas() {
   const [search, setSearch] = useState('');
   const [form] = Form.useForm();
 
+  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const res = await api.get('/disciplinas');
@@ -56,6 +67,7 @@ export default function Disciplinas() {
     loadAux();
   }, []);
 
+  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       if (editing) {
@@ -129,13 +141,14 @@ export default function Disciplinas() {
     form.resetFields();
   };
 
+  /* ================= FILTRO ================= */
   const filtered = disciplinas.filter(d =>
     d.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <AppLayout>
-      {/* TOPO */}
+      {/* ================= TOPO ================= */}
       <div
         style={{
           display: 'flex',
@@ -161,18 +174,19 @@ export default function Disciplinas() {
         </Button>
       </div>
 
-      {/* TABELA */}
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
-        bordered={false}
+        bordered
         columns={[
           {
             title: 'Nome',
             dataIndex: 'nome',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 16, fontWeight: 500 }}>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>
                 {text}
               </span>
             )
@@ -180,7 +194,8 @@ export default function Disciplinas() {
           {
             title: 'Ações',
             align: 'center',
-            width: 200,
+            width: 220,
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
               <Space size={14}>
                 <Button
@@ -204,14 +219,23 @@ export default function Disciplinas() {
         ]}
       />
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? 'Editar Disciplina' : 'Nova Disciplina'}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
         okText="Salvar"
+        cancelText="Cancelar"
         width={520}
+        okButtonProps={{
+          style: {
+            borderRadius: 6,
+            backgroundColor: '#093e5e',
+            border: 'none'
+          }
+        }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item

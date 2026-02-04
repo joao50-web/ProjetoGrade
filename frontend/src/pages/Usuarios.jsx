@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Card,
   Table,
   Button,
   Modal,
@@ -24,12 +23,23 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+/* ================= CORES DAS HIERARQUIAS ================= */
 const hierarquiaColors = {
-  Coordenador: 'gold',
-  Professor: 'blue',
-  Estagiario: 'green',
-  Estagiário: 'green',
-  Admin: 'volcano'
+  Coordenador: { bg: '#fff7e6' },
+  Professor: { bg: '#e6f4ff' },
+  Estagiario: { bg: '#f6ffed' },
+  Estagiário: { bg: '#f6ffed' },
+  Admin: { bg: '#fff1f0' }
+};
+
+/* ================= ESTILO DO HEADER ================= */
+const headerCellStyle = {
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '3px 16px',
+  fontSize: 14,
+  textAlign: 'center'
 };
 
 export default function Usuarios() {
@@ -41,26 +51,33 @@ export default function Usuarios() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
-  const filterByText = (value, fields) =>
-    fields.some(field =>
-      field?.toLowerCase().includes(value.toLowerCase())
-    );
-
+  /* ================= LOAD ================= */
   const load = async () => {
-    setUsuarios((await api.get('/usuarios')).data);
-    setPessoas((await api.get('/pessoas')).data.filter(p => !p.usuario));
-    setHierarquias((await api.get('/hierarquias')).data);
+    try {
+      const [usuariosRes, pessoasRes, hierarquiasRes] = await Promise.all([
+        api.get('/usuarios'),
+        api.get('/pessoas'),
+        api.get('/hierarquias')
+      ]);
+
+      setUsuarios(usuariosRes.data);
+      setPessoas(pessoasRes.data.filter(p => !p.usuario));
+      setHierarquias(hierarquiasRes.data);
+    } catch {
+      message.error('Erro ao carregar dados');
+    }
   };
 
+  useEffect(() => { load(); }, []);
+
+  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
-      if (editing) {
-        await api.put(`/usuarios/${editing.id}`, values);
-        message.success('Usuário atualizado');
-      } else {
-        await api.post('/usuarios', values);
-        message.success('Usuário criado');
-      }
+      editing
+        ? await api.put(`/usuarios/${editing.id}`, values)
+        : await api.post('/usuarios', values);
+
+      message.success(editing ? 'Usuário atualizado' : 'Usuário criado');
       closeModal();
       load();
     } catch (err) {
@@ -94,30 +111,48 @@ export default function Usuarios() {
     form.resetFields();
   };
 
-  const filteredUsuarios = usuarios.filter(u =>
-    filterByText(search, [
-      u.login,
-      u.pessoa?.nome,
-      u.hierarquia?.descricao
-    ])
+  /* ================= FILTRO ================= */
+  const filtered = usuarios.filter(u =>
+    [u.login, u.pessoa?.nome, u.hierarquia?.descricao]
+      .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  useEffect(() => { load(); }, []);
+  /* ================= RENDER HIERARQUIA ================= */
+  const renderHierarquia = (descricao) => {
+    const style = hierarquiaColors[descricao] || { bg: '#f0f0f0' };
+
+    return (
+      <Tag
+        style={{
+          background: style.bg,
+          color: '#000',
+          borderRadius: 12,
+          padding: '4px 14px',
+          fontSize: 13,
+          fontWeight: 500,
+          border: '1px solid #d9d9d9'
+        }}
+      >
+        {descricao}
+      </Tag>
+    );
+  };
 
   return (
     <AppLayout>
-      {/* TOPO */}
-      <div style={{
-        marginBottom: 16,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
+      {/* ================= TOPO ================= */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 16
+        }}
+      >
         <Input
-          placeholder="Buscar usuários"
+          placeholder="Buscar usuário"
           allowClear
           prefix={<SearchOutlined />}
-          style={{ width: 300, borderRadius: 6 }}
+          style={{ width: 280 }}
           onChange={e => setSearch(e.target.value)}
         />
 
@@ -131,69 +166,53 @@ export default function Usuarios() {
         </Button>
       </div>
 
-      {/* TABELA */}
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
-        dataSource={filteredUsuarios}
-        pagination={{ pageSize: 5 }}
+        dataSource={filtered}
+        pagination={{ pageSize: 6 }}
         bordered
-        style={{
-          borderRadius: 6,
-          overflow: 'hidden',
-          fontSize: 100   // ⬅️ AQUI
-        }}
         columns={[
           {
-
             title: 'Login',
             dataIndex: 'login',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 16, fontWeight: 600 }}>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>
                 {text}
               </span>
             )
-
           },
           {
-
             title: 'Pessoa',
             dataIndex: ['pessoa', 'nome'],
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: nome => (
-              <span style={{ fontSize: 16 }}>
+              <span style={{ fontSize: 15 }}>
                 {nome}
               </span>
             )
-
           },
-
           {
             title: 'Hierarquia',
+            align: 'center',
             dataIndex: ['hierarquia', 'descricao'],
-            render: descricao => (
-              <Tag
-                color={hierarquiaColors[descricao] || 'default'}
-                style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  padding: '4px 10px'
-                }}
-              >
-                {descricao}
-              </Tag>
-            )
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: renderHierarquia
           },
           {
             title: 'Ações',
             align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <Space>
+              <Space size={14}>
                 <Button
                   icon={<EditOutlined />}
                   onClick={() => edit(r)}
                   style={{ borderRadius: 6 }}
                 />
                 <Popconfirm
-                  title="Tem certeza que deseja excluir este usuário?"
+                  title="Excluir este usuário?"
                   onConfirm={() => remove(r.id)}
                 >
                   <Button
@@ -208,13 +227,13 @@ export default function Usuarios() {
         ]}
       />
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? 'Editar Usuário' : 'Novo Usuário'}
         open={open}
         onCancel={closeModal}
+        onOk={() => form.submit()}
         okText="Salvar"
-        cancelText="Cancelar"
         okButtonProps={{
           style: {
             borderRadius: 6,
@@ -223,7 +242,6 @@ export default function Usuarios() {
           }
         }}
         cancelButtonProps={{ style: { borderRadius: 6 } }}
-        onOk={() => form.submit()}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           {!editing && (
