@@ -28,71 +28,62 @@ module.exports = function renderGradeHTML({
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 11.5px;
+  font-size: 11px;
   margin: 0;
   padding: 0;
-  color: #093e5e; /* texto principal mais escuro */
+  color: #093e5e;
+  line-height: 1.4;
 }
 
 /* ================= HEADER ================= */
-
 .header {
   text-align: center;
   margin-bottom: 26px;
 }
-
 .logo {
   width: 102px;
   margin-bottom: 14px;
 }
-
 .header h1 {
-  font-size: 14.5px;
+  font-size: 14px;
   margin: 0;
   font-weight: bold;
   color: #093e5e;
 }
-
 .header h2 {
-  font-size: 12.5px;
-  margin-top: 8px;
+  font-size: 12px;
+  margin-top: 6px;
   font-weight: normal;
   color: #093e5e;
 }
 
 /* ================= INFO ================= */
-
 .info {
   margin: 0 auto 28px;
   padding: 10px 16px;
-  background-color: #eef3f8; /* fundo claro e neutro */
+  background-color: #eef3f8;
   border-left: 4px solid #093e5e;
 }
-
 .info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   row-gap: 8px;
   column-gap: 20px;
 }
-
 .info-item {
   font-size: 12px;
   line-height: 1.45;
   color: #093e5e;
 }
-
 .info-item strong {
   font-weight: bold;
 }
 
 /* ================= SEMESTRE + TABELA ================= */
-
 .semester {
   margin-bottom: 32px;
   page-break-inside: avoid;
 }
-
 .semester-title {
   font-size: 12.5px;
   font-weight: bold;
@@ -102,20 +93,20 @@ body {
 }
 
 /* ================= TABLE ================= */
-
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 th, td {
   border: 1px solid #3f5261;
-  padding: 6px;
+  padding: 6px 8px; /* espaçamento mais compacto */
   text-align: center;
   vertical-align: middle;
-  font-size: 10.5px;
+  font-size: 10px;
   color: #0d3148;
+  word-break: break-word;
 }
 
 /* Cabeçalho */
@@ -127,7 +118,7 @@ thead th {
 /* Horário */
 th.horario,
 td.horario {
-  width: 80px;
+  width: 70px; /* menor que antes */
   font-weight: bold;
   background-color: #ccdceb;
   white-space: nowrap;
@@ -135,13 +126,9 @@ td.horario {
 
 /* Disciplinas */
 td.disciplina {
-  line-height: 1.35;
-  word-wrap: break-word;
-  white-space: normal;
   background-color: #ffffff;
+  min-height: 28px; /* um pouco menor */
 }
-
-/* Destaque leve sem perder leitura */
 td.disciplina:not(:empty) {
   background-color: #f7f9fc;
 }
@@ -151,17 +138,39 @@ tr {
   page-break-inside: avoid;
 }
 
-/* ================= FOOTER ================= */
+/* ================= RESPONSIVIDADE ================= */
+@media screen and (max-width: 1024px) {
+  table, th, td {
+    font-size: 9.5px;
+    padding: 5px 6px;
+  }
+  th.horario, td.horario {
+    width: 60px;
+  }
+}
+@media screen and (max-width: 768px) {
+  table, th, td {
+    font-size: 9px;
+    padding: 4px 5px;
+  }
+  th.horario, td.horario {
+    width: 50px;
+  }
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}
 
+/* ================= FOOTER ================= */
 footer {
-  font-size: 9.5px;
+  font-size: 9px;
   text-align: center;
   margin-top: 32px;
   color: #093e5e;
   border-top: 1px solid #7f96a9;
   padding-top: 6px;
 }
-
 </style>
 </head>
 

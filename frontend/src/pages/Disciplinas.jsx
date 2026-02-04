@@ -63,6 +63,7 @@ export default function Disciplinas() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     loadAux();
   }, []);

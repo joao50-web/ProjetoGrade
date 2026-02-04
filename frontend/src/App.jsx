@@ -7,9 +7,8 @@ import Usuarios from './pages/Usuarios';
 import Cargos from './pages/Cargos';
 import Cursos from './pages/Cursos';
 import Disciplinas from './pages/Disciplinas';
+import CursoDisciplinas from './pages/CursoDisciplinas'; // <-- IMPORT CORRETO
 import GradeHoraria from './pages/GradeHoraria';
-
-
 
 export default function App() {
   return (
@@ -27,8 +26,9 @@ export default function App() {
         <Route path="/cargos" element={<Cargos />} />
         <Route path="/cursos" element={<Cursos />} />
         <Route path="/disciplinas" element={<Disciplinas />} />
-        <Route path="/home" element={<Home />} />
 
+        {/* Curso específico: Disciplinas */}
+        <Route path="/cursos/:id/disciplinas" element={<CursoDisciplinas />} />
 
         {/* Grade Horária */}
         <Route path="/grade-horaria" element={<GradeHoraria />} />

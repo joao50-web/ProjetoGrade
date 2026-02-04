@@ -47,6 +47,7 @@ export default function Cargos() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   /* ================= CRUD ================= */

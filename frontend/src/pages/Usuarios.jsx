@@ -68,6 +68,7 @@ export default function Usuarios() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   /* ================= CRUD ================= */

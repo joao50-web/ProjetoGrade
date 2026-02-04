@@ -1,22 +1,42 @@
 import { Layout } from 'antd';
-import logoBranco from '../assets/ufcspa-logo-branco.png';
+import logoBranco from '../imagens/logo_branco.png';
+import logoCentral from '../imagens/titulo_branco_2.png';
 
 const { Header, Content, Footer } = Layout;
 
 export default function HomeLayout({ children }) {
   return (
     <Layout style={{ minHeight: '100vh', backgroundColor: '#e8ebf0' }}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <Header
         style={{
           backgroundColor: '#093e5e',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between', // mantém logo esquerda/direita
           padding: '0 20px',
           boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+          position: 'relative', // necessário para o logo central absoluto
+          height: 60, // altura do header ajustável
         }}
       >
-        <img src={logoBranco} alt="UFCSPA" style={{ height: 50 }} />
+        {/* Logo à esquerda */}
+        <img src={logoBranco} alt="UFCSPA" style={{ height: 80 }} />
+
+        {/* Logo centralizado */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: 10, // ⬅ ajuste vertical do logo central
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <img src={logoCentral} alt="UFCSPA" style={{ height: 30 }} />
+        </div>
+
+        {/* Espaço para elemento à direita se precisar */}
+        <div></div>
       </Header>
 
       {/* CONTENT */}

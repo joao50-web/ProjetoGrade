@@ -62,6 +62,7 @@ export default function Pessoas() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   /* ================= CRUD ================= */
@@ -140,7 +141,7 @@ export default function Pessoas() {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginBottom: 16
+          marginBottom: 16,
         }}
       >
         <Input
