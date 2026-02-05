@@ -85,32 +85,53 @@ export default function AppLayout({ children }) {
       </Header>
 
       <Layout>
-        {/* ================= SIDEBAR ================= */}
-        <Sider
-          width={220}
-          style={{
-            backgroundColor: "#e1edf6",
-            borderRight: "1px solid #d3dce6",
-          }}
-        >
-          {/* ESTILOS DE HOVER E SELEÇÃO */}
-          <style>
-            {`
-              .ant-menu-item:hover,
-              .ant-menu-submenu-title:hover {
-                background-color: #f1f5f9 !important;
-              }
+     {/* ================= SIDEBAR ================= */}
+<Sider
+  width={200}
+  style={{
+    backgroundColor: "#e1edf6",
+    borderRight: "1px solid #d3dce6",
+  }}
+>
+  {/* ESTILOS DE HOVER E SELEÇÃO */}
+  <style>
+    {`
+      /* HOVER */
+      .ant-menu-item:hover,
+      .ant-menu-submenu-title:hover {
+        background-color: #3a4f64 !important;
+      }
 
-              .ant-menu-item-selected {
-                background-color: #dbeafe !important;
-                font-weight: 600;
-              }
+      .ant-menu-item:hover a,
+      .ant-menu-item:hover span,
+      .ant-menu-submenu-title:hover a,
+      .ant-menu-submenu-title:hover span {
+        color: #ffffff !important;
+      }
 
-              .ant-menu-item-selected::after {
-                border-right: 3px solid #093e5e;
-              }
-            `}
-          </style>
+      .ant-menu-item:hover .anticon,
+      .ant-menu-submenu-title:hover .anticon {
+        color: #ffffff !important;
+      }
+
+      /* ITEM SELECIONADO */
+      .ant-menu-item-selected {
+        background-color: #3a4f64 !important;
+      }
+
+      .ant-menu-item-selected a,
+      .ant-menu-item-selected span,
+      .ant-menu-item-selected .anticon {
+        color: #ffffff !important;
+        font-weight: 600;
+      }
+
+      .ant-menu-item-selected::after {
+        border-right: 3px solid #093e5e;
+      }
+    `}
+  </style>
+
 
           <Menu
             mode="inline"

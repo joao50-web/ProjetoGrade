@@ -23,71 +23,67 @@ module.exports = function renderGradeHTML({
 <style>
 @page {
   size: A4;
-  margin: 20mm 15mm 22mm 15mm;
+  margin: 14mm 12mm 16mm 12mm;
 }
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   margin: 0;
   padding: 0;
   color: #093e5e;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 /* ================= HEADER ================= */
 .header {
   text-align: center;
-  margin-bottom: 26px;
-}
-.logo {
-  width: 102px;
   margin-bottom: 14px;
 }
+.logo {
+  width: 80px;
+  margin-bottom: 6px;
+}
 .header h1 {
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
   font-weight: bold;
-  color: #093e5e;
 }
 .header h2 {
-  font-size: 12px;
-  margin-top: 6px;
+  font-size: 11px;
+  margin-top: 2px;
   font-weight: normal;
-  color: #093e5e;
 }
 
 /* ================= INFO ================= */
 .info {
-  margin: 0 auto 28px;
-  padding: 10px 16px;
+  margin: 0 auto 16px;
+  padding: 6px 12px;
   background-color: #eef3f8;
-  border-left: 4px solid #093e5e;
+  border-left: 3px solid #093e5e;
 }
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  row-gap: 8px;
-  column-gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  row-gap: 4px;
+  column-gap: 16px;
 }
 .info-item {
-  font-size: 12px;
-  line-height: 1.45;
-  color: #093e5e;
+  font-size: 10px;
 }
 .info-item strong {
   font-weight: bold;
 }
 
-/* ================= SEMESTRE + TABELA ================= */
+/* ================= SEMESTRE ================= */
 .semester {
-  margin-bottom: 32px;
+  margin-bottom: 18px;
   page-break-inside: avoid;
 }
 .semester-title {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: bold;
-  padding: 8px 10px;
+  padding: 5px 8px;
   background-color: #093e5e;
   color: #ffffff;
 }
@@ -96,80 +92,52 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 th, td {
   border: 1px solid #3f5261;
-  padding: 6px 8px; /* espaçamento mais compacto */
+  padding: 4px 5px;
   text-align: center;
   vertical-align: middle;
-  font-size: 10px;
+  font-size: 9px;
   color: #0d3148;
   word-break: break-word;
 }
 
-/* Cabeçalho */
 thead th {
   background-color: #ccdceb;
   font-weight: bold;
 }
 
-/* Horário */
 th.horario,
 td.horario {
-  width: 70px; /* menor que antes */
+  width: 60px;
   font-weight: bold;
   background-color: #ccdceb;
   white-space: nowrap;
 }
 
-/* Disciplinas */
 td.disciplina {
   background-color: #ffffff;
-  min-height: 28px; /* um pouco menor */
+  min-height: 22px;
 }
 td.disciplina:not(:empty) {
   background-color: #f7f9fc;
 }
 
-/* Evita quebra feia */
 tr {
   page-break-inside: avoid;
 }
 
-/* ================= RESPONSIVIDADE ================= */
-@media screen and (max-width: 1024px) {
-  table, th, td {
-    font-size: 9.5px;
-    padding: 5px 6px;
-  }
-  th.horario, td.horario {
-    width: 60px;
-  }
-}
-@media screen and (max-width: 768px) {
-  table, th, td {
-    font-size: 9px;
-    padding: 4px 5px;
-  }
-  th.horario, td.horario {
-    width: 50px;
-  }
-  table {
-    display: block;
-    overflow-x: auto;
-  }
-}
-
 /* ================= FOOTER ================= */
 footer {
-  font-size: 9px;
+  font-size: 8px;
   text-align: center;
-  margin-top: 32px;
+  margin-top: 16px;
   color: #093e5e;
   border-top: 1px solid #7f96a9;
-  padding-top: 6px;
+  padding-top: 4px;
 }
 </style>
 </head>
@@ -207,7 +175,12 @@ ${semestres.map(semestre => `
           <tr>
             <td class="horario">${linha.horario}</td>
             ${linha.celulas.map(celula => `
-              <td class="disciplina">${celula || ''}</td>
+              <td class="disciplina">
+                ${(celula || '')
+                  .split('<br>')[0]
+                  .split('\\n')[0]
+                }
+              </td>
             `).join('')}
           </tr>
         `).join('')}
