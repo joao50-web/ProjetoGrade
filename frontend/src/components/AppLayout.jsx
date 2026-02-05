@@ -99,7 +99,8 @@ export default function AppLayout({ children }) {
       /* HOVER */
       .ant-menu-item:hover,
       .ant-menu-submenu-title:hover {
-        background-color: #3a4f64 !important;
+        background-color: #4e6479 !important;
+        color: #ffffff !important;
       }
 
       .ant-menu-item:hover a,
@@ -116,7 +117,8 @@ export default function AppLayout({ children }) {
 
       /* ITEM SELECIONADO */
       .ant-menu-item-selected {
-        background-color: #3a4f64 !important;
+        background-color: #4b5e70 !important;
+        
       }
 
       .ant-menu-item-selected a,
@@ -130,9 +132,8 @@ export default function AppLayout({ children }) {
         border-right: 3px solid #093e5e;
       }
     `}
+    
   </style>
-
-
           <Menu
             mode="inline"
             selectedKeys={[location.pathname]}

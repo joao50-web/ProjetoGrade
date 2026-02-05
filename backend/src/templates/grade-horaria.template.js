@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+// Carrega o logo em Base64
 const logoBase64 = fs.readFileSync(
   path.resolve(__dirname, '../../assets/logo-ufcspa.png'),
   { encoding: 'base64' }
@@ -29,115 +30,117 @@ module.exports = function renderGradeHTML({
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 10px;
-  margin: 0;
-  padding: 0;
   color: #093e5e;
-  line-height: 1.3;
 }
 
-/* ================= HEADER ================= */
+/* ================= CABEÇALHO ================= */
+
 .header {
   text-align: center;
   margin-bottom: 14px;
 }
+
 .logo {
   width: 80px;
   margin-bottom: 6px;
 }
-.header h1 {
-  font-size: 13px;
-  margin: 0;
-  font-weight: bold;
-}
-.header h2 {
-  font-size: 11px;
-  margin-top: 2px;
-  font-weight: normal;
-}
 
-/* ================= INFO ================= */
 .info {
-  margin: 0 auto 16px;
+  background: #eef3f8;
   padding: 6px 12px;
-  background-color: #eef3f8;
+  margin-bottom: 16px;
   border-left: 3px solid #093e5e;
 }
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  row-gap: 4px;
-  column-gap: 16px;
-}
-.info-item {
-  font-size: 10px;
-}
-.info-item strong {
-  font-weight: bold;
+  gap: 4px 16px;
 }
 
-/* ================= SEMESTRE ================= */
+/* ================= SEMESTRES ================= */
+
 .semester {
   margin-bottom: 18px;
   page-break-inside: avoid;
-}
-.semester-title {
-  font-size: 11px;
-  font-weight: bold;
-  padding: 5px 8px;
-  background-color: #093e5e;
-  color: #ffffff;
+  break-inside: avoid;
 }
 
-/* ================= TABLE ================= */
+/* Somente a partir do 2º semestre quebra página */
+.semester + .semester {
+  page-break-before: always;
+}
+
+.semester-title {
+  background: #093e5e;
+  color: #fff;
+  padding: 5px 8px;
+  font-weight: bold;
+}
+
+/* ================= TABELA ================= */
+
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+thead {
+  display: table-header-group;
+}
+
+tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 th, td {
   border: 1px solid #3f5261;
-  padding: 4px 5px;
+  padding: 4px;
   text-align: center;
-  vertical-align: middle;
   font-size: 9px;
-  color: #0d3148;
-  word-break: break-word;
-}
-
-thead th {
-  background-color: #ccdceb;
-  font-weight: bold;
 }
 
 th.horario,
 td.horario {
   width: 60px;
+  background: #ccdceb;
   font-weight: bold;
-  background-color: #ccdceb;
-  white-space: nowrap;
 }
 
 td.disciplina {
-  background-color: #ffffff;
+  background: #f7f9fc;
   min-height: 22px;
-}
-td.disciplina:not(:empty) {
-  background-color: #f7f9fc;
+  white-space: normal;
 }
 
-tr {
-  page-break-inside: avoid;
+/* ================= LEGENDA ================= */
+
+.legend {
+  margin-top: 8px;
+  background: #eef3f8;
+  padding: 6px 8px;
+  border-left: 3px solid #093e5e;
+  font-size: 9px;
 }
 
-/* ================= FOOTER ================= */
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.legend-item {
+  margin-bottom: 2px;
+}
+
+/* ================= RODAPÉ ================= */
+
 footer {
   font-size: 8px;
   text-align: center;
   margin-top: 16px;
-  color: #093e5e;
-  border-top: 1px solid #7f96a9;
-  padding-top: 4px;
 }
 </style>
 </head>
@@ -152,45 +155,51 @@ footer {
 
 <div class="info">
   <div class="info-grid">
-    <div class="info-item"><strong>Curso:</strong> ${curso}</div>
-    <div class="info-item"><strong>Currículo:</strong> ${curriculo}</div>
-    <div class="info-item"><strong>Ano Letivo:</strong> ${anoLetivo}</div>
-    <div class="info-item"><strong>Coordenação:</strong> ${coordenador}</div>
+    <div><strong>Curso:</strong> ${curso}</div>
+    <div><strong>Currículo:</strong> ${curriculo}</div>
+    <div><strong>Ano Letivo:</strong> ${anoLetivo}</div>
+    <div><strong>Coordenação:</strong> ${coordenador || ''}</div>
   </div>
 </div>
 
 ${semestres.map(semestre => `
-  <div class="semester">
-    <div class="semester-title">${semestre.descricao}</div>
+<div class="semester">
+  <div class="semester-title">${semestre.descricao}</div>
 
-    <table>
-      <thead>
+  <table>
+    <thead>
+      <tr>
+        <th class="horario">Horário</th>
+        ${semestre.dias.map(d => `<th>${d}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${semestre.linhas.map(linha => `
         <tr>
-          <th class="horario">Horário</th>
-          ${semestre.dias.map(dia => `<th>${dia}</th>`).join('')}
+          <td class="horario">${linha.horario}</td>
+          ${linha.celulas.map(c => `
+            <td class="disciplina">${c || ''}</td>
+          `).join('')}
         </tr>
-      </thead>
-      <tbody>
-        ${semestre.linhas.map(linha => `
-          <tr>
-            <td class="horario">${linha.horario}</td>
-            ${linha.celulas.map(celula => `
-              <td class="disciplina">
-                ${(celula || '')
-                  .split('<br>')[0]
-                  .split('\\n')[0]
-                }
-              </td>
-            `).join('')}
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
+      `).join('')}
+    </tbody>
+  </table>
+
+  ${semestre.professores && semestre.professores.length ? `
+  <div class="legend">
+    <div class="legend-title">Legenda de Professores</div>
+    ${semestre.professores.map(p => `
+      <div class="legend-item">
+        <strong>${p.disciplina}</strong> — ${p.professor}
+      </div>
+    `).join('')}
   </div>
+  ` : ''}
+</div>
 `).join('')}
 
 <footer>
-  Documento gerado automaticamente pelo sistema acadêmico
+  UFCSPA - Universidade Federal de Ciências da Saúde de Porto Alegre
 </footer>
 
 </body>

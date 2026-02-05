@@ -97,7 +97,7 @@ export default function GradeTabela() {
       const idx = copy.findIndex(
         (s) =>
           s.horario_id === payload.horario_id &&
-          s.dia_semana_id === payload.dia_semana_id,
+          s.dia_semana_id === payload.dia_semana_id
       );
       if (idx >= 0) copy[idx] = { ...copy[idx], ...payload };
       else copy.push(payload);
@@ -127,7 +127,7 @@ export default function GradeTabela() {
       width: 80,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
-      render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
+      render: (text) => <strong>{text}</strong>,
     },
     ...dias.map((d) => ({
       title: d.descricao,
@@ -135,42 +135,46 @@ export default function GradeTabela() {
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
+        // Busca o slot correspondente
         const cell = gradeDraft.find(
-          (g) => g.horario_id === record.horario_id && g.dia_semana_id === d.id,
+          (g) =>
+            g.horario_id === record.horario_id &&
+            g.dia_semana_id === d.id
         );
 
-        const value = cell
-          ? `${cell.disciplina_id}-${cell.professor_id}`
-          : undefined;
+        const disciplinaId = cell?.disciplina_id ?? undefined;
 
         return (
           <Select
             size="small"
             allowClear
             style={{ width: "100%" }}
-            value={value}
-            optionLabelProp="disciplina"
-            onChange={(v) => {
-              if (!v)
+            value={disciplinaId}
+            optionLabelProp="label"
+            onChange={(disciplina_id) => {
+              if (!disciplina_id) {
                 return updateSlot({
                   horario_id: record.horario_id,
                   dia_semana_id: d.id,
                   disciplina_id: null,
                   professor_id: null,
                 });
+              }
 
-              const [disciplina_id, professor_id] = v.split("-").map(Number);
+              // Busca o professor vinculado à disciplina selecionada
+              const vinculo = disciplinas.find(
+                (x) => x.disciplina_id === disciplina_id
+              );
 
               updateSlot({
                 horario_id: record.horario_id,
                 dia_semana_id: d.id,
                 disciplina_id,
-                professor_id,
+                professor_id: vinculo?.professor_id ?? null,
               });
             }}
             options={disciplinas.map((opt) => ({
-              value: `${opt.disciplina_id}-${opt.professor_id}`,
-              disciplina: opt.disciplina_nome,
+              value: opt.disciplina_id,
               label: (
                 <div>
                   <div style={{ fontWeight: 500 }}>{opt.disciplina_nome}</div>
@@ -234,21 +238,23 @@ export default function GradeTabela() {
 
     window.open(
       `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-      "_blank",
+      "_blank"
     );
   };
 
   return (
     <div style={{ backgroundColor: "#f7f9fc", padding: 14 }}>
+      {/* TÍTULO */}
+      <div style={{ textAlign: "center", margin: "1px 0" }}>
+        <Title
+          level={3}
+          style={{ fontWeight: 500, margin: 10, color: "#093e5e" }}
+        >
+          Grade Horária
+        </Title>
+      </div>
+
       {/* BOTÕES SUPERIORES */}
-
-        {/* TÍTULO */}
-        <div style={{ textAlign: "center", margin: "1px 0" }}>
-          <Title level={3} style={{ fontWeight: 500, margin: 10, color: "#093e5e" }}>
-            Grade Horária
-          </Title>
-        </div>
-
       <div
         style={{
           display: "flex",
@@ -264,8 +270,6 @@ export default function GradeTabela() {
         >
           Início
         </Button>
-
-      
 
         <div style={{ display: "flex", gap: 8 }}>
           <Button size="small" type="primary" onClick={salvarGrade}>
@@ -302,7 +306,7 @@ export default function GradeTabela() {
         </div>
       </div>
 
-      {/* LOGO + FILTROS FIXOS */}
+      {/* FILTROS */}
       <div
         style={{
           position: "relative",
@@ -310,22 +314,8 @@ export default function GradeTabela() {
           zIndex: 10,
           backgroundColor: "#f7f9fc",
           paddingBottom: 5,
-        
         }}
       >
-        {/* LOGO CENTRAL     
-        
-           <div style={{ textAlign: 'center', marginBottom: 80 }}>
-          <img
-            src="../src/assets/titulo_azul.png" // ajuste o caminho do logo conforme necessário
-            alt="Logo"
-            style={{ height: 20, objectFit: 'contain' }}
-          />
-        </div>
-        
-        */}
-
-        {/* FILTROS */}
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
           <Col md={6}>
             <strong>Curso</strong>

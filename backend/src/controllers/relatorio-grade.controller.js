@@ -23,6 +23,8 @@ exports.gerarPDF = async (req, res) => {
       });
     }
 
+    /* ================= DADOS BASE ================= */
+
     const curso = await Curso.findByPk(curso_id);
     const ano = await Ano.findByPk(ano_id);
     const curriculo = await Curriculo.findByPk(curriculo_id);
@@ -31,13 +33,42 @@ exports.gerarPDF = async (req, res) => {
       return res.status(404).json({ error: 'Dados não encontrados' });
     }
 
-    const coordenador = await Pessoa.findByPk(curso.coordenador_id);
+    /* ================= BUSCA DA GRADE ================= */
+
+    const grades = await GradeHoraria.findAll({
+      where: {
+        curso_id,
+        ano_id,
+        curriculo_id,
+        ...(todos === 'true' ? {} : { semestre_id })
+      },
+      include: [
+        { model: Disciplina, as: 'disciplina', required: false },
+        { model: Pessoa, as: 'professor', required: false }, // NÃO USAMOS NO PDF
+        { model: Horario, as: 'horario' },
+        { model: DiaSemana, as: 'diaSemana' },
+        { model: Semestre, as: 'semestre' }
+      ]
+    });
+
+    /* ================= COORDENADOR ================= */
+
+    let coordenadorNome = '';
+
+    const registroComCoordenador = grades.find(g => g.coordenador_id);
+    if (registroComCoordenador) {
+      const coord = await Pessoa.findByPk(registroComCoordenador.coordenador_id);
+      coordenadorNome = coord?.nome || '';
+    }
+
+    /* ================= HORÁRIOS E DIAS ================= */
 
     const horarios = await Horario.findAll({ order: [['id', 'ASC']] });
     const dias = await DiaSemana.findAll({ order: [['id', 'ASC']] });
 
-    // 🔹 SEMESTRES
-    let semestres;
+    /* ================= SEMESTRES ================= */
+
+    let semestres = [];
 
     if (todos === 'true') {
       semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
@@ -47,25 +78,11 @@ exports.gerarPDF = async (req, res) => {
           error: 'semestre_id é obrigatório quando todos=false'
         });
       }
-
-      const semestre = await Semestre.findByPk(semestre_id);
-      semestres = semestre ? [semestre] : [];
+      const sem = await Semestre.findByPk(semestre_id);
+      if (sem) semestres = [sem];
     }
 
-    const grades = await GradeHoraria.findAll({
-      where: {
-        curso_id,
-        ano_id,
-        curriculo_id
-      },
-      include: [
-        { model: Disciplina, as: 'disciplina', required: false },
-        { model: Pessoa, as: 'professor', required: false },
-        { model: Horario, as: 'horario' },
-        { model: DiaSemana, as: 'diaSemana' },
-        { model: Semestre, as: 'semestre' }
-      ]
-    });
+    /* ================= MONTAGEM FINAL ================= */
 
     const semestresRender = semestres.map(sem => {
       const registrosSemestre = grades.filter(
@@ -82,12 +99,8 @@ exports.gerarPDF = async (req, res) => {
 
           if (!slot) return '';
 
-          const disciplina = slot.disciplina?.nome || '';
-          const professor = slot.professor?.nome || '';
-
-          if (!disciplina && !professor) return '';
-
-          return `${disciplina}\n${professor}`.trim();
+          // ✅ AQUI É A CORREÇÃO DEFINITIVA
+          return slot.disciplina?.nome || '';
         });
 
         return {
@@ -103,11 +116,13 @@ exports.gerarPDF = async (req, res) => {
       };
     });
 
+    /* ================= TEMPLATE ================= */
+
     const html = renderTemplate({
       universidade: 'Universidade Federal de Ciências da Saúde',
       curso: curso.nome,
       curriculo: curriculo.descricao,
-      coordenador: coordenador?.nome || '',
+      coordenador: coordenadorNome,
       anoLetivo: ano.descricao,
       semestres: semestresRender
     });
@@ -121,8 +136,9 @@ exports.gerarPDF = async (req, res) => {
     );
 
     return res.end(pdf);
+
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    return res.status(500).json({ error: 'Erro interno ao gerar PDF' });
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao gerar PDF' });
   }
 };
