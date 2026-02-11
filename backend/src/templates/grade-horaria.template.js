@@ -42,7 +42,16 @@ body {
 
 .logo {
   width: 80px;
-  margin-bottom: 6px;
+  margin-bottom: 26px; /* Aumentei o espaçamento do logo */
+}
+
+.header h1 {
+  margin: 0;
+  margin-bottom: 10px; /* Espaço entre universidade e título */
+}
+
+.header h2 {
+  margin: 10;
 }
 
 .info {
@@ -204,5 +213,5 @@ ${semestres.map(semestre => `
 
 </body>
 </html>
-`;
+  `;
 };

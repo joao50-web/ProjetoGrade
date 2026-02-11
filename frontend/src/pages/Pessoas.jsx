@@ -1,3 +1,6 @@
+
+
+
 import { useEffect, useState } from 'react';
 import {
   Table,
@@ -45,6 +48,7 @@ export default function Pessoas() {
   const [cargos, setCargos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
@@ -55,6 +59,7 @@ export default function Pessoas() {
         api.get('/pessoas'),
         api.get('/cargos')
       ]);
+
       setPessoas(pessoasRes.data);
       setCargos(cargosRes.data);
     } catch {
@@ -62,42 +67,66 @@ export default function Pessoas() {
     }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  /* ================= CRUD ================= */
+  /* ================= SALVAR ================= */
   const save = async () => {
     try {
-      const values = form.getFieldsValue();
-      editing
-        ? await api.put(`/pessoas/${editing.id}`, values)
-        : await api.post('/pessoas', values);
+      const values = await form.validateFields();
 
-      message.success(editing ? 'Pessoa atualizada' : 'Pessoa criada');
+      setLoading(true);
+
+      if (editing) {
+        await api.put(`/pessoas/${editing.id}`, values);
+        message.success('Pessoa atualizada com sucesso');
+      } else {
+        await api.post('/pessoas', values);
+        message.success('Pessoa criada com sucesso');
+      }
+
       closeModal();
       load();
-    } catch {
-      message.error('Erro ao salvar');
+
+    } catch (err) {
+
+      // Ignora erro de validação do form
+      if (err.errorFields) return;
+
+      message.error(
+        err.response?.data?.error || 'Erro ao salvar pessoa'
+      );
+
+    } finally {
+      setLoading(false);
     }
   };
 
+  /* ================= REMOVER ================= */
   const remove = async (id) => {
     try {
       await api.delete(`/pessoas/${id}`);
-      message.success('Pessoa removida');
+      message.success('Pessoa removida com sucesso');
       load();
-    } catch {
-      message.error('Erro ao excluir');
+    } catch (err) {
+      message.error(
+        err.response?.data?.error ||
+        'Não é possível excluir. Pessoa vinculada a usuário ou grade.'
+      );
     }
   };
 
+  /* ================= EDITAR ================= */
   const edit = (pessoa) => {
     setEditing(pessoa);
+
     form.setFieldsValue({
       nome: pessoa.nome,
       email: pessoa.email,
       cargo_id: pessoa.cargo?.id
     });
+
     setOpen(true);
   };
 
@@ -136,6 +165,7 @@ export default function Pessoas() {
 
   return (
     <AppLayout>
+
       {/* ================= TOPO ================= */}
       <div
         style={{
@@ -173,25 +203,15 @@ export default function Pessoas() {
             title: 'Nome',
             dataIndex: 'nome',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <span style={{ fontSize: 15, fontWeight: 500 }}>
-                {text}
-              </span>
-            )
           },
           {
             title: 'Email',
             dataIndex: 'email',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <span style={{ fontSize: 14, color: '#1d4ed8' }}>
-                {text}
-              </span>
-            )
           },
           {
             title: 'Cargo',
-             align: 'center',
+            align: 'center',
             dataIndex: ['cargo', 'descricao'],
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderCargo
@@ -201,7 +221,7 @@ export default function Pessoas() {
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) =>
-              r.usuario
+              r.usuario?.id
                 ? <CheckCircleTwoTone twoToneColor="#52c41a" />
                 : <CloseCircleTwoTone twoToneColor="#ff4d4f" />
           },
@@ -209,25 +229,43 @@ export default function Pessoas() {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => (
-              <Space size={14}>
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={() => edit(r)}
-                  style={{ borderRadius: 6 }}
-                />
-                <Popconfirm
-                  title="Excluir esta pessoa?"
-                  onConfirm={() => remove(r.id)}
-                >
+            render: (_, r) => {
+
+              const possuiUsuario = Boolean(r.usuario?.id);
+
+              return (
+                <Space size={14}>
                   <Button
-                    danger
-                    icon={<DeleteOutlined />}
+                    icon={<EditOutlined />}
+                    onClick={() => edit(r)}
                     style={{ borderRadius: 6 }}
                   />
-                </Popconfirm>
-              </Space>
-            )
+
+                  {possuiUsuario ? (
+                    <Button
+                      danger
+                      disabled
+                      icon={<DeleteOutlined />}
+                      style={{ borderRadius: 6 }}
+                    />
+                  ) : (
+                    <Popconfirm
+                      title="Excluir esta pessoa?"
+                      description="Essa ação não pode ser desfeita."
+                      onConfirm={() => remove(r.id)}
+                      okText="Sim"
+                      cancelText="Cancelar"
+                    >
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        style={{ borderRadius: 6 }}
+                      />
+                    </Popconfirm>
+                  )}
+                </Space>
+              );
+            }
           }
         ]}
       />
@@ -238,18 +276,35 @@ export default function Pessoas() {
         open={open}
         onCancel={closeModal}
         onOk={save}
+        confirmLoading={loading}
         okText="Salvar"
+        destroyOnClose
       >
         <Form layout="vertical" form={form}>
-          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
+          <Form.Item
+            name="nome"
+            label="Nome"
+            rules={[{ required: true, message: 'Informe o nome' }]}
+          >
             <Input />
           </Form.Item>
 
-          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: 'Informe o email' },
+              { type: 'email', message: 'Email inválido' }
+            ]}
+          >
             <Input />
           </Form.Item>
 
-          <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
+          <Form.Item
+            name="cargo_id"
+            label="Cargo"
+            rules={[{ required: true, message: 'Selecione o cargo' }]}
+          >
             <Select placeholder="Selecione">
               {cargos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
@@ -260,6 +315,7 @@ export default function Pessoas() {
           </Form.Item>
         </Form>
       </Modal>
+
     </AppLayout>
   );
 }

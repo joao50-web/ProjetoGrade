@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: grade_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: grade_horaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - grade_network
+
+  backend:
+    build: ./backend
+    container_name: grade_backend
+    restart: always
+    ports:
+      - "0.0.0.0:3000:3000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    networks:
+      - grade_network
+
+  frontend:
+    build: ./frontend
+    container_name: grade_frontend
+    restart: always
+    ports:
+      - "0.0.0.0:8080:80" 
+    depends_on:
+      - backend
+    networks:
+      - grade_network
+
+volumes:
+  db_data:
+
+networks:
+  grade_network:
+    driver: bridge

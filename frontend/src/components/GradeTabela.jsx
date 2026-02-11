@@ -55,6 +55,7 @@ export default function GradeTabela() {
       const ano = await api.post("/anos/get-or-create", {
         descricao: anoInput,
       });
+
       const curriculo = await api.post("/curriculos/get-or-create", {
         descricao: curriculoInput,
       });
@@ -83,10 +84,11 @@ export default function GradeTabela() {
     api.get("/dias-semana").then((r) => setDias(r.data));
   }, []);
 
+  /* ================= LOAD DISCIPLINAS (SEM PROFESSOR) ================= */
   useEffect(() => {
     if (!contexto.curso_id) return;
     api
-      .get(`/cursos/${contexto.curso_id}/disciplinas-professores`)
+      .get(`/cursos/${contexto.curso_id}/disciplinas`)
       .then((r) => setDisciplinas(r.data));
   }, [contexto.curso_id]);
 
@@ -135,7 +137,6 @@ export default function GradeTabela() {
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
-        // Busca o slot correspondente
         const cell = gradeDraft.find(
           (g) =>
             g.horario_id === record.horario_id &&
@@ -150,39 +151,16 @@ export default function GradeTabela() {
             allowClear
             style={{ width: "100%" }}
             value={disciplinaId}
-            optionLabelProp="label"
             onChange={(disciplina_id) => {
-              if (!disciplina_id) {
-                return updateSlot({
-                  horario_id: record.horario_id,
-                  dia_semana_id: d.id,
-                  disciplina_id: null,
-                  professor_id: null,
-                });
-              }
-
-              // Busca o professor vinculado à disciplina selecionada
-              const vinculo = disciplinas.find(
-                (x) => x.disciplina_id === disciplina_id
-              );
-
               updateSlot({
                 horario_id: record.horario_id,
                 dia_semana_id: d.id,
-                disciplina_id,
-                professor_id: vinculo?.professor_id ?? null,
+                disciplina_id: disciplina_id || null,
               });
             }}
-            options={disciplinas.map((opt) => ({
-              value: opt.disciplina_id,
-              label: (
-                <div>
-                  <div style={{ fontWeight: 500 }}>{opt.disciplina_nome}</div>
-                  <div style={{ fontSize: 12, color: "#475569" }}>
-                    {opt.professor_nome}
-                  </div>
-                </div>
-              ),
+            options={disciplinas.map((disc) => ({
+              value: disc.id,
+              label: disc.nome,
             }))}
           />
         );
@@ -202,6 +180,7 @@ export default function GradeTabela() {
       const ano = await api.post("/anos/get-or-create", {
         descricao: anoInput,
       });
+
       const curr = await api.post("/curriculos/get-or-create", {
         descricao: curriculoInput,
       });
@@ -244,17 +223,12 @@ export default function GradeTabela() {
 
   return (
     <div style={{ backgroundColor: "#f7f9fc", padding: 14 }}>
-      {/* TÍTULO */}
       <div style={{ textAlign: "center", margin: "1px 0" }}>
-        <Title
-          level={3}
-          style={{ fontWeight: 500, margin: 10, color: "#093e5e" }}
-        >
+        <Title level={3} style={{ fontWeight: 500, margin: 10, color: "#093e5e" }}>
           Grade Horária
         </Title>
       </div>
 
-      {/* BOTÕES SUPERIORES */}
       <div
         style={{
           display: "flex",
@@ -306,7 +280,6 @@ export default function GradeTabela() {
         </div>
       </div>
 
-      {/* FILTROS */}
       <div
         style={{
           position: "relative",
@@ -374,7 +347,6 @@ export default function GradeTabela() {
         </Row>
       </div>
 
-      {/* TABELA */}
       <Table
         size="small"
         columns={columns}

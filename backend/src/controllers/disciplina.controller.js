@@ -1,42 +1,43 @@
 const { Disciplina, Curso, Pessoa } = require('../models');
 
-// ==== CRUD EXISTENTE (SEM ALTERAÇÃO) ====
-
+// ==== CRIAR DISCIPLINA (sem professor obrigatório) ====
 exports.create = async (req, res) => {
-  const disciplina = await Disciplina.create(req.body);
-  res.status(201).json(disciplina);
+  try {
+    const disciplina = await Disciplina.create(req.body); // Apenas cria
+    res.status(201).json(disciplina);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao criar disciplina' });
+  }
 };
 
+// ==== LISTAR TODAS AS DISCIPLINAS ====
 exports.findAll = async (req, res) => {
   const disciplinas = await Disciplina.findAll();
   res.json(disciplinas);
 };
 
+// ==== ATUALIZAR DISCIPLINA ====
 exports.update = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id);
   if (!disciplina) {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
-
   await disciplina.update(req.body);
   res.json(disciplina);
 };
 
+// ==== REMOVER DISCIPLINA ====
 exports.remove = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id);
   if (!disciplina) {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
-
   await disciplina.destroy();
   res.status(204).send();
 };
 
-// ==== NOVO: ASSOCIAÇÕES DA DISCIPLINA ====
-
-/**
- * LISTAR CURSOS E PROFESSORES DA DISCIPLINA
- */
+// ==== LISTAR RELAÇÕES (CURSOS E PROFESSORES) ====
 exports.findRelations = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id, {
     include: [
@@ -62,14 +63,11 @@ exports.findRelations = async (req, res) => {
   res.json(disciplina);
 };
 
-/**
- * ATUALIZAR CURSOS E PROFESSORES DA DISCIPLINA
- */
+// ==== ATUALIZAR RELAÇÕES (CURSOS E PROFESSORES) ====
 exports.updateRelations = async (req, res) => {
   const { cursos = [], professores = [] } = req.body;
 
   const disciplina = await Disciplina.findByPk(req.params.id);
-
   if (!disciplina) {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
@@ -79,7 +77,7 @@ exports.updateRelations = async (req, res) => {
   }
 
   if (Array.isArray(professores)) {
-    await disciplina.setProfessores(professores);
+    await disciplina.setProfessores(professores); // Professores são opcionais
   }
 
   res.json({ message: 'Associações atualizadas com sucesso' });

@@ -3,7 +3,6 @@ const { generatePDF } = require('../services/pdf.service');
 
 const {
   Curso,
-  Pessoa,
   Ano,
   Curriculo,
   Semestre,
@@ -43,23 +42,25 @@ exports.gerarPDF = async (req, res) => {
         ...(todos === 'true' ? {} : { semestre_id })
       },
       include: [
-        { model: Disciplina, as: 'disciplina', required: false },
-        { model: Pessoa, as: 'professor', required: false }, // NÃO USAMOS NO PDF
-        { model: Horario, as: 'horario' },
-        { model: DiaSemana, as: 'diaSemana' },
-        { model: Semestre, as: 'semestre' }
+        {
+          model: Disciplina,
+          as: 'disciplina',
+          required: false
+        },
+        {
+          model: Horario,
+          as: 'horario'
+        },
+        {
+          model: DiaSemana,
+          as: 'diaSemana'
+        },
+        {
+          model: Semestre,
+          as: 'semestre'
+        }
       ]
     });
-
-    /* ================= COORDENADOR ================= */
-
-    let coordenadorNome = '';
-
-    const registroComCoordenador = grades.find(g => g.coordenador_id);
-    if (registroComCoordenador) {
-      const coord = await Pessoa.findByPk(registroComCoordenador.coordenador_id);
-      coordenadorNome = coord?.nome || '';
-    }
 
     /* ================= HORÁRIOS E DIAS ================= */
 
@@ -99,7 +100,7 @@ exports.gerarPDF = async (req, res) => {
 
           if (!slot) return '';
 
-          // ✅ AQUI É A CORREÇÃO DEFINITIVA
+          // ✅ AGORA É SOMENTE DISCIPLINA
           return slot.disciplina?.nome || '';
         });
 
@@ -122,7 +123,7 @@ exports.gerarPDF = async (req, res) => {
       universidade: 'Universidade Federal de Ciências da Saúde',
       curso: curso.nome,
       curriculo: curriculo.descricao,
-      coordenador: coordenadorNome,
+      coordenador: '', // removido
       anoLetivo: ano.descricao,
       semestres: semestresRender
     });
