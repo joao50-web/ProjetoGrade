@@ -5,32 +5,33 @@ const jwt = require('jsonwebtoken');
 exports.login = async (req, res) => {
   const { login, senha } = req.body;
 
-  const user = await Usuario.findOne({
-    where: { login },
-    include: [
-      { model: Pessoa, as: 'pessoa' },
-      { model: Hierarquia, as: 'hierarquia' }
-    ]
-  });
-
-  if (!user || !(await bcrypt.compare(senha, user.senha))) {
-    return res.status(401).json({ error: 'Credenciais inválidas' });
-  }
-
-  if (!user.hierarquia_id) {
-    return res.status(403).json({
-      error: 'Acesso negado. Usuário sem hierarquia definida.'
+  try {
+    const usuario = await Usuario.findOne({
+      where: { login },
+      include: [{ model: Pessoa, as: 'pessoa' }, { model: Hierarquia, as: 'hierarquia' }]
     });
+
+    if (!usuario) {
+      return res.status(401).json({ error: 'Usuário não encontrado' });
+    }
+
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaValida) {
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+
+    const token = jwt.sign(
+      {
+        id: usuario.id,
+        role: usuario.hierarquia ? usuario.hierarquia.nome : 'usuario'
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno' });
   }
-
-  const token = jwt.sign(
-    {
-      id: user.id,
-      role: user.hierarquia.descricao
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '8h' }
-  );
-
-  res.json({ token });
 };

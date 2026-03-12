@@ -5,5 +5,4 @@ router.get('/', controller.findByContext);
 router.post('/', controller.saveSlot);
 router.post('/save', controller.saveGrade);
 
-
 module.exports = router;

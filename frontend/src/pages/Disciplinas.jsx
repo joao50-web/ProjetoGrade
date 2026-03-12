@@ -57,6 +57,7 @@ export default function Disciplinas() {
     ]);
 
     setCursos(c.data);
+
     setProfessores(
       p.data.filter(p => p.cargo?.descricao === 'Professor')
     );
@@ -71,9 +72,12 @@ export default function Disciplinas() {
   /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
+
       if (editing) {
+
         await api.put(`/disciplinas/${editing.id}`, {
-          nome: values.nome
+          nome: values.nome,
+          codigo: values.codigo
         });
 
         await api.post(
@@ -85,9 +89,12 @@ export default function Disciplinas() {
         );
 
         message.success('Disciplina atualizada');
+
       } else {
+
         const res = await api.post('/disciplinas', {
-          nome: values.nome
+          nome: values.nome,
+          codigo: values.codigo
         });
 
         const disciplinaId = res.data.id;
@@ -105,6 +112,7 @@ export default function Disciplinas() {
 
       closeModal();
       load();
+
     } catch {
       message.error('Erro ao salvar disciplina');
     }
@@ -121,6 +129,7 @@ export default function Disciplinas() {
   };
 
   const edit = async (disciplina) => {
+
     setEditing(disciplina);
 
     const res = await api.get(
@@ -129,6 +138,7 @@ export default function Disciplinas() {
 
     form.setFieldsValue({
       nome: disciplina.nome,
+      codigo: disciplina.codigo,
       cursos: res.data.cursos.map(c => c.id),
       professores: res.data.professores.map(p => p.id)
     });
@@ -149,6 +159,7 @@ export default function Disciplinas() {
 
   return (
     <AppLayout>
+
       {/* ================= TOPO ================= */}
       <div
         style={{
@@ -183,6 +194,16 @@ export default function Disciplinas() {
         bordered
         columns={[
           {
+            title: 'Código',
+            dataIndex: 'codigo',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: text => (
+              <span style={{ fontWeight: 600 }}>
+                {text}
+              </span>
+            )
+          },
+          {
             title: 'Nome',
             dataIndex: 'nome',
             onHeaderCell: () => ({ style: headerCellStyle }),
@@ -204,6 +225,7 @@ export default function Disciplinas() {
                   onClick={() => edit(r)}
                   style={{ borderRadius: 6 }}
                 />
+
                 <Popconfirm
                   title="Excluir esta disciplina?"
                   onConfirm={() => remove(r.id)}
@@ -238,7 +260,17 @@ export default function Disciplinas() {
         }}
         cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
+
         <Form layout="vertical" form={form} onFinish={submit}>
+
+          <Form.Item
+            name="codigo"
+            label="Código da Disciplina"
+            rules={[{ required: true, message: 'Informe o código' }]}
+          >
+            <Input placeholder="teste" />
+          </Form.Item>
+
           <Form.Item
             name="nome"
             label="Nome da Disciplina"
@@ -265,9 +297,13 @@ export default function Disciplinas() {
                 </Select.Option>
               ))}
             </Select>
+
           </Form.Item>
+
         </Form>
+
       </Modal>
+
     </AppLayout>
   );
 }
