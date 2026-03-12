@@ -32,6 +32,7 @@ const headerCellStyle = {
 };
 
 export default function Disciplinas() {
+
   const [disciplinas, setDisciplinas] = useState([]);
   const [cursos, setCursos] = useState([]);
   const [professores, setProfessores] = useState([]);
@@ -43,24 +44,39 @@ export default function Disciplinas() {
   /* ================= LOAD ================= */
   const load = async () => {
     try {
+
       const res = await api.get('/disciplinas');
-      setDisciplinas(res.data);
+
+      // garante que sempre exista campo codigo
+      const dados = res.data.map(d => ({
+        ...d,
+        codigo: d.codigo || d.cod_disciplina || d.codigo_disciplina || ''
+      }));
+
+      setDisciplinas(dados);
+
     } catch {
       message.error('Erro ao carregar disciplinas');
     }
   };
 
   const loadAux = async () => {
-    const [c, p] = await Promise.all([
-      api.get('/cursos'),
-      api.get('/pessoas')
-    ]);
+    try {
 
-    setCursos(c.data);
+      const [c, p] = await Promise.all([
+        api.get('/cursos'),
+        api.get('/pessoas')
+      ]);
 
-    setProfessores(
-      p.data.filter(p => p.cargo?.descricao === 'Professor')
-    );
+      setCursos(c.data);
+
+      setProfessores(
+        p.data.filter(p => p.cargo?.descricao === 'Professor')
+      );
+
+    } catch {
+      message.error('Erro ao carregar dados auxiliares');
+    }
   };
 
   useEffect(() => {
@@ -71,6 +87,7 @@ export default function Disciplinas() {
 
   /* ================= CRUD ================= */
   const submit = async (values) => {
+
     try {
 
       if (editing) {
@@ -120,9 +137,13 @@ export default function Disciplinas() {
 
   const remove = async (id) => {
     try {
+
       await api.delete(`/disciplinas/${id}`);
+
       message.success('Disciplina removida');
+
       load();
+
     } catch {
       message.error('Erro ao excluir disciplina');
     }
@@ -130,20 +151,26 @@ export default function Disciplinas() {
 
   const edit = async (disciplina) => {
 
-    setEditing(disciplina);
+    try {
 
-    const res = await api.get(
-      `/disciplinas/${disciplina.id}/relations`
-    );
+      setEditing(disciplina);
 
-    form.setFieldsValue({
-      nome: disciplina.nome,
-      codigo: disciplina.codigo,
-      cursos: res.data.cursos.map(c => c.id),
-      professores: res.data.professores.map(p => p.id)
-    });
+      const res = await api.get(
+        `/disciplinas/${disciplina.id}/relations`
+      );
 
-    setOpen(true);
+      form.setFieldsValue({
+        nome: disciplina.nome,
+        codigo: disciplina.codigo,
+        cursos: res.data.cursos.map(c => c.id),
+        professores: res.data.professores.map(p => p.id)
+      });
+
+      setOpen(true);
+
+    } catch {
+      message.error('Erro ao carregar disciplina');
+    }
   };
 
   const closeModal = () => {
@@ -154,7 +181,8 @@ export default function Disciplinas() {
 
   /* ================= FILTRO ================= */
   const filtered = disciplinas.filter(d =>
-    d.nome?.toLowerCase().includes(search.toLowerCase())
+    d.nome?.toLowerCase().includes(search.toLowerCase()) ||
+    d.codigo?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -193,16 +221,18 @@ export default function Disciplinas() {
         pagination={{ pageSize: 6 }}
         bordered
         columns={[
+
           {
             title: 'Código',
             dataIndex: 'codigo',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
+            render: (_, record) => (
               <span style={{ fontWeight: 600 }}>
-                {text}
+                {record.codigo || '-'}
               </span>
             )
           },
+
           {
             title: 'Nome',
             dataIndex: 'nome',
@@ -213,6 +243,7 @@ export default function Disciplinas() {
               </span>
             )
           },
+
           {
             title: 'Ações',
             align: 'center',
@@ -220,6 +251,7 @@ export default function Disciplinas() {
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
               <Space size={14}>
+
                 <Button
                   icon={<EditOutlined />}
                   onClick={() => edit(r)}
@@ -236,9 +268,11 @@ export default function Disciplinas() {
                     style={{ borderRadius: 6 }}
                   />
                 </Popconfirm>
+
               </Space>
             )
           }
+
         ]}
       />
 
@@ -268,7 +302,7 @@ export default function Disciplinas() {
             label="Código da Disciplina"
             rules={[{ required: true, message: 'Informe o código' }]}
           >
-            <Input placeholder="teste" />
+            <Input placeholder="Ex: MED101" />
           </Form.Item>
 
           <Form.Item
@@ -281,23 +315,26 @@ export default function Disciplinas() {
 
           <Form.Item name="cursos" label="Cursos">
             <Select mode="multiple" allowClear placeholder="Selecione">
+
               {cursos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.nome}
                 </Select.Option>
               ))}
+
             </Select>
           </Form.Item>
 
           <Form.Item name="professores" label="Professores">
             <Select mode="multiple" allowClear placeholder="Selecione">
+
               {professores.map(p => (
                 <Select.Option key={p.id} value={p.id}>
                   {p.nome}
                 </Select.Option>
               ))}
-            </Select>
 
+            </Select>
           </Form.Item>
 
         </Form>
