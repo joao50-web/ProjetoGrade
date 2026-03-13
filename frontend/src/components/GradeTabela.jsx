@@ -9,8 +9,17 @@ import {
   message,
   Dropdown,
   Popconfirm,
+  Card,
+  Space
 } from "antd";
-import { HomeOutlined } from "@ant-design/icons";
+
+import {
+  HomeOutlined,
+  SaveOutlined,
+  FilePdfOutlined,
+  ClearOutlined
+} from "@ant-design/icons";
+
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 
@@ -53,8 +62,6 @@ export default function GradeTabela() {
     anos.push({ value: `${ano}/1`, label: `${ano}/1` });
     anos.push({ value: `${ano}/2`, label: `${ano}/2` });
   }
-
-  /* ================= GERAR CURRICULOS ================= */
 
   const curriculos = [];
   for (let ano = 2020; ano <= 2040; ano++) {
@@ -213,10 +220,6 @@ export default function GradeTabela() {
 
         const disciplinaId = cell?.disciplina_id ?? undefined;
 
-        const disciplina = disciplinas.find(
-          (disc) => disc.id === disciplinaId
-        );
-
         return (
 
           <Select
@@ -224,7 +227,6 @@ export default function GradeTabela() {
             allowClear
             style={{ width: "100%" }}
             value={disciplinaId}
-
             onChange={(disciplina_id) => {
 
               updateSlot({
@@ -234,17 +236,11 @@ export default function GradeTabela() {
               });
 
             }}
-
             options={disciplinas.map((disc) => ({
               value: disc.id,
               label: `${disc.codigo} - ${disc.nome}`,
             }))}
-
-            placeholder={
-              disciplina
-                ? `${disciplina.codigo} - ${disciplina.nome}`
-                : "Selecionar"
-            }
+            placeholder="Selecionar"
           />
 
         );
@@ -305,73 +301,77 @@ export default function GradeTabela() {
 
   /* ================= PDF ================= */
 
- const gerarPDF = async (todos) => {
+  const gerarPDF = async (todos) => {
 
-  const { curso_id, semestre_id, ano, curriculo } = contexto;
+    const { curso_id, semestre_id, ano, curriculo } = contexto;
 
-  if (!curso_id || !ano || !curriculo) {
-    message.warning("Selecione curso, ano e currículo");
-    return;
-  }
-
-  try {
-
-    // busca ou cria ano
-    const anoRes = await api.post("/anos/get-or-create", {
-      descricao: ano,
-    });
-
-    // busca ou cria currículo
-    const currRes = await api.post("/curriculos/get-or-create", {
-      descricao: curriculo,
-    });
-
-    const params = new URLSearchParams({
-      curso_id,
-      ano_id: anoRes.data.id,
-      curriculo_id: currRes.data.id,
-    });
-
-    if (todos) {
-      params.append("todos", "true");
-    } else {
-
-      if (!semestre_id) {
-        message.warning("Selecione o semestre");
-        return;
-      }
-
-      params.append("semestre_id", semestre_id);
+    if (!curso_id || !ano || !curriculo) {
+      message.warning("Selecione curso, ano e currículo");
+      return;
     }
 
-    window.open(
-      `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-      "_blank"
-    );
+    try {
 
-  } catch (err) {
+      const anoRes = await api.post("/anos/get-or-create", {
+        descricao: ano,
+      });
 
-    console.error(err);
-    message.error("Erro ao gerar PDF");
+      const currRes = await api.post("/curriculos/get-or-create", {
+        descricao: curriculo,
+      });
 
-  }
+      const params = new URLSearchParams({
+        curso_id,
+        ano_id: anoRes.data.id,
+        curriculo_id: currRes.data.id,
+      });
 
-};
+      if (todos) {
+        params.append("todos", "true");
+      } else {
+
+        if (!semestre_id) {
+          message.warning("Selecione o semestre");
+          return;
+        }
+
+        params.append("semestre_id", semestre_id);
+      }
+
+      window.open(
+        `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
+        "_blank"
+      );
+
+    } catch (err) {
+
+      console.error(err);
+      message.error("Erro ao gerar PDF");
+
+    }
+
+  };
+
   return (
 
-    <div style={{ backgroundColor: "#f7f9fc", padding: 14 }}>
+    <div style={{ backgroundColor: "#f7f9fc", padding: 20 }}>
 
-      <div style={{ textAlign: "center", margin: "1px 0" }}>
-        <Title level={3} style={{ fontWeight: 500, margin: 10, color: "#093e5e" }}>
-          Grade Horária
-        </Title>
-      </div>
+      <Title
+        level={3}
+        style={{
+          textAlign: "center",
+          color: "#093e5e",
+          marginBottom: 16
+        }}
+      >
+        Grade Horária
+      </Title>
 
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 60,
+          marginBottom: 20,
         }}
       >
 
@@ -379,43 +379,64 @@ export default function GradeTabela() {
           Início
         </Button>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <Space>
 
-          <Button size="small" type="primary" onClick={salvarGrade}>
-            Salvar
-          </Button>
-
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: "1",
-                  label: "PDF do semestre",
-                  onClick: () => gerarPDF(false),
-                },
-                {
-                  key: "2",
-                  label: "PDF todos os semestres",
-                  onClick: () => gerarPDF(true),
-                },
-              ],
-            }}
-          >
-            <Button size="small">PDF</Button>
-          </Dropdown>
-
-          <Popconfirm
-            title="Tem certeza que deseja limpar?"
-            onConfirm={limparTudo}
-          >
-            <Button size="small" danger>
-              Limpar
+          <Card size="small">
+            <Button
+              size="small"
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={salvarGrade}
+            >
+              Salvar
             </Button>
-          </Popconfirm>
+          </Card>
 
-        </div>
+          <Card size="small">
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "1",
+                    icon: <FilePdfOutlined />,
+                    label: "PDF do semestre",
+                    onClick: () => gerarPDF(false),
+                  },
+                  {
+                    key: "2",
+                    icon: <FilePdfOutlined />,
+                    label: "PDF todos os semestres",
+                    onClick: () => gerarPDF(true),
+                  },
+                ],
+              }}
+            >
+              <Button size="small" icon={<FilePdfOutlined />}>
+                PDF
+              </Button>
+            </Dropdown>
+          </Card>
+
+          <Card size="small">
+            <Popconfirm
+              title="Tem certeza que deseja limpar?"
+              onConfirm={limparTudo}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<ClearOutlined />}
+              >
+                Limpar
+              </Button>
+            </Popconfirm>
+          </Card>
+
+        </Space>
 
       </div>
+
+      {/* FILTROS */}
 
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
 
@@ -502,7 +523,7 @@ export default function GradeTabela() {
         pagination={false}
         bordered
         scroll={{ x: "max-content" }}
-        style={{ background: "#ffffff", borderRadius: 4 }}
+        style={{ background: "#ffffff", borderRadius: 6 }}
         sticky
       />
 

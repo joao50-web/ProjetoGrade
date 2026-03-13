@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Layout, Menu, Typography } from "antd";
+import { Layout, Menu, Typography, Divider } from "antd";
 import {
   TeamOutlined,
   ApartmentOutlined,
@@ -14,14 +14,15 @@ const { Header, Sider, Content, Footer } = Layout;
 const { Text, Title } = Typography;
 
 export default function AppLayout({ children }) {
+
   const navigate = useNavigate();
   const location = useLocation();
-
   const [openKeys, setOpenKeys] = useState([]);
 
-  /* ================= DEFINIR SUBMENU ABERTO PELA ROTA ================= */
+  /* ================= SUBMENU ABERTO ================= */
 
   useEffect(() => {
+
     let keys = [];
 
     if (
@@ -41,11 +42,13 @@ export default function AppLayout({ children }) {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(keys);
+
   }, [location.pathname]);
 
-  /* ================= TÍTULO DINÂMICO ================= */
+  /* ================= TITULO PAGINA ================= */
 
   const currentPage = useMemo(() => {
+
     switch (location.pathname) {
       case "/home":
         return "Início";
@@ -64,21 +67,28 @@ export default function AppLayout({ children }) {
       default:
         return "";
     }
+
   }, [location.pathname]);
 
-  /* ================= MENU ITEMS ================= */
+  /* ================= MENU ================= */
 
   const menuItems = [
+
     {
       key: "/home",
-      icon: <HomeOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
-      label: <Text style={{ color: "#093e5e", fontSize: 13 }}>Início</Text>,
+      icon: <HomeOutlined style={{ fontSize: 14, color: "#374151" }} />,
+      label: <Text style={{ fontSize: 13 }}>Início</Text>,
     },
+
+    {
+      type: "divider",
+    },
+
     {
       key: "cadastro-admin",
-      icon: <TeamOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      icon: <TeamOutlined style={{ fontSize: 16, color: "#093e5e" }} />,
       label: (
-        <Text style={{ color: "#093e5e", fontSize: 13 }}>
+        <Text style={{ fontSize: 13, fontWeight: 600, color: "#093e5e" }}>
           Cadastro Administrativo
         </Text>
       ),
@@ -97,11 +107,12 @@ export default function AppLayout({ children }) {
         },
       ],
     },
+
     {
       key: "cadastro-academico",
-      icon: <ApartmentOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      icon: <ApartmentOutlined style={{ fontSize: 16, color: "#093e5e" }} />,
       label: (
-        <Text style={{ color: "#093e5e", fontSize: 13 }}>
+        <Text style={{ fontSize: 13, fontWeight: 600, color: "#093e5e" }}>
           Cadastro Acadêmico
         </Text>
       ),
@@ -116,20 +127,26 @@ export default function AppLayout({ children }) {
         },
       ],
     },
+
+    {
+      type: "divider",
+    },
+
     {
       key: "/grade-horaria",
-      icon: <CalendarOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
-      label: (
-        <Text style={{ color: "#093e5e", fontSize: 13 }}>Grade Horária</Text>
-      ),
+      icon: <CalendarOutlined style={{ fontSize: 14, color: "#374151" }} />,
+      label: <Text style={{ fontSize: 13 }}>Grade Horária</Text>,
     },
+
   ];
 
-  /* ================= CONTROLE SUBMENUS ================= */
+  /* ================= CONTROLE SUBMENU ================= */
 
   const onOpenChange = (keys) => {
+
     const latestKey = keys.find((key) => !openKeys.includes(key));
     setOpenKeys(latestKey ? [latestKey] : []);
+
   };
 
   /* ================= CLIQUE MENU ================= */
@@ -139,43 +156,51 @@ export default function AppLayout({ children }) {
   };
 
   return (
+
     <Layout style={{ minHeight: "100vh", backgroundColor: "#e8ebf0" }}>
+
       {/* HEADER */}
+
       <Header
         style={{
           backgroundColor: "#093e5e",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 20px",
+          padding: "0 10px",
           boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
           position: "relative",
           height: 60,
         }}
       >
-        <img src={logoBranco} alt="UFCSPA" style={{ height: 80 }} />
+
+        <img src={logoBranco} alt="UFCSPA" style={{ height: 70 }} />
 
         <div
           style={{
             position: "absolute",
             left: "50%",
-            top: 10,
+            top: 5,
             transform: "translateX(-50%)",
           }}
         >
-          <img src={logoCentral} alt="UFCSPA" style={{ height: 30 }} />
+          <img src={logoCentral} alt="UFCSPA" style={{ height: 25 }} />
         </div>
+
       </Header>
 
       <Layout>
+
         {/* SIDEBAR */}
+
         <Sider
-          width={200}
+          width={250}
           style={{
             backgroundColor: "#e1edf6",
             borderRight: "1px solid #d3dce6",
           }}
         >
+
           <Menu
             mode="inline"
             items={menuItems}
@@ -191,15 +216,18 @@ export default function AppLayout({ children }) {
               fontWeight: 500,
             }}
           />
+
         </Sider>
 
         {/* CONTEÚDO */}
+
         <Content
           style={{
             padding: "24px 48px",
             backgroundColor: "#e8ebf0",
           }}
         >
+
           <Title
             level={2}
             style={{
@@ -223,10 +251,13 @@ export default function AppLayout({ children }) {
           >
             {children}
           </div>
+
         </Content>
+
       </Layout>
 
       {/* FOOTER */}
+
       <Footer
         style={{
           backgroundColor: "#093e5e",
@@ -239,6 +270,7 @@ export default function AppLayout({ children }) {
         © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre
         (UFCSPA)
       </Footer>
+
     </Layout>
   );
-};
+}

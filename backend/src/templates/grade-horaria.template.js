@@ -37,34 +37,48 @@ body {
 
 .header {
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .logo {
-  width: 80px;
-  margin-bottom: 26px; /* Aumentei o espaçamento do logo */
+  width: 75px;
+  margin-bottom: 10px;
 }
 
 .header h1 {
   margin: 0;
-  margin-bottom: 10px; /* Espaço entre universidade e título */
+  font-size: 16px;
+  color: #093e5e;
+  font-weight: 600;
 }
 
 .header h2 {
-  margin: 10;
+  margin: 2px 0 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #093e5e;
 }
 
+/* ================= INFORMAÇÕES ================= */
+
 .info {
-  background: #eef3f8;
-  padding: 6px 12px;
-  margin-bottom: 16px;
-  border-left: 3px solid #093e5e;
+  background: #f4f7fb;
+  border: 1px solid #d9e2ec;
+  border-left: 4px solid #093e5e;
+  padding: 8px 12px;
+  margin-bottom: 18px;
+  border-radius: 4px;
 }
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 4px 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 20px;
+  font-size: 10px;
+}
+
+.info strong {
+  color: #093e5e;
 }
 
 /* ================= SEMESTRES ================= */
@@ -147,9 +161,12 @@ td.disciplina {
 /* ================= RODAPÉ ================= */
 
 footer {
+  margin-top: 18px;
+  padding-top: 6px;
+  border-top: 1px solid #cfd8e3;
   font-size: 8px;
+  color: #5a6b7c;
   text-align: center;
-  margin-top: 16px;
 }
 </style>
 </head>
@@ -158,6 +175,7 @@ footer {
 
 <div class="header">
   <img class="logo" src="data:image/png;base64,${logoBase64}" />
+
   <h1>${universidade}</h1>
   <h2>Grade Horária</h2>
 </div>
@@ -167,7 +185,7 @@ footer {
     <div><strong>Curso:</strong> ${curso}</div>
     <div><strong>Currículo:</strong> ${curriculo}</div>
     <div><strong>Ano Letivo:</strong> ${anoLetivo}</div>
-    <div><strong>Coordenação:</strong> ${coordenador || ''}</div>
+    <div><strong>Coordenação:</strong> ${coordenador || '-'}</div>
   </div>
 </div>
 
@@ -204,11 +222,14 @@ ${semestres.map(semestre => `
     `).join('')}
   </div>
   ` : ''}
+
 </div>
 `).join('')}
 
 <footer>
-  UFCSPA - Universidade Federal de Ciências da Saúde de Porto Alegre
+  Sistema de Gestão Acadêmica • UFCSPA
+  <br>
+  Universidade Federal de Ciências da Saúde de Porto Alegre
 </footer>
 
 </body>
