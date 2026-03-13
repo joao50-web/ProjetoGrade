@@ -1,5 +1,5 @@
 const {
- 
+  Curso,
   GradeHoraria,
   Disciplina,
   Pessoa,

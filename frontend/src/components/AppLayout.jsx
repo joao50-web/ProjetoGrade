@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Layout, Menu, Typography } from "antd";
 import {
   TeamOutlined,
@@ -17,10 +17,34 @@ export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const rootSubmenuKeys = ["cadastro-admin", "cadastro-academico"];
-  const [openKeys, setOpenKeys] = useState(rootSubmenuKeys);
+  const [openKeys, setOpenKeys] = useState([]);
+
+  /* ================= DEFINIR SUBMENU ABERTO PELA ROTA ================= */
+
+  useEffect(() => {
+    let keys = [];
+
+    if (
+      location.pathname === "/pessoas" ||
+      location.pathname === "/usuarios" ||
+      location.pathname === "/cargos"
+    ) {
+      keys = ["cadastro-admin"];
+    }
+
+    if (
+      location.pathname === "/cursos" ||
+      location.pathname === "/disciplinas"
+    ) {
+      keys = ["cadastro-academico"];
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpenKeys(keys);
+  }, [location.pathname]);
 
   /* ================= TÍTULO DINÂMICO ================= */
+
   const currentPage = useMemo(() => {
     switch (location.pathname) {
       case "/home":
@@ -42,18 +66,81 @@ export default function AppLayout({ children }) {
     }
   }, [location.pathname]);
 
+  /* ================= MENU ITEMS ================= */
+
+  const menuItems = [
+    {
+      key: "/home",
+      icon: <HomeOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      label: <Text style={{ color: "#093e5e", fontSize: 13 }}>Início</Text>,
+    },
+    {
+      key: "cadastro-admin",
+      icon: <TeamOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      label: (
+        <Text style={{ color: "#093e5e", fontSize: 13 }}>
+          Cadastro Administrativo
+        </Text>
+      ),
+      children: [
+        {
+          key: "/pessoas",
+          label: <Text style={{ fontSize: 13 }}>Pessoas</Text>,
+        },
+        {
+          key: "/usuarios",
+          label: <Text style={{ fontSize: 13 }}>Usuários</Text>,
+        },
+        {
+          key: "/cargos",
+          label: <Text style={{ fontSize: 13 }}>Cargos</Text>,
+        },
+      ],
+    },
+    {
+      key: "cadastro-academico",
+      icon: <ApartmentOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      label: (
+        <Text style={{ color: "#093e5e", fontSize: 13 }}>
+          Cadastro Acadêmico
+        </Text>
+      ),
+      children: [
+        {
+          key: "/cursos",
+          label: <Text style={{ fontSize: 13 }}>Cursos</Text>,
+        },
+        {
+          key: "/disciplinas",
+          label: <Text style={{ fontSize: 13 }}>Disciplinas</Text>,
+        },
+      ],
+    },
+    {
+      key: "/grade-horaria",
+      icon: <CalendarOutlined style={{ color: "#093e5e", fontSize: 12 }} />,
+      label: (
+        <Text style={{ color: "#093e5e", fontSize: 13 }}>Grade Horária</Text>
+      ),
+    },
+  ];
+
+  /* ================= CONTROLE SUBMENUS ================= */
+
   const onOpenChange = (keys) => {
-    const latest = keys.find((k) => !openKeys.includes(k));
-    if (rootSubmenuKeys.includes(latest)) {
-      setOpenKeys([latest]);
-    } else {
-      setOpenKeys([]);
-    }
+    const latestKey = keys.find((key) => !openKeys.includes(key));
+    setOpenKeys(latestKey ? [latestKey] : []);
+  };
+
+  /* ================= CLIQUE MENU ================= */
+
+  const handleMenuClick = ({ key }) => {
+    navigate(key);
   };
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#e8ebf0" }}>
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <Header
         style={{
           backgroundColor: "#093e5e",
@@ -62,84 +149,40 @@ export default function AppLayout({ children }) {
           justifyContent: "space-between",
           padding: "0 20px",
           boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-          position: "relative", // necessário para o absolute funcionar
-          height: 60, // ajuste a altura do header conforme precisar
+          position: "relative",
+          height: 60,
         }}
       >
-        {/* Logo à esquerda */}
         <img src={logoBranco} alt="UFCSPA" style={{ height: 80 }} />
 
-        {/* Logo centralizado */}
         <div
           style={{
             position: "absolute",
             left: "50%",
-            top: 10, // <--- aqui você controla para cima ou para baixo
+            top: 10,
             transform: "translateX(-50%)",
           }}
         >
           <img src={logoCentral} alt="UFCSPA" style={{ height: 30 }} />
         </div>
-
-        {/* Elemento à direita se precisar */}
       </Header>
 
       <Layout>
-     {/* ================= SIDEBAR ================= */}
-<Sider
-  width={200}
-  style={{
-    backgroundColor: "#e1edf6",
-    borderRight: "1px solid #d3dce6",
-  }}
->
-  {/* ESTILOS DE HOVER E SELEÇÃO */}
-  <style>
-    {`
-      /* HOVER */
-      .ant-menu-item:hover,
-      .ant-menu-submenu-title:hover {
-        background-color: #4e6479 !important;
-        color: #ffffff !important;
-      }
-
-      .ant-menu-item:hover a,
-      .ant-menu-item:hover span,
-      .ant-menu-submenu-title:hover a,
-      .ant-menu-submenu-title:hover span {
-        color: #ffffff !important;
-      }
-
-      .ant-menu-item:hover .anticon,
-      .ant-menu-submenu-title:hover .anticon {
-        color: #ffffff !important;
-      }
-
-      /* ITEM SELECIONADO */
-      .ant-menu-item-selected {
-        background-color: #4b5e70 !important;
-        
-      }
-
-      .ant-menu-item-selected a,
-      .ant-menu-item-selected span,
-      .ant-menu-item-selected .anticon {
-        color: #ffffff !important;
-        font-weight: 600;
-      }
-
-      .ant-menu-item-selected::after {
-        border-right: 3px solid #093e5e;
-      }
-    `}
-    
-  </style>
+        {/* SIDEBAR */}
+        <Sider
+          width={200}
+          style={{
+            backgroundColor: "#e1edf6",
+            borderRight: "1px solid #d3dce6",
+          }}
+        >
           <Menu
             mode="inline"
+            items={menuItems}
             selectedKeys={[location.pathname]}
             openKeys={openKeys}
             onOpenChange={onOpenChange}
-            onClick={({ key }) => navigate(key)}
+            onClick={handleMenuClick}
             style={{
               backgroundColor: "#e1edf6",
               height: "100%",
@@ -147,81 +190,16 @@ export default function AppLayout({ children }) {
               paddingTop: 16,
               fontWeight: 500,
             }}
-            theme="light"
-          >
-            {/* INÍCIO */}
-            <Menu.Item
-              key="/home"
-              icon={<HomeOutlined style={{ color: "#093e5e", fontSize: 12 }} />}
-            >
-              <Text style={{ color: "#093e5e", fontSize: 13 }}>Início</Text>
-            </Menu.Item>
-
-            {/* CADASTRO ADMINISTRATIVO */}
-            <Menu.SubMenu
-              key="cadastro-admin"
-              icon={<TeamOutlined style={{ color: "#093e5e", fontSize: 12 }} />}
-              title={
-                <Text style={{ color: "#093e5e", fontSize: 13 }}>
-                  Cadastro Administrativo
-                </Text>
-              }
-            >
-              <Menu.Item key="/pessoas">
-                <Text style={{ color: "#1e293b", fontSize: 13 }}>Pessoas</Text>
-              </Menu.Item>
-              <Menu.Item key="/usuarios">
-                <Text style={{ color: "#1e293b", fontSize: 13 }}>Usuários</Text>
-              </Menu.Item>
-              <Menu.Item key="/cargos">
-                <Text style={{ color: "#1e293b", fontSize: 13 }}>Cargos</Text>
-              </Menu.Item>
-            </Menu.SubMenu>
-
-            {/* CADASTRO ACADÊMICO */}
-            <Menu.SubMenu
-              key="cadastro-academico"
-              icon={
-                <ApartmentOutlined style={{ color: "#093e5e", fontSize: 12 }} />
-              }
-              title={
-                <Text style={{ color: "#093e5e", fontSize: 13 }}>
-                  Cadastro Acadêmico
-                </Text>
-              }
-            >
-              <Menu.Item key="/cursos">
-                <Text style={{ color: "#1e293b", fontSize: 13 }}>Cursos</Text>
-              </Menu.Item>
-              <Menu.Item key="/disciplinas">
-                <Text style={{ color: "#1e293b", fontSize: 13 }}>
-                  Disciplinas
-                </Text>
-              </Menu.Item>
-            </Menu.SubMenu>
-
-            {/* GRADE HORÁRIA */}
-            <Menu.Item
-              key="/grade-horaria"
-              icon={
-                <CalendarOutlined style={{ color: "#093e5e", fontSize: 12 }} />
-              }
-            >
-              <Text style={{ color: "#093e5e", fontSize: 13 }}>
-                Grade Horária
-              </Text>
-            </Menu.Item>
-          </Menu>
+          />
         </Sider>
 
-        {/* ================= CONTEÚDO ================= */}
+        {/* CONTEÚDO */}
         <Content
           style={{
             padding: "24px 48px",
             backgroundColor: "#e8ebf0",
           }}
         >
-          {/* TÍTULO */}
           <Title
             level={2}
             style={{
@@ -229,13 +207,11 @@ export default function AppLayout({ children }) {
               color: "#093e5e",
               fontSize: 24,
               fontWeight: 600,
-              letterSpacing: 0.2,
             }}
           >
             {currentPage}
           </Title>
 
-          {/* CONTAINER CENTRAL */}
           <div
             style={{
               backgroundColor: "#ffffff",
@@ -250,7 +226,7 @@ export default function AppLayout({ children }) {
         </Content>
       </Layout>
 
-      {/* ================= FOOTER ================= */}
+      {/* FOOTER */}
       <Footer
         style={{
           backgroundColor: "#093e5e",
@@ -265,4 +241,4 @@ export default function AppLayout({ children }) {
       </Footer>
     </Layout>
   );
-}
+};

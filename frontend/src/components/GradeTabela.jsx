@@ -5,7 +5,6 @@ import {
   Typography,
   Row,
   Col,
-  Input,
   Button,
   message,
   Dropdown,
@@ -27,6 +26,7 @@ const headerStyle = {
 };
 
 export default function GradeTabela() {
+
   const navigate = useNavigate();
 
   const [cursos, setCursos] = useState([]);
@@ -36,70 +36,94 @@ export default function GradeTabela() {
   const [dias, setDias] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
 
+  const [gradeDraft, setGradeDraft] = useState([]);
+
   const [contexto, setContexto] = useState({
     curso_id: null,
     coordenador_id: null,
     semestre_id: null,
+    ano: null,
+    curriculo: null,
   });
 
-  const [anoInput, setAnoInput] = useState("");
-  const [curriculoInput, setCurriculoInput] = useState("");
-  const [gradeDraft, setGradeDraft] = useState([]);
+  /* ================= GERAR ANOS ================= */
+
+  const anos = [];
+  for (let ano = 2020; ano <= 2040; ano++) {
+    anos.push({ value: `${ano}/1`, label: `${ano}/1` });
+    anos.push({ value: `${ano}/2`, label: `${ano}/2` });
+  }
+
+  /* ================= GERAR CURRICULOS ================= */
+
+  const curriculos = [];
+  for (let ano = 2020; ano <= 2040; ano++) {
+    curriculos.push({ value: `${ano}`, label: `${ano}` });
+  }
 
   /* ================= LOAD GRADE ================= */
 
   useEffect(() => {
-    const { curso_id, semestre_id } = contexto;
 
-    if (!curso_id || !semestre_id || !anoInput || !curriculoInput) return;
+    const { curso_id, semestre_id, ano, curriculo } = contexto;
+
+    if (!curso_id || !semestre_id || !ano || !curriculo) return;
 
     async function carregarGrade() {
+
       try {
-        const ano = await api.post("/anos/get-or-create", {
-          descricao: anoInput,
+
+        const anoRes = await api.post("/anos/get-or-create", {
+          descricao: ano,
         });
 
-        const curriculo = await api.post("/curriculos/get-or-create", {
-          descricao: curriculoInput,
+        const curriculoRes = await api.post("/curriculos/get-or-create", {
+          descricao: curriculo,
         });
 
         const res = await api.get("/grade-horaria", {
           params: {
             curso_id,
             semestre_id,
-            ano_id: ano.data.id,
-            curriculo_id: curriculo.data.id,
+            ano_id: anoRes.data.id,
+            curriculo_id: curriculoRes.data.id,
           },
         });
 
         setGradeDraft(res.data || []);
+
       } catch {
+
         message.error("Erro ao carregar grade");
+
       }
+
     }
 
     carregarGrade();
-  }, [contexto, anoInput, curriculoInput]);
+
+  }, [contexto]);
 
   /* ================= LOAD FIXOS ================= */
 
   useEffect(() => {
+
     api.get("/cursos").then((r) => setCursos(r.data));
     api.get("/pessoas/coordenadores").then((r) => setCoordenadores(r.data));
     api.get("/semestres").then((r) => setSemestres(r.data));
     api.get("/horarios").then((r) => setHorarios(r.data));
     api.get("/dias-semana").then((r) => setDias(r.data));
+
   }, []);
 
   /* ================= LOAD DISCIPLINAS ================= */
 
   useEffect(() => {
+
     if (!contexto.curso_id) return;
 
     api.get(`/cursos/${contexto.curso_id}/disciplinas`)
       .then((r) => {
-
-        console.log("DISCIPLINAS API:", r.data);
 
         const lista = Array.isArray(r.data)
           ? r.data
@@ -112,13 +136,17 @@ export default function GradeTabela() {
         }));
 
         setDisciplinas(disciplinasCorrigidas);
+
       });
+
   }, [contexto.curso_id]);
 
   /* ================= SLOT ================= */
 
   const updateSlot = (payload) => {
+
     setGradeDraft((prev) => {
+
       const copy = [...prev];
 
       const idx = copy.findIndex(
@@ -131,28 +159,33 @@ export default function GradeTabela() {
       else copy.push(payload);
 
       return copy;
+
     });
+
   };
 
   /* ================= LIMPAR ================= */
 
   const limparTudo = () => {
+
     setGradeDraft([]);
-    setAnoInput("");
-    setCurriculoInput("");
 
     setContexto({
       curso_id: null,
       coordenador_id: null,
       semestre_id: null,
+      ano: null,
+      curriculo: null,
     });
 
     message.info("Grade e filtros limpos");
+
   };
 
   /* ================= COLUNAS ================= */
 
   const columns = [
+
     {
       title: "Horário",
       dataIndex: "horario",
@@ -164,6 +197,7 @@ export default function GradeTabela() {
     },
 
     ...dias.map((d) => ({
+
       title: d.descricao,
       width: 170,
       align: "center",
@@ -171,47 +205,54 @@ export default function GradeTabela() {
 
       render: (_, record) => {
 
-  const cell = gradeDraft.find(
-    (g) =>
-      g.horario_id === record.horario_id &&
-      g.dia_semana_id === d.id
-  );
+        const cell = gradeDraft.find(
+          (g) =>
+            g.horario_id === record.horario_id &&
+            g.dia_semana_id === d.id
+        );
 
-  const disciplinaId = cell?.disciplina_id ?? undefined;
+        const disciplinaId = cell?.disciplina_id ?? undefined;
 
-  const disciplina = disciplinas.find(
-    (disc) => disc.id === disciplinaId
-  );
+        const disciplina = disciplinas.find(
+          (disc) => disc.id === disciplinaId
+        );
 
-  return (
-    <Select
-      size="small"
-      allowClear
-      style={{ width: "100%" }}
-      value={disciplinaId}
+        return (
 
-      onChange={(disciplina_id) => {
-        updateSlot({
-          horario_id: record.horario_id,
-          dia_semana_id: d.id,
-          disciplina_id: disciplina_id || null,
-        });
-      }}
+          <Select
+            size="small"
+            allowClear
+            style={{ width: "100%" }}
+            value={disciplinaId}
 
-      options={disciplinas.map((disc) => ({
-        value: disc.id,
-        label: `${disc.codigo} - ${disc.nome}`,
-      }))}
+            onChange={(disciplina_id) => {
 
-      placeholder={
-        disciplina
-          ? `${disciplina.codigo} - ${disciplina.nome}`
-          : "Selecionar"
+              updateSlot({
+                horario_id: record.horario_id,
+                dia_semana_id: d.id,
+                disciplina_id: disciplina_id || null,
+              });
+
+            }}
+
+            options={disciplinas.map((disc) => ({
+              value: disc.id,
+              label: `${disc.codigo} - ${disc.nome}`,
+            }))}
+
+            placeholder={
+              disciplina
+                ? `${disciplina.codigo} - ${disciplina.nome}`
+                : "Selecionar"
+            }
+          />
+
+        );
+
       }
-    />
-  );
-}
-    })),
+
+    }))
+
   ];
 
   const dataSource = horarios.map((h) => ({
@@ -223,21 +264,31 @@ export default function GradeTabela() {
   /* ================= SALVAR ================= */
 
   const salvarGrade = async () => {
+
+    const { curso_id, semestre_id, ano, curriculo } = contexto;
+
+    if (!curso_id || !semestre_id || !ano || !curriculo) {
+      message.warning("Preencha curso, semestre, ano e currículo");
+      return;
+    }
+
     try {
 
-      const ano = await api.post("/anos/get-or-create", {
-        descricao: anoInput,
+      const anoRes = await api.post("/anos/get-or-create", {
+        descricao: ano,
       });
 
-      const curr = await api.post("/curriculos/get-or-create", {
-        descricao: curriculoInput,
+      const currRes = await api.post("/curriculos/get-or-create", {
+        descricao: curriculo,
       });
 
       await api.post("/grade-horaria/save", {
         contexto: {
-          ...contexto,
-          ano_id: ano.data.id,
-          curriculo_id: curr.data.id,
+          curso_id,
+          coordenador_id: contexto.coordenador_id,
+          semestre_id,
+          ano_id: anoRes.data.id,
+          curriculo_id: currRes.data.id,
         },
         slots: gradeDraft,
       });
@@ -245,36 +296,69 @@ export default function GradeTabela() {
       message.success("Grade salva com sucesso");
 
     } catch {
+
       message.error("Erro ao salvar a grade");
+
     }
+
   };
 
   /* ================= PDF ================= */
 
-  const gerarPDF = async (todos) => {
+ const gerarPDF = async (todos) => {
 
-    const ano = await api.post("/anos/get-or-create", { descricao: anoInput });
+  const { curso_id, semestre_id, ano, curriculo } = contexto;
 
-    const curr = await api.post("/curriculos/get-or-create", {
-      descricao: curriculoInput,
+  if (!curso_id || !ano || !curriculo) {
+    message.warning("Selecione curso, ano e currículo");
+    return;
+  }
+
+  try {
+
+    // busca ou cria ano
+    const anoRes = await api.post("/anos/get-or-create", {
+      descricao: ano,
+    });
+
+    // busca ou cria currículo
+    const currRes = await api.post("/curriculos/get-or-create", {
+      descricao: curriculo,
     });
 
     const params = new URLSearchParams({
-      curso_id: contexto.curso_id,
-      ano_id: ano.data.id,
-      curriculo_id: curr.data.id,
+      curso_id,
+      ano_id: anoRes.data.id,
+      curriculo_id: currRes.data.id,
     });
 
-    if (todos) params.append("todos", "true");
-    else params.append("semestre_id", contexto.semestre_id);
+    if (todos) {
+      params.append("todos", "true");
+    } else {
+
+      if (!semestre_id) {
+        message.warning("Selecione o semestre");
+        return;
+      }
+
+      params.append("semestre_id", semestre_id);
+    }
 
     window.open(
       `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
       "_blank"
     );
-  };
 
+  } catch (err) {
+
+    console.error(err);
+    message.error("Erro ao gerar PDF");
+
+  }
+
+};
   return (
+
     <div style={{ backgroundColor: "#f7f9fc", padding: 14 }}>
 
       <div style={{ textAlign: "center", margin: "1px 0" }}>
@@ -291,10 +375,7 @@ export default function GradeTabela() {
         }}
       >
 
-        <Button
-          icon={<HomeOutlined />}
-          onClick={() => navigate("/home")}
-        >
+        <Button icon={<HomeOutlined />} onClick={() => navigate("/home")}>
           Início
         </Button>
 
@@ -333,6 +414,7 @@ export default function GradeTabela() {
           </Popconfirm>
 
         </div>
+
       </div>
 
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
@@ -371,10 +453,14 @@ export default function GradeTabela() {
 
         <Col md={4}>
           <strong>Ano</strong>
-          <Input
+          <Select
             size="small"
-            value={anoInput}
-            onChange={(e) => setAnoInput(e.target.value)}
+            style={{ width: "100%" }}
+            value={contexto.ano}
+            options={anos}
+            onChange={(v) =>
+              setContexto((c) => ({ ...c, ano: v }))
+            }
           />
         </Col>
 
@@ -396,10 +482,14 @@ export default function GradeTabela() {
 
         <Col md={4}>
           <strong>Currículo</strong>
-          <Input
+          <Select
             size="small"
-            value={curriculoInput}
-            onChange={(e) => setCurriculoInput(e.target.value)}
+            style={{ width: "100%" }}
+            value={contexto.curriculo}
+            options={curriculos}
+            onChange={(v) =>
+              setContexto((c) => ({ ...c, curriculo: v }))
+            }
           />
         </Col>
 
