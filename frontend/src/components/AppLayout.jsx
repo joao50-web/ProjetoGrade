@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Layout, Menu, Typography } from "antd";
+import { Layout, Menu, Typography, Button } from "antd";
 import {
   TeamOutlined,
   ApartmentOutlined,
@@ -8,7 +8,9 @@ import {
   UserOutlined,
   IdcardOutlined,
   BookOutlined,
+  LogoutOutlined
 } from "@ant-design/icons";
+
 import { useNavigate, useLocation } from "react-router-dom";
 
 import logoBranco from "../imagens/logo_branco.png";
@@ -22,6 +24,13 @@ export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openKeys, setOpenKeys] = useState([]);
+
+  /* ================= LOGOUT ================= */
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   /* ================= CONTROLE SUBMENU ================= */
 
@@ -158,11 +167,14 @@ export default function AppLayout({ children }) {
           justifyContent: "space-between",
           padding: "0 20px",
           height: 64,
+          position: "relative"
         }}
       >
 
+        {/* Logo esquerda */}
         <img src={logoBranco} alt="UFCSPA" style={{ height: 58 }} />
 
+        {/* Logo central */}
         <div
           style={{
             position: "absolute",
@@ -172,6 +184,20 @@ export default function AppLayout({ children }) {
         >
           <img src={logoCentral} alt="UFCSPA" style={{ height: 28 }} />
         </div>
+
+        {/* BOTÃO SAIR */}
+        <Button
+          type="text"
+          icon={<LogoutOutlined />}
+          onClick={handleLogout}
+          style={{
+            color: "#ffffff",
+            fontWeight: 500,
+            fontSize: 14
+          }}
+        >
+          Sair
+        </Button>
 
       </Header>
 

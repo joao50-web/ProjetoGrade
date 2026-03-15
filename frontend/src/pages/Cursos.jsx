@@ -33,6 +33,7 @@ const headerCellStyle = {
   textAlign: 'center'
 };
 
+
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);

@@ -33,7 +33,7 @@ const headerStyle = {
   fontSize: 14,
   textAlign: "center",
 };
-
+  
 export default function GradeTabela() {
 
   const navigate = useNavigate();

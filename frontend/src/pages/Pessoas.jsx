@@ -1,6 +1,3 @@
-
-
-
 import { useEffect, useState } from 'react';
 import {
   Table,
@@ -42,6 +39,7 @@ const headerCellStyle = {
   fontSize: 14,
   textAlign: 'center'
 };
+
 
 export default function Pessoas() {
   const [pessoas, setPessoas] = useState([]);

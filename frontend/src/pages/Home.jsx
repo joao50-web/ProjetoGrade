@@ -2,7 +2,7 @@ import { Card, Button, Typography, Space, Divider } from 'antd';
 import {
   TeamOutlined,
   ApartmentOutlined,
-  CalendarOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import HomeLayout from '../components/HomeLayout';
@@ -14,11 +14,12 @@ export default function Home() {
 
   return (
     <HomeLayout>
-      {/* CABEÇALHO INSTITUCIONAL */}
+
       <div style={{ marginBottom: 28 }}>
         <Title level={2} style={{ marginBottom: 4, color: '#093e5e' }}>
           Sistema de Gestão Acadêmica
         </Title>
+
         <Text type="secondary">
           Universidade Federal de Ciências da Saúde de Porto Alegre
         </Text>
@@ -26,13 +27,13 @@ export default function Home() {
 
       <Divider />
 
-      {/* MÓDULOS */}
       <Space size={32} wrap style={{ marginTop: 14 }}>
+
         <Card
           style={{
             width: 350,
             borderRadius: 8,
-            border: '1px solid #000000',
+            border: '1px solid #000000'
           }}
         >
           <Space direction="vertical" size={12}>
@@ -53,7 +54,7 @@ export default function Home() {
           style={{
             width: 320,
             borderRadius: 8,
-            border: '1px solid #000000',
+            border: '1px solid #000000'
           }}
         >
           <Space direction="vertical" size={12}>
@@ -74,7 +75,7 @@ export default function Home() {
           style={{
             width: 320,
             borderRadius: 8,
-            border: '1px solid #000000',
+            border: '1px solid #000000'
           }}
         >
           <Space direction="vertical" size={12}>
@@ -90,7 +91,9 @@ export default function Home() {
             </Button>
           </Space>
         </Card>
+
       </Space>
+
     </HomeLayout>
   );
 }
