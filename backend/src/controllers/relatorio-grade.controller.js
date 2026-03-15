@@ -14,6 +14,7 @@ const {
 
 exports.gerarPDF = async (req, res) => {
   try {
+
     const { curso_id, ano_id, curriculo_id, semestre_id, todos } = req.query;
 
     if (!curso_id || !ano_id || !curriculo_id) {
@@ -45,6 +46,7 @@ exports.gerarPDF = async (req, res) => {
         {
           model: Disciplina,
           as: 'disciplina',
+          attributes: ['id', 'codigo', 'nome'],
           required: false
         },
         {
@@ -74,11 +76,13 @@ exports.gerarPDF = async (req, res) => {
     if (todos === 'true') {
       semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
     } else {
+
       if (!semestre_id) {
         return res.status(400).json({
           error: 'semestre_id é obrigatório quando todos=false'
         });
       }
+
       const sem = await Semestre.findByPk(semestre_id);
       if (sem) semestres = [sem];
     }
@@ -86,28 +90,33 @@ exports.gerarPDF = async (req, res) => {
     /* ================= MONTAGEM FINAL ================= */
 
     const semestresRender = semestres.map(sem => {
+
       const registrosSemestre = grades.filter(
         g => g.semestre_id === sem.id
       );
 
       const linhas = horarios.map(h => {
+
         const celulas = dias.map(d => {
+
           const slot = registrosSemestre.find(
             g =>
               g.horario_id === h.id &&
               g.dia_semana_id === d.id
           );
 
-          if (!slot) return '';
+          if (!slot || !slot.disciplina) return '';
 
-          // ✅ AGORA É SOMENTE DISCIPLINA
-          return slot.disciplina?.nome || '';
+          // ✅ AGORA MOSTRA CÓDIGO + NOME
+          return `${slot.disciplina.codigo} - ${slot.disciplina.nome}`;
+
         });
 
         return {
           horario: h.descricao,
           celulas
         };
+
       });
 
       return {
@@ -115,6 +124,7 @@ exports.gerarPDF = async (req, res) => {
         dias: dias.map(d => d.descricao),
         linhas
       };
+
     });
 
     /* ================= TEMPLATE ================= */
@@ -123,7 +133,7 @@ exports.gerarPDF = async (req, res) => {
       universidade: 'Universidade Federal de Ciências da Saúde',
       curso: curso.nome,
       curriculo: curriculo.descricao,
-      coordenador: '', // removido
+      coordenador: '',
       anoLetivo: ano.descricao,
       semestres: semestresRender
     });
@@ -139,7 +149,12 @@ exports.gerarPDF = async (req, res) => {
     return res.end(pdf);
 
   } catch (error) {
+
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao gerar PDF' });
+
+    return res.status(500).json({
+      error: 'Erro ao gerar PDF'
+    });
+
   }
 };

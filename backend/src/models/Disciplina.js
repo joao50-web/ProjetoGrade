@@ -20,7 +20,8 @@ const Disciplina = sequelize.define('Tb_Disciplina', {
   }
 
 }, {
-  tableName: 'Tb_Disciplina'
+  tableName: 'Tb_Disciplina',
+  timestamps: false
 });
 
 module.exports = Disciplina;

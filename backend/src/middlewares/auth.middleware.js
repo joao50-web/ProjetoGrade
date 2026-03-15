@@ -1,16 +1,15 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
+
   const authHeader = req.headers.authorization;
 
-  // 1️⃣ Token existe?
   if (!authHeader) {
     return res.status(401).json({
       error: 'Token não informado'
     });
   }
 
-  // Esperado: "Bearer TOKEN"
   const parts = authHeader.split(' ');
 
   if (parts.length !== 2) {
@@ -27,19 +26,9 @@ module.exports = (req, res, next) => {
     });
   }
 
-  // 2️⃣ Validar token
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    /*
-      decoded esperado:
-      {
-        id: usuario_id,
-        role: 'administrador' | 'edicao' | 'visualizacao',
-        iat,
-        exp
-      }
-    */
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.user = {
       id: decoded.id,
@@ -47,9 +36,12 @@ module.exports = (req, res, next) => {
     };
 
     return next();
+
   } catch (err) {
+
     return res.status(401).json({
       error: 'Token inválido ou expirado'
     });
+
   }
 };
