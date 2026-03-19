@@ -13,8 +13,8 @@ exports.findAll = async (req, res) => {
       {
         model: Disciplina,
         as: 'disciplinas',
-        attributes: ['id'],          // só o necessário
-        through: { attributes: [] }  // limpa a resposta
+        attributes: ['id', 'codigo', 'nome'], // agora inclui o código e nome
+        through: { attributes: [] }
       }
     ]
   });

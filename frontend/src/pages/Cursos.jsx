@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Table,
   Button,
@@ -8,76 +8,85 @@ import {
   Popconfirm,
   message,
   Space,
-  Badge
-} from 'antd';
+  Badge,
+  Pagination,
+} from "antd";
 
 import {
   EditOutlined,
   DeleteOutlined,
   BookOutlined,
   PlusOutlined,
-  SearchOutlined
-} from '@ant-design/icons';
+  SearchOutlined,
+} from "@ant-design/icons";
 
-import { useNavigate } from 'react-router-dom';
-import AppLayout from '../components/AppLayout';
-import { api } from '../services/api';
+import { useNavigate } from "react-router-dom";
+import AppLayout from "../components/AppLayout";
+import { api } from "../services/api";
 
 /* ================= ESTILO DO HEADER ================= */
 const headerCellStyle = {
-  backgroundColor: '#093e5e',
-  color: '#ffffff',
+  backgroundColor: "#093e5e",
+  color: "#ffffff",
   fontWeight: 600,
-  padding: '3px 16px',
+  padding: "3px 16px",
   fontSize: 14,
-  textAlign: 'center'
+  textAlign: "center",
 };
 
+/* ================= QTD DE ITENS POR PÁGINA NA LISTA INTERNA ================= */
+const PAGE_SIZE = 5;
 
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [form] = Form.useForm();
-
   const navigate = useNavigate();
 
   /* ================= LOAD ================= */
   const load = async () => {
     try {
-      const res = await api.get('/cursos');
-      setCursos(res.data);
+      const res = await api.get("/cursos");
+      // Adiciona estado de paginação interna para cada curso
+      const data = res.data.map((c) => ({ ...c, currentPage: 1 }));
+      setCursos(data);
     } catch {
-      message.error('Erro ao carregar cursos');
+      message.error("Erro ao carregar cursos");
     }
   };
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, []);
 
   /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
-      editing
-        ? await api.put(`/cursos/${editing.id}`, values)
-        : await api.post('/cursos', values);
-
-      message.success(editing ? 'Curso atualizado' : 'Curso criado');
+      if (editing) {
+        await api.put(`/cursos/${editing.id}`, values);
+        message.success("Curso atualizado");
+      } else {
+        await api.post("/cursos", values);
+        message.success("Curso criado");
+      }
       closeModal();
       load();
     } catch {
-      message.error('Erro ao salvar curso');
+      message.error("Erro ao salvar curso");
     }
   };
 
   const remove = async (id) => {
     try {
       await api.delete(`/cursos/${id}`);
-      message.success('Curso removido');
+      message.success("Curso removido");
       load();
     } catch {
-      message.error('Erro ao excluir curso');
+      message.error("Erro ao excluir curso");
     }
   };
 
@@ -94,18 +103,113 @@ export default function Cursos() {
   };
 
   /* ================= FILTRO ================= */
-  const filtered = cursos.filter(c =>
-    c.nome?.toLowerCase().includes(search.toLowerCase())
+  const filtered = cursos.filter((c) =>
+    c.nome?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  /* ================= PAGINAÇÃO INTERNA ================= */
+  const handlePageChange = (cursoId, page) => {
+    setCursos((prev) =>
+      prev.map((c) => (c.id === cursoId ? { ...c, currentPage: page } : c)),
+    );
+  };
+
+  /* ================= COLUNAS ================= */
+  const columns = [
+    {
+      title: "Nome",
+      dataIndex: "nome",
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (text) => (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>{text}</span>
+      ),
+    },
+    {
+      title: "Disciplinas",
+      dataIndex: "disciplinas",
+      align: "left",
+      width: 300,
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (disciplinas = [], record) => {
+        const start = (record.currentPage - 1) * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        const pageItems = disciplinas.slice(start, end);
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Badge
+              count={disciplinas.length}
+              showZero
+              style={{
+                backgroundColor: "#093e5e",
+                fontSize: 13,
+                marginBottom: 2,
+              }}
+            />
+            {pageItems.map((d) => (
+              <span key={d.id} style={{ fontSize: 12 }}>
+                {d.codigo} - {d.nome}
+              </span>
+            ))}
+            {disciplinas.length > PAGE_SIZE && (
+              <Pagination
+                size="small"
+                simple
+                current={record.currentPage}
+                pageSize={PAGE_SIZE}
+                total={disciplinas.length}
+                onChange={(page) => handlePageChange(record.id, page)}
+                style={{ marginTop: 2, textAlign: "center" }}
+              />
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: "Ações",
+      align: "center",
+      width: 300,
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (_, r) => (
+        <Space size={14}>
+          <Button
+            icon={<BookOutlined />}
+            onClick={() => navigate(`/cursos/${r.id}/disciplinas`)}
+            style={{ borderRadius: 6 }}
+          >
+            Disciplinas
+          </Button>
+
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => edit(r)}
+            style={{ borderRadius: 6 }}
+          />
+
+          <Popconfirm
+            title="Excluir este curso?"
+            onConfirm={() => remove(r.id)}
+          >
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              style={{ borderRadius: 6 }}
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <AppLayout>
       {/* ================= TOPO ================= */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 16,
         }}
       >
         <Input
@@ -113,9 +217,8 @@ export default function Cursos() {
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 260 }}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
         />
-
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -132,76 +235,12 @@ export default function Cursos() {
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        columns={[
-          {
-            title: 'Nome',
-            dataIndex: 'nome',
-            onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <span style={{ fontSize: 15, fontWeight: 500 }}>
-                {text}
-              </span>
-            )
-          },
-          {
-            title: 'Disciplinas',
-            dataIndex: 'disciplinas',
-            align: 'center',
-            width: 160,
-            onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (disciplinas = []) => (
-              <Badge
-                count={disciplinas.length}
-                showZero
-                style={{
-                  backgroundColor: '#093e5e',
-                  fontSize: 15
-                }}
-              />
-            )
-          },
-          {
-            title: 'Ações',
-            align: 'center',
-            width: 300,
-            onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => (
-              <Space size={14}>
-                <Button
-                  icon={<BookOutlined />}
-                  onClick={() =>
-                    navigate(`/cursos/${r.id}/disciplinas`)
-                  }
-                  style={{ borderRadius: 6 }}
-                >
-                  Disciplinas
-                </Button>
-
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={() => edit(r)}
-                  style={{ borderRadius: 6 }}
-                />
-
-                <Popconfirm
-                  title="Excluir este curso?"
-                  onConfirm={() => remove(r.id)}
-                >
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    style={{ borderRadius: 6 }}
-                  />
-                </Popconfirm>
-              </Space>
-            )
-          }
-        ]}
+        columns={columns}
       />
 
       {/* ================= MODAL ================= */}
       <Modal
-        title={editing ? 'Editar Curso' : 'Novo Curso'}
+        title={editing ? "Editar Curso" : "Novo Curso"}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
@@ -210,9 +249,9 @@ export default function Cursos() {
         okButtonProps={{
           style: {
             borderRadius: 6,
-            backgroundColor: '#093e5e',
-            border: 'none'
-          }
+            backgroundColor: "#093e5e",
+            border: "none",
+          },
         }}
         cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
