@@ -37,12 +37,12 @@ body {
 
 .header {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 28px; /* 🔥 aumentado */
 }
 
 .logo {
   width: 75px;
-  margin-bottom: 10px;
+  margin-bottom: 18px; /* 🔥 aumentado (era 10px) */
 }
 
 .header h1 {
@@ -53,7 +53,7 @@ body {
 }
 
 .header h2 {
-  margin: 2px 0 0 0;
+  margin: 6px 0 0 0; /* 🔥 aumentado */
   font-size: 14px;
   font-weight: 500;
   color: #093e5e;
@@ -65,15 +65,15 @@ body {
   background: #f4f7fb;
   border: 1px solid #d9e2ec;
   border-left: 4px solid #093e5e;
-  padding: 8px 12px;
-  margin-bottom: 18px;
+  padding: 10px 14px; /* 🔥 leve aumento */
+  margin-bottom: 24px; /* 🔥 mais espaço antes da grade */
   border-radius: 4px;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px 20px;
+  gap: 8px 24px; /* 🔥 mais espaçamento */
   font-size: 10px;
 }
 
@@ -84,7 +84,8 @@ body {
 /* ================= SEMESTRES ================= */
 
 .semester {
-  margin-bottom: 18px;
+  margin-bottom: 26px; /* 🔥 mais espaço entre blocos */
+  margin-top: 10px; /* 🔥 novo espaço antes da tabela */
   page-break-inside: avoid;
   break-inside: avoid;
 }
@@ -97,8 +98,9 @@ body {
 .semester-title {
   background: #093e5e;
   color: #fff;
-  padding: 5px 8px;
+  padding: 6px 10px; /* 🔥 levemente maior */
   font-weight: bold;
+  margin-bottom: 8px; /* 🔥 espaço antes da tabela */
 }
 
 /* ================= TABELA ================= */
@@ -106,6 +108,7 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 6px; /* 🔥 espaço da grade */
   page-break-inside: avoid;
   break-inside: avoid;
 }
@@ -121,7 +124,7 @@ tr {
 
 th, td {
   border: 1px solid #3f5261;
-  padding: 4px;
+  padding: 5px; /* 🔥 aumentei levemente */
   text-align: center;
   font-size: 9px;
 }
@@ -135,34 +138,34 @@ td.horario {
 
 td.disciplina {
   background: #f7f9fc;
-  min-height: 22px;
+  min-height: 24px; /* 🔥 mais altura */
   white-space: normal;
 }
 
 /* ================= LEGENDA ================= */
 
 .legend {
-  margin-top: 8px;
+  margin-top: 12px; /* 🔥 mais respiro */
   background: #eef3f8;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-left: 3px solid #093e5e;
   font-size: 9px;
 }
 
 .legend-title {
   font-weight: bold;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .legend-item {
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 /* ================= RODAPÉ ================= */
 
 footer {
-  margin-top: 18px;
-  padding-top: 6px;
+  margin-top: 24px; /* 🔥 mais espaço */
+  padding-top: 8px;
   border-top: 1px solid #cfd8e3;
   font-size: 8px;
   color: #5a6b7c;

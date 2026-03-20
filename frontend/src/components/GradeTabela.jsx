@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Select,
   Table,
@@ -9,33 +9,35 @@ import {
   message,
   Dropdown,
   Popconfirm,
-  Card,
-  Space
+  Space,
+  Layout,
 } from "antd";
 
 import {
   HomeOutlined,
   SaveOutlined,
   FilePdfOutlined,
-  ClearOutlined
+  ClearOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 
-const { Title } = Typography;
+import AppLayout from "../components/AppLayout";
+
+const { Title, Text } = Typography;
+const { Header, Content, Footer } = Layout;
 
 const headerStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
   fontWeight: 600,
-  padding: "3px 30px",
+  padding: "6px 16px",
   fontSize: 14,
   textAlign: "center",
 };
-  
-export default function GradeTabela() {
 
+export default function GradeTabela() {
   const navigate = useNavigate();
 
   const [cursos, setCursos] = useState([]);
@@ -44,7 +46,6 @@ export default function GradeTabela() {
   const [horarios, setHorarios] = useState([]);
   const [dias, setDias] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
-
   const [gradeDraft, setGradeDraft] = useState([]);
 
   const [contexto, setContexto] = useState({
@@ -55,8 +56,9 @@ export default function GradeTabela() {
     curriculo: null,
   });
 
-  /* ================= GERAR ANOS ================= */
+  const saveTimeout = useRef(null); // ⬅️ para debounce do salvamento automático
 
+  // Arrays de anos e currículos para os selects
   const anos = [];
   for (let ano = 2020; ano <= 2040; ano++) {
     anos.push({ value: `${ano}/1`, label: `${ano}/1` });
@@ -68,18 +70,44 @@ export default function GradeTabela() {
     curriculos.push({ value: `${ano}`, label: `${ano}` });
   }
 
-  /* ================= LOAD GRADE ================= */
-
+  /* ================= LOAD FIXOS ================= */
   useEffect(() => {
+    api.get("/cursos").then((r) => setCursos(r.data));
+    api.get("/pessoas/coordenadores").then((r) => setCoordenadores(r.data));
+    api.get("/semestres").then((r) => setSemestres(r.data));
+    api.get("/horarios").then((r) => setHorarios(r.data));
+    api.get("/dias-semana").then((r) => setDias(r.data));
+  }, []);
 
+  /* ================= LOAD DISCIPLINAS ================= */
+  useEffect(() => {
+    if (!contexto.curso_id) return;
+
+    api
+      .get(`/cursos/${contexto.curso_id}/disciplinas`)
+      .then((r) => {
+        const lista = Array.isArray(r.data)
+          ? r.data
+          : r.data?.Disciplinas || [];
+
+        const disciplinasCorrigidas = lista.map((d) => ({
+          id: d.id,
+          codigo: d.codigo || "",
+          nome: d.nome || "",
+        }));
+
+        setDisciplinas(disciplinasCorrigidas);
+      });
+  }, [contexto.curso_id]);
+
+  /* ================= LOAD GRADE ================= */
+  useEffect(() => {
     const { curso_id, semestre_id, ano, curriculo } = contexto;
 
     if (!curso_id || !semestre_id || !ano || !curriculo) return;
 
     async function carregarGrade() {
-
       try {
-
         const anoRes = await api.post("/anos/get-or-create", {
           descricao: ano,
         });
@@ -98,64 +126,17 @@ export default function GradeTabela() {
         });
 
         setGradeDraft(res.data || []);
-
       } catch {
-
         message.error("Erro ao carregar grade");
-
       }
-
     }
-
     carregarGrade();
-
   }, [contexto]);
 
-  /* ================= LOAD FIXOS ================= */
-
-  useEffect(() => {
-
-    api.get("/cursos").then((r) => setCursos(r.data));
-    api.get("/pessoas/coordenadores").then((r) => setCoordenadores(r.data));
-    api.get("/semestres").then((r) => setSemestres(r.data));
-    api.get("/horarios").then((r) => setHorarios(r.data));
-    api.get("/dias-semana").then((r) => setDias(r.data));
-
-  }, []);
-
-  /* ================= LOAD DISCIPLINAS ================= */
-
-  useEffect(() => {
-
-    if (!contexto.curso_id) return;
-
-    api.get(`/cursos/${contexto.curso_id}/disciplinas`)
-      .then((r) => {
-
-        const lista = Array.isArray(r.data)
-          ? r.data
-          : r.data?.Disciplinas || [];
-
-        const disciplinasCorrigidas = lista.map((d) => ({
-          id: d.id,
-          codigo: d.codigo || "",
-          nome: d.nome || "",
-        }));
-
-        setDisciplinas(disciplinasCorrigidas);
-
-      });
-
-  }, [contexto.curso_id]);
-
   /* ================= SLOT ================= */
-
   const updateSlot = (payload) => {
-
     setGradeDraft((prev) => {
-
       const copy = [...prev];
-
       const idx = copy.findIndex(
         (s) =>
           s.horario_id === payload.horario_id &&
@@ -166,114 +147,17 @@ export default function GradeTabela() {
       else copy.push(payload);
 
       return copy;
-
     });
-
   };
 
-  /* ================= LIMPAR ================= */
-
-  const limparTudo = () => {
-
-    setGradeDraft([]);
-
-    setContexto({
-      curso_id: null,
-      coordenador_id: null,
-      semestre_id: null,
-      ano: null,
-      curriculo: null,
-    });
-
-    message.info("Grade e filtros limpos");
-
-  };
-
-  /* ================= COLUNAS ================= */
-
-  const columns = [
-
-    {
-      title: "Horário",
-      dataIndex: "horario",
-      fixed: "left",
-      width: 90,
-      align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
-      render: (text) => <strong>{text}</strong>,
-    },
-
-    ...dias.map((d) => ({
-
-      title: d.descricao,
-      width: 170,
-      align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
-
-      render: (_, record) => {
-
-        const cell = gradeDraft.find(
-          (g) =>
-            g.horario_id === record.horario_id &&
-            g.dia_semana_id === d.id
-        );
-
-        const disciplinaId = cell?.disciplina_id ?? undefined;
-
-        return (
-
-          <Select
-            size="small"
-            allowClear
-            style={{ width: "100%" }}
-            value={disciplinaId}
-            onChange={(disciplina_id) => {
-
-              updateSlot({
-                horario_id: record.horario_id,
-                dia_semana_id: d.id,
-                disciplina_id: disciplina_id || null,
-              });
-
-            }}
-            options={disciplinas.map((disc) => ({
-              value: disc.id,
-              label: `${disc.codigo} - ${disc.nome}`,
-            }))}
-            placeholder="Selecionar"
-          />
-
-        );
-
-      }
-
-    }))
-
-  ];
-
-  const dataSource = horarios.map((h) => ({
-    key: h.id,
-    horario: h.descricao,
-    horario_id: h.id,
-  }));
-
-  /* ================= SALVAR ================= */
-
-  const salvarGrade = async () => {
-
+  /* ================= SALVAMENTO AUTOMÁTICO ================= */
+  const salvarGradeAutomatica = async () => {
     const { curso_id, semestre_id, ano, curriculo } = contexto;
 
-    if (!curso_id || !semestre_id || !ano || !curriculo) {
-      message.warning("Preencha curso, semestre, ano e currículo");
-      return;
-    }
+    if (!curso_id || !semestre_id || !ano || !curriculo) return;
 
     try {
-
-      const anoRes = await api.post("/anos/get-or-create", {
-        descricao: ano,
-      });
-
+      const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
       const currRes = await api.post("/curriculos/get-or-create", {
         descricao: curriculo,
       });
@@ -289,20 +173,98 @@ export default function GradeTabela() {
         slots: gradeDraft,
       });
 
-      message.success("Grade salva com sucesso");
-
-    } catch {
-
-      message.error("Erro ao salvar a grade");
-
+      console.log("Grade salva automaticamente");
+    } catch (err) {
+      console.error("Erro ao salvar grade automática", err);
     }
+  };
 
+  // useEffect para debouncing
+  useEffect(() => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+
+    saveTimeout.current = setTimeout(() => {
+      salvarGradeAutomatica();
+    }, 1500); // salva 1,5s após última alteração
+
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, [gradeDraft, contexto]);
+
+  /* ================= LIMPAR ================= */
+  const limparTudo = () => {
+    setGradeDraft([]);
+    setContexto({
+      curso_id: null,
+      coordenador_id: null,
+      semestre_id: null,
+      ano: null,
+      curriculo: null,
+    });
+    message.info("Grade e filtros limpos");
+  };
+
+  /* ================= COLUNAS ================= */
+  const columns = [
+    {
+      title: "Horário",
+      dataIndex: "horario",
+      fixed: "left",
+      width: 90,
+      align: "center",
+      onHeaderCell: () => ({ style: headerStyle }),
+      render: (text) => <strong>{text}</strong>,
+    },
+    ...dias.map((d) => ({
+      title: d.descricao,
+      width: 170,
+      align: "center",
+      onHeaderCell: () => ({ style: headerStyle }),
+      render: (_, record) => {
+        const cell = gradeDraft.find(
+          (g) =>
+            g.horario_id === record.horario_id && g.dia_semana_id === d.id
+        );
+
+        return (
+          <Select
+            size="small"
+            allowClear
+            style={{ width: "100%" }}
+            value={cell?.disciplina_id}
+            onChange={(disciplina_id) =>
+              updateSlot({
+                horario_id: record.horario_id,
+                dia_semana_id: d.id,
+                disciplina_id: disciplina_id || null,
+              })
+            }
+            options={disciplinas.map((disc) => ({
+              value: disc.id,
+              label: `${disc.codigo} - ${disc.nome}`,
+            }))}
+            placeholder="Selecionar"
+          />
+        );
+      },
+    })),
+  ];
+
+  const dataSource = horarios.map((h) => ({
+    key: h.id,
+    horario: h.descricao,
+    horario_id: h.id,
+  }));
+
+  /* ================= SALVAR MANUAL ================= */
+  const salvarGrade = async () => {
+    await salvarGradeAutomatica();
+    message.success("Grade salva manualmente");
   };
 
   /* ================= PDF ================= */
-
   const gerarPDF = async (todos) => {
-
     const { curso_id, semestre_id, ano, curriculo } = contexto;
 
     if (!curso_id || !ano || !curriculo) {
@@ -311,11 +273,7 @@ export default function GradeTabela() {
     }
 
     try {
-
-      const anoRes = await api.post("/anos/get-or-create", {
-        descricao: ano,
-      });
-
+      const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
       const currRes = await api.post("/curriculos/get-or-create", {
         descricao: curriculo,
       });
@@ -329,12 +287,10 @@ export default function GradeTabela() {
       if (todos) {
         params.append("todos", "true");
       } else {
-
         if (!semestre_id) {
           message.warning("Selecione o semestre");
           return;
         }
-
         params.append("semestre_id", semestre_id);
       }
 
@@ -342,57 +298,37 @@ export default function GradeTabela() {
         `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
         "_blank"
       );
-
     } catch (err) {
-
       console.error(err);
       message.error("Erro ao gerar PDF");
-
     }
-
   };
 
   return (
+    <AppLayout>
+      <Layout style={{ minHeight: "100vh", backgroundColor: "#f7f9fc", padding: "24px 32px" }}>
+        <Header
+          style={{
+            backgroundColor: "#093e5e",
+            padding: "0 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderRadius: 6,
+            marginBottom: 20,
+          }}
+        >
+          <Title level={3} style={{ color: "#fff", margin: 10 }}></Title>
 
-    <div style={{ backgroundColor: "#f7f9fc", padding: 20 }}>
+          <Space size="middle">
+            <Button icon={<HomeOutlined />} type="default" onClick={() => navigate("/home")}>
+              Início
+            </Button>
 
-      <Title
-        level={3}
-        style={{
-          textAlign: "center",
-          color: "#093e5e",
-          marginBottom: 16
-        }}
-      >
-        Grade Horária
-      </Title>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 20,
-        }}
-      >
-
-        <Button icon={<HomeOutlined />} onClick={() => navigate("/home")}>
-          Início
-        </Button>
-
-        <Space>
-
-          <Card size="small">
-            <Button
-              size="small"
-              type="primary"
-              icon={<SaveOutlined />}
-              onClick={salvarGrade}
-            >
+            <Button icon={<SaveOutlined />} type="primary" style={{ borderRadius: 6 }} onClick={salvarGrade}>
               Salvar
             </Button>
-          </Card>
 
-          <Card size="small">
             <Dropdown
               menu={{
                 items: [
@@ -411,122 +347,119 @@ export default function GradeTabela() {
                 ],
               }}
             >
-              <Button size="small" icon={<FilePdfOutlined />}>
-                PDF
-              </Button>
+              <Button icon={<FilePdfOutlined />}>PDF</Button>
             </Dropdown>
-          </Card>
 
-          <Card size="small">
-            <Popconfirm
-              title="Tem certeza que deseja limpar?"
-              onConfirm={limparTudo}
-            >
-              <Button
-                size="small"
-                danger
-                icon={<ClearOutlined />}
-              >
+            <Popconfirm title="Tem certeza que deseja limpar?" onConfirm={limparTudo}>
+              <Button danger icon={<ClearOutlined />}>
                 Limpar
               </Button>
             </Popconfirm>
-          </Card>
+          </Space>
+        </Header>
 
-        </Space>
+        <Content
+          style={{
+            backgroundColor: "#fff",
+            padding: 24,
+            borderRadius: 6,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          {/* FILTROS */}
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} md={6}>
+              <Text strong>Curso</Text>
+              <Select
+                size="middle"
+                placeholder="Selecione o curso"
+                style={{ width: "100%" }}
+                value={contexto.curso_id}
+                options={cursos.map((c) => ({ label: c.nome, value: c.id }))}
+                onChange={(v) => setContexto((c) => ({ ...c, curso_id: v }))}
+                allowClear
+              />
+            </Col>
 
-      </div>
+            <Col xs={24} sm={12} md={6}>
+              <Text strong>Coordenador</Text>
+              <Select
+                size="middle"
+                placeholder="Selecione o coordenador"
+                style={{ width: "100%" }}
+                value={contexto.coordenador_id}
+                options={coordenadores.map((c) => ({ label: c.nome, value: c.id }))}
+                onChange={(v) => setContexto((c) => ({ ...c, coordenador_id: v }))}
+                allowClear
+              />
+            </Col>
 
-      {/* FILTROS */}
+            <Col xs={24} sm={12} md={4}>
+              <Text strong>Ano</Text>
+              <Select
+                size="middle"
+                placeholder="Selecione o ano"
+                style={{ width: "100%" }}
+                value={contexto.ano}
+                options={anos}
+                onChange={(v) => setContexto((c) => ({ ...c, ano: v }))}
+                allowClear
+              />
+            </Col>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+            <Col xs={24} sm={12} md={4}>
+              <Text strong>Semestre</Text>
+              <Select
+                size="middle"
+                placeholder="Selecione o semestre"
+                style={{ width: "100%" }}
+                value={contexto.semestre_id}
+                options={semestres.map((s) => ({ label: s.descricao, value: s.id }))}
+                onChange={(v) => setContexto((c) => ({ ...c, semestre_id: v }))}
+                allowClear
+              />
+            </Col>
 
-        <Col md={6}>
-          <strong>Curso</strong>
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={contexto.curso_id}
-            options={cursos.map((c) => ({
-              value: c.id,
-              label: c.nome,
-            }))}
-            onChange={(v) =>
-              setContexto((c) => ({ ...c, curso_id: v }))
-            }
+            <Col xs={24} sm={12} md={4}>
+              <Text strong>Currículo</Text>
+              <Select
+                size="middle"
+                placeholder="Selecione o currículo"
+                style={{ width: "100%" }}
+                value={contexto.curriculo}
+                options={curriculos}
+                onChange={(v) => setContexto((c) => ({ ...c, curriculo: v }))}
+                allowClear
+              />
+            </Col>
+          </Row>
+
+          {/* TABELA */}
+          <Table
+            size="middle"
+            columns={columns}
+            dataSource={dataSource}
+            pagination={false}
+            bordered
+            scroll={{ x: "max-content" }}
+            style={{ borderRadius: 6 }}
+            sticky
           />
-        </Col>
+        </Content>
 
-        <Col md={6}>
-          <strong>Coordenador</strong>
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={contexto.coordenador_id}
-            options={coordenadores.map((c) => ({
-              value: c.id,
-              label: c.nome,
-            }))}
-            onChange={(v) =>
-              setContexto((c) => ({ ...c, coordenador_id: v }))
-            }
-          />
-        </Col>
-
-        <Col md={4}>
-          <strong>Ano</strong>
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={contexto.ano}
-            options={anos}
-            onChange={(v) =>
-              setContexto((c) => ({ ...c, ano: v }))
-            }
-          />
-        </Col>
-
-        <Col md={4}>
-          <strong>Semestre</strong>
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={contexto.semestre_id}
-            options={semestres.map((s) => ({
-              value: s.id,
-              label: s.descricao,
-            }))}
-            onChange={(v) =>
-              setContexto((c) => ({ ...c, semestre_id: v }))
-            }
-          />
-        </Col>
-
-        <Col md={4}>
-          <strong>Currículo</strong>
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={contexto.curriculo}
-            options={curriculos}
-            onChange={(v) =>
-              setContexto((c) => ({ ...c, curriculo: v }))
-            }
-          />
-        </Col>
-
-      </Row>
-
-      <Table
-        size="small"
-        columns={columns}
-        dataSource={dataSource}
-        pagination={false}
-        bordered
-        scroll={{ x: "max-content" }}
-        style={{ background: "#ffffff", borderRadius: 6 }}
-        sticky
-      />
-
-    </div>
+        <Footer
+          style={{
+            textAlign: "center",
+            padding: 12,
+            color: "#999",
+            marginTop: 24,
+            backgroundColor: "#fafafa",
+            borderTop: "1px solid #e8e8e8",
+          }}
+        >
+          © {new Date().getFullYear()} Seu Sistema - Todos os direitos reservados.
+        </Footer>
+      </Layout>
+    </AppLayout>
   );
 }
