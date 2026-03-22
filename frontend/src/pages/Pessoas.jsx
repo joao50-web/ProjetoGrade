@@ -24,22 +24,24 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= CORES DOS CARGOS ================= */
+/* ================= CORES DOS CARGOS (SUAVES) ================= */
 const cargoColors = {
-  Coordenador: { bg: '#e6f4ff' },
-  Professor: { bg: '#fff7e6' }
+  Administrador: { bg: '#dfecff8c' },
+  'Secretario de curso': { bg: '#f4e2ff88' },
+  Coordenador: { bg: '#eafaf1' },
+  PROGRAD: { bg: '#fffeca88' },
+  Professor: { bg: '#e8f5ff' }
 };
 
-/* ================= ESTILO DO CABEÇALHO ================= */
+/* ================= HEADER PADRÃO ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '3px 30px',
+  padding: '12px 16px',
   fontSize: 14,
   textAlign: 'center'
 };
-
 
 export default function Pessoas() {
   const [pessoas, setPessoas] = useState([]);
@@ -50,7 +52,6 @@ export default function Pessoas() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
-  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const [pessoasRes, cargosRes] = await Promise.all([
@@ -69,11 +70,9 @@ export default function Pessoas() {
     load();
   }, []);
 
-  /* ================= SALVAR ================= */
   const save = async () => {
     try {
       const values = await form.validateFields();
-
       setLoading(true);
 
       if (editing) {
@@ -88,20 +87,16 @@ export default function Pessoas() {
       load();
 
     } catch (err) {
-
-      // Ignora erro de validação do form
       if (err.errorFields) return;
 
       message.error(
         err.response?.data?.error || 'Erro ao salvar pessoa'
       );
-
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= REMOVER ================= */
   const remove = async (id) => {
     try {
       await api.delete(`/pessoas/${id}`);
@@ -110,12 +105,11 @@ export default function Pessoas() {
     } catch (err) {
       message.error(
         err.response?.data?.error ||
-        'Não é possível excluir. Pessoa vinculada a usuário ou grade.'
+        'Não é possível excluir. Pessoa vinculada.'
       );
     }
   };
 
-  /* ================= EDITAR ================= */
   const edit = (pessoa) => {
     setEditing(pessoa);
 
@@ -134,46 +128,58 @@ export default function Pessoas() {
     form.resetFields();
   };
 
-  /* ================= FILTRO ================= */
   const filtered = pessoas.filter(p =>
     [p.nome, p.email, p.cargo?.descricao]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  /* ================= RENDER CARGO ================= */
+  /* ================= TEXTO PADRÃO ================= */
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '6px 16px' }}>
+      <span style={{
+        fontSize: strong ? 16 : 15,
+        fontWeight: strong ? 500 : 400,
+        color: '#1a1a1a'
+      }}>
+        {text}
+      </span>
+    </div>
+  );
+
+  /* ================= TAG DE CARGO ================= */
   const renderCargo = (descricao) => {
-    const style = cargoColors[descricao] || { bg: '#f0f0f0' };
+    const style = cargoColors[descricao] || { bg: '#fafafa' };
 
     return (
-      <Tag
-        style={{
-          background: style.bg,
-          color: '#000000',
-          borderRadius: 12,
-          padding: '4px 14px',
-          fontSize: 13,
-          fontWeight: 500,
-          border: '1px solid #d9d9d9'
-        }}
-      >
-        {descricao}
-      </Tag>
+      <div style={{ padding: '6px 16px' }}>
+        <Tag
+          style={{
+            background: style.bg,
+            color: '#262626',
+            borderRadius: 12,
+            padding: '4px 14px',
+            fontSize: 13,
+            fontWeight: 500,
+            border: '1px solid #d9d9d9'
+          }}
+        >
+          {descricao}
+        </Tag>
+      </div>
     );
   };
 
   return (
     <AppLayout>
 
-      {/* ================= TOPO ================= */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
+      {/* TOPO */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 18
+      }}>
         <Input
-          placeholder="Buscar pessoa"
+          placeholder="Buscar pessoa..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 260 }}
@@ -184,80 +190,97 @@ export default function Pessoas() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ borderRadius: 6 }}
+          style={{
+            height: 40,
+            fontWeight: 500
+          }}
         >
           Nova Pessoa
         </Button>
       </div>
 
-      {/* ================= TABELA ================= */}
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
+        style={{ borderRadius: 10 }}
         columns={[
+
           {
             title: 'Nome',
             dataIndex: 'nome',
+            align: 'left',
+            ellipsis: true,
             onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (text) => renderText(text, true)
           },
+
           {
             title: 'Email',
             dataIndex: 'email',
+            align: 'left',
+            ellipsis: true,
             onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (text) => renderText(text)
           },
+
           {
             title: 'Cargo',
-            align: 'center',
             dataIndex: ['cargo', 'descricao'],
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderCargo
           },
+
           {
             title: 'Usuário',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) =>
-              r.usuario?.id
-                ? <CheckCircleTwoTone twoToneColor="#52c41a" />
-                : <CloseCircleTwoTone twoToneColor="#ff4d4f" />
+            render: (_, r) => (
+              <div style={{ padding: '6px' }}>
+                {r.usuario?.id
+                  ? <CheckCircleTwoTone twoToneColor="#52c41a" />
+                  : <CloseCircleTwoTone twoToneColor="#ff4d4f" />}
+              </div>
+            )
           },
+
           {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => {
-
               const possuiUsuario = Boolean(r.usuario?.id);
 
               return (
-                <Space size={14}>
+                <Space size={18}>
                   <Button
+                    type="text"
                     icon={<EditOutlined />}
                     onClick={() => edit(r)}
-                    style={{ borderRadius: 6 }}
+                    style={{ fontSize: 18 }}
                   />
 
                   {possuiUsuario ? (
                     <Button
+                      type="text"
                       danger
                       disabled
                       icon={<DeleteOutlined />}
-                      style={{ borderRadius: 6 }}
+                      style={{ fontSize: 18 }}
                     />
                   ) : (
                     <Popconfirm
                       title="Excluir esta pessoa?"
-                      description="Essa ação não pode ser desfeita."
                       onConfirm={() => remove(r.id)}
-                      okText="Sim"
-                      cancelText="Cancelar"
                     >
                       <Button
+                        type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        style={{ borderRadius: 6 }}
+                        style={{ fontSize: 18 }}
                       />
                     </Popconfirm>
                   )}
@@ -265,10 +288,11 @@ export default function Pessoas() {
               );
             }
           }
+
         ]}
       />
 
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={open}
@@ -279,30 +303,15 @@ export default function Pessoas() {
         destroyOnClose
       >
         <Form layout="vertical" form={form}>
-          <Form.Item
-            name="nome"
-            label="Nome"
-            rules={[{ required: true, message: 'Informe o nome' }]}
-          >
-            <Input />
+          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
+            <Input size="middle" />
           </Form.Item>
 
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Informe o email' },
-              { type: 'email', message: 'Email inválido' }
-            ]}
-          >
-            <Input />
+          <Form.Item name="email" label="Email" rules={[{ required: true }, { type: 'email' }]}>
+            <Input size="middle" />
           </Form.Item>
 
-          <Form.Item
-            name="cargo_id"
-            label="Cargo"
-            rules={[{ required: true, message: 'Selecione o cargo' }]}
-          >
+          <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
             <Select placeholder="Selecione">
               {cargos.map(c => (
                 <Select.Option key={c.id} value={c.id}>

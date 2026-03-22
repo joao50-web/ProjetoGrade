@@ -20,7 +20,6 @@ import {
   ClearOutlined,
 } from "@ant-design/icons";
 
-import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 
 import AppLayout from "../components/AppLayout";
@@ -32,14 +31,12 @@ const headerStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
   fontWeight: 600,
-  padding: "6px 16px",
+  padding: "4px 16px",
   fontSize: 14,
   textAlign: "center",
 };
 
 export default function GradeTabela() {
-  const navigate = useNavigate();
-
   const [cursos, setCursos] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
   const [semestres, setSemestres] = useState([]);
@@ -83,21 +80,17 @@ export default function GradeTabela() {
   useEffect(() => {
     if (!contexto.curso_id) return;
 
-    api
-      .get(`/cursos/${contexto.curso_id}/disciplinas`)
-      .then((r) => {
-        const lista = Array.isArray(r.data)
-          ? r.data
-          : r.data?.Disciplinas || [];
+    api.get(`/cursos/${contexto.curso_id}/disciplinas`).then((r) => {
+      const lista = Array.isArray(r.data) ? r.data : r.data?.Disciplinas || [];
 
-        const disciplinasCorrigidas = lista.map((d) => ({
-          id: d.id,
-          codigo: d.codigo || "",
-          nome: d.nome || "",
-        }));
+      const disciplinasCorrigidas = lista.map((d) => ({
+        id: d.id,
+        codigo: d.codigo || "",
+        nome: d.nome || "",
+      }));
 
-        setDisciplinas(disciplinasCorrigidas);
-      });
+      setDisciplinas(disciplinasCorrigidas);
+    });
   }, [contexto.curso_id]);
 
   /* ================= LOAD GRADE ================= */
@@ -140,7 +133,7 @@ export default function GradeTabela() {
       const idx = copy.findIndex(
         (s) =>
           s.horario_id === payload.horario_id &&
-          s.dia_semana_id === payload.dia_semana_id
+          s.dia_semana_id === payload.dia_semana_id,
       );
 
       if (idx >= 0) copy[idx] = { ...copy[idx], ...payload };
@@ -192,7 +185,7 @@ export default function GradeTabela() {
     };
   }, [gradeDraft, contexto]);
 
-  /* ================= LIMPAR ================= */
+  /* ================= RESTAURAR ================= */
   const limparTudo = () => {
     setGradeDraft([]);
     setContexto({
@@ -202,7 +195,7 @@ export default function GradeTabela() {
       ano: null,
       curriculo: null,
     });
-    message.info("Grade e filtros limpos");
+    message.info("Grade e filtros restaurados");
   };
 
   /* ================= COLUNAS ================= */
@@ -211,20 +204,19 @@ export default function GradeTabela() {
       title: "Horário",
       dataIndex: "horario",
       fixed: "left",
-      width: 90,
+      width: 100,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       render: (text) => <strong>{text}</strong>,
     },
     ...dias.map((d) => ({
       title: d.descricao,
-      width: 170,
+      width: 200,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
         const cell = gradeDraft.find(
-          (g) =>
-            g.horario_id === record.horario_id && g.dia_semana_id === d.id
+          (g) => g.horario_id === record.horario_id && g.dia_semana_id === d.id,
         );
 
         return (
@@ -296,7 +288,7 @@ export default function GradeTabela() {
 
       window.open(
         `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-        "_blank"
+        "_blank",
       );
     } catch (err) {
       console.error(err);
@@ -306,26 +298,33 @@ export default function GradeTabela() {
 
   return (
     <AppLayout>
-      <Layout style={{ minHeight: "100vh", backgroundColor: "#f7f9fc", padding: "24px 32px" }}>
+      <Layout
+        style={{
+          minHeight: "10vh",
+          backgroundColor: "white",
+          padding: "0px 0px",
+        }}
+      >
         <Header
           style={{
             backgroundColor: "#093e5e",
-            padding: "0 24px",
+            padding: "1px 22px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderRadius: 6,
-            marginBottom: 20,
+            marginBottom: 10,
           }}
         >
-          <Title level={3} style={{ color: "#fff", margin: 10 }}></Title>
+          <Title level={3} style={{ color: "#fff", margin: 0 }}></Title>
 
           <Space size="middle">
-            <Button icon={<HomeOutlined />} type="default" onClick={() => navigate("/home")}>
-              Início
-            </Button>
-
-            <Button icon={<SaveOutlined />} type="primary" style={{ borderRadius: 6 }} onClick={salvarGrade}>
+            <Button
+              icon={<SaveOutlined />}
+              type="primary"
+              style={{ borderRadius: 6 }}
+              onClick={salvarGrade}
+            >
               Salvar
             </Button>
 
@@ -350,9 +349,12 @@ export default function GradeTabela() {
               <Button icon={<FilePdfOutlined />}>PDF</Button>
             </Dropdown>
 
-            <Popconfirm title="Tem certeza que deseja limpar?" onConfirm={limparTudo}>
+            <Popconfirm
+              title="Tem certeza que deseja restaurar?"
+              onConfirm={limparTudo}
+            >
               <Button danger icon={<ClearOutlined />}>
-                Limpar
+                Restaurar
               </Button>
             </Popconfirm>
           </Space>
@@ -361,13 +363,13 @@ export default function GradeTabela() {
         <Content
           style={{
             backgroundColor: "#fff",
-            padding: 24,
+            padding: 6,
             borderRadius: 6,
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            boxShadow: "0 1px 10px rgba(0, 0, 0, 0.1)",
           }}
         >
           {/* FILTROS */}
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
             <Col xs={24} sm={12} md={6}>
               <Text strong>Curso</Text>
               <Select
@@ -388,8 +390,13 @@ export default function GradeTabela() {
                 placeholder="Selecione o coordenador"
                 style={{ width: "100%" }}
                 value={contexto.coordenador_id}
-                options={coordenadores.map((c) => ({ label: c.nome, value: c.id }))}
-                onChange={(v) => setContexto((c) => ({ ...c, coordenador_id: v }))}
+                options={coordenadores.map((c) => ({
+                  label: c.nome,
+                  value: c.id,
+                }))}
+                onChange={(v) =>
+                  setContexto((c) => ({ ...c, coordenador_id: v }))
+                }
                 allowClear
               />
             </Col>
@@ -414,7 +421,10 @@ export default function GradeTabela() {
                 placeholder="Selecione o semestre"
                 style={{ width: "100%" }}
                 value={contexto.semestre_id}
-                options={semestres.map((s) => ({ label: s.descricao, value: s.id }))}
+                options={semestres.map((s) => ({
+                  label: s.descricao,
+                  value: s.id,
+                }))}
                 onChange={(v) => setContexto((c) => ({ ...c, semestre_id: v }))}
                 allowClear
               />
@@ -450,15 +460,14 @@ export default function GradeTabela() {
         <Footer
           style={{
             textAlign: "center",
-            padding: 12,
+            padding: 0,
             color: "#999",
-            marginTop: 24,
+            marginTop: 0,
             backgroundColor: "#fafafa",
             borderTop: "1px solid #e8e8e8",
+            borderRadius: 0, // 🔥 garantia
           }}
-        >
-          © {new Date().getFullYear()} Seu Sistema - Todos os direitos reservados.
-        </Footer>
+        ></Footer>
       </Layout>
     </AppLayout>
   );

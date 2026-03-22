@@ -23,21 +23,21 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= CORES DAS HIERARQUIAS ================= */
+/* ================= CORES SUAVES ================= */
 const hierarquiaColors = {
-  Coordenador: { bg: '#fff7e6' },
-  Professor: { bg: '#e6f4ff' },
+  Coordenador: { bg: '#e6f4ff' },
+  Professor: { bg: '#e8f5ff' },
   Estagiario: { bg: '#f6ffed' },
   Estagiário: { bg: '#f6ffed' },
   Admin: { bg: '#fff1f0' }
 };
 
-/* ================= ESTILO DO HEADER ================= */
+/* ================= HEADER ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '3px 16px',
+  padding: '12px 16px',
   fontSize: 14,
   textAlign: 'center'
 };
@@ -51,7 +51,6 @@ export default function Usuarios() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
-  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const [usuariosRes, pessoasRes, hierarquiasRes] = await Promise.all([
@@ -71,7 +70,6 @@ export default function Usuarios() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
-  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       editing
@@ -112,48 +110,59 @@ export default function Usuarios() {
     form.resetFields();
   };
 
-  /* ================= FILTRO ================= */
   const filtered = usuarios.filter(u =>
     [u.login, u.pessoa?.nome, u.hierarquia?.descricao]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  /* ================= RENDER HIERARQUIA ================= */
+  /* PADRÃO TEXTO */
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '6px 16px' }}>
+      <span style={{
+        fontSize: strong ? 16 : 15,
+        fontWeight: strong ? 500 : 400
+      }}>
+        {text}
+      </span>
+    </div>
+  );
+
+  /* TAG HIERARQUIA */
   const renderHierarquia = (descricao) => {
-    const style = hierarquiaColors[descricao] || { bg: '#f0f0f0' };
+    const style = hierarquiaColors[descricao] || { bg: '#fafafa' };
 
     return (
-      <Tag
-        style={{
-          background: style.bg,
-          color: '#000',
-          borderRadius: 12,
-          padding: '4px 14px',
-          fontSize: 13,
-          fontWeight: 500,
-          border: '1px solid #d9d9d9'
-        }}
-      >
-        {descricao}
-      </Tag>
+      <div style={{ padding: '6px 16px' }}>
+        <Tag
+          style={{
+            background: style.bg,
+            borderRadius: 12,
+            padding: '4px 14px',
+            fontSize: 13,
+            fontWeight: 500,
+            border: '1px solid #d9d9d9'
+          }}
+        >
+          {descricao}
+        </Tag>
+      </div>
     );
   };
 
   return (
     <AppLayout>
-      {/* ================= TOPO ================= */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16
-        }}
-      >
+
+      {/* TOPO */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 18
+      }}>
         <Input
-          placeholder="Buscar usuário"
-          allowClear
+          placeholder="Buscar usuário..."
           prefix={<SearchOutlined />}
-          style={{ width: 280 }}
+          allowClear
+          style={{ width: 260 }}
           onChange={e => setSearch(e.target.value)}
         />
 
@@ -161,97 +170,90 @@ export default function Usuarios() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ borderRadius: 6 }}
+          style={{ height: 40, fontWeight: 500 }}
         >
           Novo Usuário
         </Button>
       </div>
 
-      {/* ================= TABELA ================= */}
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
+        style={{ borderRadius: 10 }}
         columns={[
+
           {
             title: 'Login',
             dataIndex: 'login',
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <span style={{ fontSize: 15, fontWeight: 600 }}>
-                {text}
-              </span>
-            )
+            render: text => renderText(text, true)
           },
+
           {
             title: 'Pessoa',
             dataIndex: ['pessoa', 'nome'],
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: nome => (
-              <span style={{ fontSize: 15 }}>
-                {nome}
-              </span>
-            )
+            render: renderText
           },
+
           {
             title: 'Hierarquia',
-            align: 'center',
             dataIndex: ['hierarquia', 'descricao'],
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderHierarquia
           },
+
           {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <Space size={14}>
+              <Space size={18}>
                 <Button
+                  type="text"
                   icon={<EditOutlined />}
                   onClick={() => edit(r)}
-                  style={{ borderRadius: 6 }}
+                  style={{ fontSize: 18 }}
                 />
+
                 <Popconfirm
                   title="Excluir este usuário?"
                   onConfirm={() => remove(r.id)}
                 >
                   <Button
+                    type="text"
                     danger
                     icon={<DeleteOutlined />}
-                    style={{ borderRadius: 6 }}
+                    style={{ fontSize: 18 }}
                   />
                 </Popconfirm>
               </Space>
             )
           }
+
         ]}
       />
 
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Usuário' : 'Novo Usuário'}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
         okText="Salvar"
-        okButtonProps={{
-          style: {
-            borderRadius: 6,
-            backgroundColor: '#093e5e',
-            border: 'none'
-          }
-        }}
-        cancelButtonProps={{ style: { borderRadius: 6 } }}
+        destroyOnClose
       >
         <Form layout="vertical" form={form} onFinish={submit}>
+
           {!editing && (
-            <Form.Item
-              name="pessoa_id"
-              label="Pessoa"
-              rules={[{ required: true }]}
-            >
-              <Select placeholder="Selecione a pessoa">
+            <Form.Item name="pessoa_id" label="Pessoa" rules={[{ required: true }]}>
+              <Select placeholder="Selecione">
                 {pessoas.map(p => (
                   <Select.Option key={p.id} value={p.id}>
                     {p.nome}
@@ -261,27 +263,15 @@ export default function Usuarios() {
             </Form.Item>
           )}
 
-          <Form.Item
-            name="login"
-            label="Login"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="login" label="Login" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="senha"
-            label="Senha"
-            rules={!editing ? [{ required: true }] : []}
-          >
+          <Form.Item name="senha" label="Senha" rules={!editing ? [{ required: true }] : []}>
             <Input.Password />
           </Form.Item>
 
-          <Form.Item
-            name="hierarquia_id"
-            label="Hierarquia"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="hierarquia_id" label="Hierarquia" rules={[{ required: true }]}>
             <Radio.Group>
               {hierarquias.map(h => (
                 <Radio key={h.id} value={h.id}>
@@ -290,8 +280,10 @@ export default function Usuarios() {
               ))}
             </Radio.Group>
           </Form.Item>
+
         </Form>
       </Modal>
+
     </AppLayout>
   );
 }

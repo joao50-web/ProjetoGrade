@@ -8,8 +8,6 @@ import {
   Popconfirm,
   message,
   Space,
-  Badge,
-  Pagination,
 } from "antd";
 
 import {
@@ -24,18 +22,14 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
-/* ================= ESTILO DO HEADER ================= */
 const headerCellStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
   fontWeight: 600,
-  padding: "3px 16px",
+  padding: "12px 16px",
   fontSize: 14,
   textAlign: "center",
 };
-
-/* ================= QTD DE ITENS POR PÁGINA NA LISTA INTERNA ================= */
-const PAGE_SIZE = 5;
 
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
@@ -45,25 +39,20 @@ export default function Cursos() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
-  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const res = await api.get("/cursos");
-      // Adiciona estado de paginação interna para cada curso
-      const data = res.data.map((c) => ({ ...c, currentPage: 1 }));
-      setCursos(data);
+      setCursos(res.data);
     } catch {
       message.error("Erro ao carregar cursos");
     }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
-  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       if (editing) {
@@ -102,100 +91,160 @@ export default function Cursos() {
     form.resetFields();
   };
 
-  /* ================= FILTRO ================= */
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase()),
+    c.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
-  /* ================= PAGINAÇÃO INTERNA ================= */
-  const handlePageChange = (cursoId, page) => {
-    setCursos((prev) =>
-      prev.map((c) => (c.id === cursoId ? { ...c, currentPage: page } : c)),
-    );
-  };
-
-  /* ================= COLUNAS ================= */
   const columns = [
     {
-      title: "Nome",
+      title: "Cursos",
       dataIndex: "nome",
+      width: 260,
+      ellipsis: true,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (text) => (
-        <span style={{ fontSize: 15, fontWeight: 500 }}>{text}</span>
+        <div style={{ padding: "8px 16px" }}>
+          <span
+            style={{
+              fontSize: 17,
+              fontWeight: 600,
+              color: "#1a1a1a",
+            }}
+          >
+            {text}
+          </span>
+        </div>
       ),
     },
+
+    /* 🔥 COLUNA MELHORADA */
     {
       title: "Disciplinas",
       dataIndex: "disciplinas",
-      align: "left",
-      width: 300,
+      width: 420,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = [], record) => {
-        const start = (record.currentPage - 1) * PAGE_SIZE;
-        const end = start + PAGE_SIZE;
-        const pageItems = disciplinas.slice(start, end);
+      render: (disciplinas = []) => {
+        const visible = disciplinas.slice(0, 3);
+        const restantes = disciplinas.length > 3 ? disciplinas.length - 3 : 0;
 
         return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Badge
-              count={disciplinas.length}
-              showZero
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              padding: "10px 16px",
+            }}
+          >
+            {/* BADGE CONTADOR */}
+            <div
               style={{
-                backgroundColor: "#093e5e",
+                background: "linear-gradient(135deg, #e6f0f6, #f4f9fc)",
+                color: "#093e5e",
+                padding: "6px 14px",
+                borderRadius: 30,
                 fontSize: 13,
-                marginBottom: 2,
+                fontWeight: 600,
+                width: "fit-content",
+                border: "1px solid #d6e4ec",
               }}
-            />
-            {pageItems.map((d) => (
-              <span key={d.id} style={{ fontSize: 12 }}>
-                {d.codigo} - {d.nome}
-              </span>
+            >
+              📚 {disciplinas.length} disciplinas
+            </div>
+
+            {/* LISTA */}
+            {visible.map((d) => (
+              <div
+                key={d.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "#ffffff",
+                  border: "1px solid #e6edf3",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f4f8fb";
+                  e.currentTarget.style.transform = "scale(1.01)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                {/* CÓDIGO ESTILO TAG */}
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: "#093e5e",
+                    fontSize: 11,
+                    background: "#e6f0f6",
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                  }}
+                >
+                  {d.codigo}
+                </span>
+
+                {/* NOME */}
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: "#1a1a1a",
+                  }}
+                >
+                  {d.nome}
+                </span>
+              </div>
             ))}
-            {disciplinas.length > PAGE_SIZE && (
-              <Pagination
-                size="small"
-                simple
-                current={record.currentPage}
-                pageSize={PAGE_SIZE}
-                total={disciplinas.length}
-                onChange={(page) => handlePageChange(record.id, page)}
-                style={{ marginTop: 2, textAlign: "center" }}
-              />
+
+            {/* RESTANTES */}
+            {restantes > 0 && (
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  fontStyle: "italic",
+                  paddingLeft: 4,
+                }}
+              >
+                +{restantes} disciplinas adicionais
+              </span>
             )}
           </div>
         );
       },
     },
+
     {
       title: "Ações",
-      align: "center",
       width: 300,
+      align: "center",
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <Space size={14}>
+        <Space size={24}>
           <Button
             icon={<BookOutlined />}
             onClick={() => navigate(`/cursos/${r.id}/disciplinas`)}
-            style={{ borderRadius: 6 }}
           >
-            Disciplinas
+            Ver
           </Button>
 
           <Button
             icon={<EditOutlined />}
             onClick={() => edit(r)}
-            style={{ borderRadius: 6 }}
-          />
-
-          <Popconfirm
-            title="Excluir este curso?"
-            onConfirm={() => remove(r.id)}
           >
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              style={{ borderRadius: 6 }}
-            />
+            Editar
+          </Button>
+
+          <Popconfirm title="Excluir?" onConfirm={() => remove(r.id)}>
+            <Button danger icon={<DeleteOutlined />}>
+              Excluir
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -204,41 +253,45 @@ export default function Cursos() {
 
   return (
     <AppLayout>
-      {/* ================= TOPO ================= */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
+          marginBottom: 18,
         }}
       >
         <Input
-          placeholder="Buscar curso"
+          size="middle"
+          placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 260 }}
           onChange={(e) => setSearch(e.target.value)}
         />
+
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ borderRadius: 6 }}
+          style={{
+            height: 40,
+            fontSize: 14,
+            fontWeight: 500,
+          }}
         >
           Novo Curso
         </Button>
       </div>
 
-      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
+        style={{ borderRadius: 8 }}
         columns={columns}
       />
 
-      {/* ================= MODAL ================= */}
       <Modal
         title={editing ? "Editar Curso" : "Novo Curso"}
         open={open}
@@ -246,14 +299,6 @@ export default function Cursos() {
         onOk={() => form.submit()}
         okText="Salvar"
         cancelText="Cancelar"
-        okButtonProps={{
-          style: {
-            borderRadius: 6,
-            backgroundColor: "#093e5e",
-            border: "none",
-          },
-        }}
-        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item
@@ -261,7 +306,7 @@ export default function Cursos() {
             label="Nome do Curso"
             rules={[{ required: true }]}
           >
-            <Input />
+            <Input size="middle" placeholder="Digite o nome do curso" />
           </Form.Item>
         </Form>
       </Modal>

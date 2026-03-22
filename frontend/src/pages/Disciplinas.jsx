@@ -9,7 +9,8 @@ import {
   Select,
   Popconfirm,
   message,
-  Space
+  Space,
+  Tooltip
 } from 'antd';
 
 import {
@@ -22,12 +23,11 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= ESTILO DO HEADER ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '3px 16px',
+  padding: '12px 16px',
   fontSize: 14,
   textAlign: 'center'
 };
@@ -36,26 +36,21 @@ export default function Disciplinas() {
 
   const [disciplinas, setDisciplinas] = useState([]);
   const [cursos, setCursos] = useState([]);
-  const [professores, setProfessores] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [form] = Form.useForm();
 
-  /* ================= LOAD ================= */
   const load = async () => {
     try {
-
       const res = await api.get('/disciplinas');
 
-      // garante que sempre exista campo codigo
       const dados = res.data.map(d => ({
         ...d,
-        codigo: d.codigo || d.cod_disciplina || d.codigo_disciplina || ''
+        codigo: d.codigo || d.cod_disciplina || ''
       }));
 
       setDisciplinas(dados);
-
     } catch {
       message.error('Erro ao carregar disciplinas');
     }
@@ -63,20 +58,12 @@ export default function Disciplinas() {
 
   const loadAux = async () => {
     try {
-
-      const [c, p] = await Promise.all([
-        api.get('/cursos'),
-        api.get('/pessoas')
+      const [c] = await Promise.all([
+        api.get('/cursos')
       ]);
-
       setCursos(c.data);
-
-      setProfessores(
-        p.data.filter(p => p.cargo?.descricao === 'Professor')
-      );
-
     } catch {
-      message.error('Erro ao carregar dados auxiliares');
+      message.error('Erro ao carregar dados');
     }
   };
 
@@ -86,92 +73,48 @@ export default function Disciplinas() {
     loadAux();
   }, []);
 
-  /* ================= CRUD ================= */
   const submit = async (values) => {
-
     try {
-
       if (editing) {
+        await api.put(`/disciplinas/${editing.id}`, values);
 
-        await api.put(`/disciplinas/${editing.id}`, {
-          nome: values.nome,
-          codigo: values.codigo
+        await api.post(`/disciplinas/${editing.id}/relations`, {
+          cursos: values.cursos || []
         });
 
-        await api.post(
-          `/disciplinas/${editing.id}/relations`,
-          {
-            cursos: values.cursos || [],
-            professores: values.professores || []
-          }
-        );
-
-        message.success('Disciplina atualizada');
-
+        message.success('Atualizada');
       } else {
+        const res = await api.post('/disciplinas', values);
 
-        const res = await api.post('/disciplinas', {
-          nome: values.nome,
-          codigo: values.codigo
+        await api.post(`/disciplinas/${res.data.id}/relations`, {
+          cursos: values.cursos || []
         });
 
-        const disciplinaId = res.data.id;
-
-        await api.post(
-          `/disciplinas/${disciplinaId}/relations`,
-          {
-            cursos: values.cursos || [],
-            professores: values.professores || []
-          }
-        );
-
-        message.success('Disciplina criada');
+        message.success('Criada');
       }
 
       closeModal();
       load();
 
     } catch {
-      message.error('Erro ao salvar disciplina');
+      message.error('Erro ao salvar');
     }
   };
 
   const remove = async (id) => {
     try {
-
       await api.delete(`/disciplinas/${id}`);
-
-      message.success('Disciplina removida');
-
+      message.success('Removida');
       load();
-
     } catch {
-      message.error('Erro ao excluir disciplina');
+      message.error('Erro ao excluir');
     }
   };
 
-  const edit = async (disciplina) => {
-
-    try {
-
-      setEditing(disciplina);
-
-      const res = await api.get(
-        `/disciplinas/${disciplina.id}/relations`
-      );
-
-      form.setFieldsValue({
-        nome: disciplina.nome,
-        codigo: disciplina.codigo,
-        cursos: res.data.cursos.map(c => c.id),
-        professores: res.data.professores.map(p => p.id)
-      });
-
-      setOpen(true);
-
-    } catch {
-      message.error('Erro ao carregar disciplina');
-    }
+  const edit = (disciplina) => {
+    setEditing(disciplina);
+    form.setFieldsValue(disciplina);
+    setOpen(true);
   };
 
   const closeModal = () => {
@@ -180,7 +123,6 @@ export default function Disciplinas() {
     form.resetFields();
   };
 
-  /* ================= FILTRO ================= */
   const filtered = disciplinas.filter(d =>
     d.nome?.toLowerCase().includes(search.toLowerCase()) ||
     d.codigo?.toLowerCase().includes(search.toLowerCase())
@@ -189,16 +131,15 @@ export default function Disciplinas() {
   return (
     <AppLayout>
 
-      {/* ================= TOPO ================= */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16
-        }}
-      >
+      {/* TOPO */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 18
+      }}>
         <Input
-          placeholder="Buscar disciplina"
+          size="middle"
+          placeholder="Buscar disciplina..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 260 }}
@@ -209,65 +150,74 @@ export default function Disciplinas() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ borderRadius: 6 }}
+          style={{ height: 40 }}
         >
           Nova Disciplina
         </Button>
       </div>
 
-      {/* ================= TABELA ================= */}
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
-        pagination={{ pageSize: 6 }}
         bordered
+        pagination={{ pageSize: 6 }}
+        style={{ borderRadius: 8 }}
         columns={[
 
           {
             title: 'Código',
             dataIndex: 'codigo',
+            width: 160,
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, record) => (
-              <span style={{ fontWeight: 600 }}>
-                {record.codigo || '-'}
-              </span>
+            render: text => (
+              <div style={{ padding: '10px 16px' }}>
+                <span style={{
+                  background: '#e6f0f6',
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  color: '#093e5e',
+                  fontSize: 12
+                }}>
+                  {text}
+                </span>
+              </div>
             )
           },
 
           {
-            title: 'Nome',
+            title: 'Disciplina',
             dataIndex: 'nome',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <span style={{ fontSize: 15, fontWeight: 500 }}>
-                {text}
-              </span>
+              <div style={{ padding: '10px 16px' }}>
+                <span style={{
+                  fontSize: 15,
+                  fontWeight: 500
+                }}>
+                  {text}
+                </span>
+              </div>
             )
           },
 
           {
             title: 'Ações',
+            width: 160,
             align: 'center',
-            width: 220,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <Space size={14}>
+              <Space size={18}>
 
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={() => edit(r)}
-                  style={{ borderRadius: 6 }}
-                />
+                <Tooltip title="Editar">
+                  <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
+                </Tooltip>
 
-                <Popconfirm
-                  title="Excluir esta disciplina?"
-                  onConfirm={() => remove(r.id)}
-                >
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    style={{ borderRadius: 6 }}
-                  />
+                <Popconfirm title="Excluir?" onConfirm={() => remove(r.id)}>
+                  <Tooltip title="Excluir">
+                    <Button type="text" danger icon={<DeleteOutlined />} />
+                  </Tooltip>
                 </Popconfirm>
 
               </Space>
@@ -277,69 +227,32 @@ export default function Disciplinas() {
         ]}
       />
 
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Disciplina' : 'Nova Disciplina'}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
-        okText="Salvar"
-        cancelText="Cancelar"
-        width={520}
-        okButtonProps={{
-          style: {
-            borderRadius: 6,
-            backgroundColor: '#093e5e',
-            border: 'none'
-          }
-        }}
-        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
-
         <Form layout="vertical" form={form} onFinish={submit}>
-
-          <Form.Item
-            name="codigo"
-            label="Código da Disciplina"
-            rules={[{ required: true, message: 'Informe o código' }]}
-          >
-            <Input placeholder="Ex: MED101" />
+          <Form.Item name="codigo" label="Código" rules={[{ required: true }]}>
+            <Input />
           </Form.Item>
 
-          <Form.Item
-            name="nome"
-            label="Nome da Disciplina"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
           <Form.Item name="cursos" label="Cursos">
-            <Select mode="multiple" allowClear placeholder="Selecione">
-
+            <Select mode="multiple">
               {cursos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.nome}
                 </Select.Option>
               ))}
-
             </Select>
           </Form.Item>
-
-          <Form.Item name="professores" label="Professores">
-            <Select mode="multiple" allowClear placeholder="Selecione">
-
-              {professores.map(p => (
-                <Select.Option key={p.id} value={p.id}>
-                  {p.nome}
-                </Select.Option>
-              ))}
-
-            </Select>
-          </Form.Item>
-
         </Form>
-
       </Modal>
 
     </AppLayout>

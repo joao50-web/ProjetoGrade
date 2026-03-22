@@ -20,12 +20,11 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= ESTILO DO HEADER ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '3px 16px',
+  padding: '12px 16px',
   fontSize: 14,
   textAlign: 'center'
 };
@@ -37,7 +36,6 @@ export default function Cargos() {
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
-  /* ================= LOAD ================= */
   const load = async () => {
     try {
       const response = await api.get('/cargos');
@@ -50,7 +48,6 @@ export default function Cargos() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
-  /* ================= CRUD ================= */
   const submit = async (values) => {
     try {
       editing
@@ -87,23 +84,32 @@ export default function Cargos() {
     form.resetFields();
   };
 
-  /* ================= FILTRO ================= */
   const filtered = cargos.filter(c =>
     c.descricao?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const renderText = (text) => (
+    <div style={{ padding: '6px 16px' }}>
+      <span style={{
+        fontSize: 15,
+        fontWeight: 500
+      }}>
+        {text}
+      </span>
+    </div>
+  );
+
   return (
     <AppLayout>
-      {/* ================= TOPO ================= */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16
-        }}
-      >
+
+      {/* TOPO */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 18
+      }}>
         <Input
-          placeholder="Buscar cargo"
+          placeholder="Buscar cargo..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 260 }}
@@ -114,83 +120,80 @@ export default function Cargos() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ borderRadius: 6 }}
+          style={{ height: 40, fontWeight: 500 }}
         >
           Novo Cargo
         </Button>
       </div>
 
-      {/* ================= TABELA ================= */}
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
+        style={{ borderRadius: 10 }}
         columns={[
+
           {
             title: 'Descrição',
             dataIndex: 'descricao',
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <span style={{ fontSize: 15, fontWeight: 500 }}>
-                {text}
-              </span>
-            )
+            render: renderText
           },
+
           {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, record) => (
-              <Space size={14}>
+              <Space size={18}>
                 <Button
+                  type="text"
                   icon={<EditOutlined />}
                   onClick={() => edit(record)}
-                  style={{ borderRadius: 6 }}
+                  style={{ fontSize: 18 }}
                 />
+
                 <Popconfirm
                   title="Excluir este cargo?"
                   onConfirm={() => remove(record.id)}
                 >
                   <Button
+                    type="text"
                     danger
                     icon={<DeleteOutlined />}
-                    style={{ borderRadius: 6 }}
+                    style={{ fontSize: 18 }}
                   />
                 </Popconfirm>
               </Space>
             )
           }
+
         ]}
       />
 
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Cargo' : 'Novo Cargo'}
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
         okText="Salvar"
-        cancelText="Cancelar"
-        okButtonProps={{
-          style: {
-            borderRadius: 6,
-            backgroundColor: '#093e5e',
-            border: 'none'
-          }
-        }}
-        cancelButtonProps={{ style: { borderRadius: 6 } }}
+        destroyOnClose
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item
             name="descricao"
             label="Descrição"
-            rules={[{ required: true, message: 'Campo obrigatório' }]}
+            rules={[{ required: true }]}
           >
-            <Input placeholder="Digite a descrição do cargo" />
+            <Input placeholder="Digite o cargo" />
           </Form.Item>
         </Form>
       </Modal>
+
     </AppLayout>
   );
 }
