@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { Layout, Menu, Typography, Button } from "antd";
+import { getUsuarioLogado } from '../services/api';
+
 import {
   TeamOutlined,
   ApartmentOutlined,
@@ -59,6 +61,10 @@ export default function AppLayout({ children }) {
     setOpenKeys(keys);
   }, [location.pathname]);
 
+
+
+
+   const usuario = getUsuarioLogado ()
   /* ================= TITULO PAGINA ================= */
 
   const currentPage = useMemo(() => {
@@ -84,38 +90,43 @@ export default function AppLayout({ children }) {
 
   /* ================= MENU ================= */
 
-  const menuItems = [
-    {
-      key: "/home",
-      icon: <HomeOutlined />,
-      label: "Início",
-    },
-    {
-      key: "cadastro-admin",
-      icon: <TeamOutlined />,
-      label: "Cadastro Administrativo",
-      children: [
-        { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
-        { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
-        { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
-      ],
-    },
-    {
-      key: "cadastro-academico",
-      icon: <ApartmentOutlined />,
-      label: "Cadastro Acadêmico",
-      children: [
-        { key: "/cursos", icon: <ApartmentOutlined />, label: "Cursos" },
-        { key: "/disciplinas", icon: <BookOutlined />, label: "Disciplinas" },
-      ],
-    },
-    {
-      key: "/grade-horaria",
-      icon: <CalendarOutlined />,
-      label: "Grade Horária",
-    },
-  ];
+  const menuItems = useMemo(() => {
+    if (usuario.role !== "administrador") {
+      return [
+        {
+          key: "/grade-horaria",
+          icon: <CalendarOutlined />,
+          label: "Grade Horária",
+        },
+      ];
+    } else {
+      return [
+        { key: "/home", icon: <HomeOutlined />, label: "Início" },
+        {
+          key: "cadastro-admin",
+          icon: <TeamOutlined />,
+          label: "Cadastro Administrativo",
+          children: [
+            { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
+            { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
+            { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
+          ],
+        },
+        {
+          key: "cadastro-academico",
+          icon: <ApartmentOutlined />,
+          label: "Cadastro Acadêmico",
+          children: [
+            { key: "/cursos", icon: <ApartmentOutlined />, label: "Cursos" },
+            { key: "/disciplinas", icon: <BookOutlined />, label: "Disciplinas" },
+          ],
+        },
+        { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
+      ];
+    }
+  }, [usuario.hierarquia]);
 
+console.log(usuario)
   const handleMenuClick = ({ key }) => navigate(key);
 
   const onOpenChange = (keys) => {

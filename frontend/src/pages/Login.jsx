@@ -18,11 +18,20 @@ export default function Login() {
         senha: values.senha
       });
 
-      localStorage.setItem("token", res.data.token);
+     localStorage.setItem("token", res.data.token);
 
+      // Salva usuário logado no localStorage (opcional para PrivateRoute)
+      localStorage.setItem("usuario", JSON.stringify(res.data.usuario));
+
+       const role = res.data.usuario.role; // ou hierarquia
+      let redirect = "/home"; // padrão
+
+      if (role === "administrador") redirect = "/home"; // pode ser dashboard admin
+      else if (role === "visualizacao" || role === "edicao") redirect = "/grade-horaria";
+      
       message.success("Login realizado com sucesso");
 
-      window.location.href = "/home";
+      window.location.href = redirect;
 
     } catch (err) {
 

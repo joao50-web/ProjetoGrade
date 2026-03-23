@@ -12,3 +12,9 @@ api.interceptors.request.use(config => {
   }
   return config;
 });
+
+// Função para pegar usuário logado
+export function getUsuarioLogado() {
+  const usuario = localStorage.getItem('usuario');
+  return usuario ? JSON.parse(usuario) : null;
+}
