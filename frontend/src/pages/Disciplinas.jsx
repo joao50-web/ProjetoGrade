@@ -168,17 +168,14 @@ export default function Disciplinas() {
           {
             title: 'Código',
             dataIndex: 'codigo',
-            width: 160,
+            width: 130,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <div style={{ padding: '10px 16px' }}>
+              <div style={{ padding: '10px 26px' }}>
                 <span style={{
-                  background: '#e6f0f6',
-                  padding: '4px 10px',
-                  borderRadius: 6,
                   fontWeight: 600,
-                  color: '#093e5e',
-                  fontSize: 12
+                  fontSize: 17
+                 
                 }}>
                   {text}
                 </span>
@@ -189,12 +186,13 @@ export default function Disciplinas() {
           {
             title: 'Disciplina',
             dataIndex: 'nome',
+             width: 70,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: text => (
-              <div style={{ padding: '10px 16px' }}>
+              <div style={{ padding: '10px 200px' }}>
                 <span style={{
                   fontSize: 15,
-                  fontWeight: 500
+                  fontWeight: 600
                 }}>
                   {text}
                 </span>
@@ -208,7 +206,7 @@ export default function Disciplinas() {
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <Space size={18}>
+              <Space size={38}>
 
                 <Tooltip title="Editar">
                   <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />

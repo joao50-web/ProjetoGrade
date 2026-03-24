@@ -92,7 +92,7 @@ export default function Cursos() {
   };
 
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase())
+    c.nome?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const columns = [
@@ -104,140 +104,77 @@ export default function Cursos() {
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (text) => (
         <div style={{ padding: "8px 16px" }}>
-          <span
-            style={{
-              fontSize: 17,
-              fontWeight: 600,
-              color: "#1a1a1a",
-            }}
-          >
-            {text}
-          </span>
+          <span style={{ fontSize: 17, fontWeight: 600 }}>{text}</span>
         </div>
       ),
     },
 
-    /* 🔥 COLUNA MELHORADA */
+    /* COLUNA DISCIPLINAS COM BOTÃO */
     {
       title: "Disciplinas",
       dataIndex: "disciplinas",
       width: 420,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = []) => {
-        const visible = disciplinas.slice(0, 3);
-        const restantes = disciplinas.length > 3 ? disciplinas.length - 3 : 0;
-
+      render: (disciplinas = [], record) => {
         return (
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 12,
-              padding: "10px 16px",
+              gap: 6,
+              border: "1px solid #f0f0f0",
+              padding: "10px",
+              borderRadius: 8,
             }}
           >
-            {/* BADGE CONTADOR */}
+            {/* TOPO: CONTADOR + BOTÃO */}
             <div
               style={{
-                background: "linear-gradient(135deg, #e6f0f6, #f4f9fc)",
-                color: "#093e5e",
-                padding: "6px 14px",
-                borderRadius: 30,
-                fontSize: 13,
-                fontWeight: 600,
-                width: "fit-content",
-                border: "1px solid #d6e4ec",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              📚 {disciplinas.length} disciplinas
-            </div>
-
-            {/* LISTA */}
-            {visible.map((d) => (
-              <div
-                key={d.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  background: "#ffffff",
-                  border: "1px solid #e6edf3",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f4f8fb";
-                  e.currentTarget.style.transform = "scale(1.01)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#ffffff";
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
-              >
-                {/* CÓDIGO ESTILO TAG */}
-                <span
-                  style={{
-                    fontWeight: 600,
-                    color: "#093e5e",
-                    fontSize: 11,
-                    background: "#e6f0f6",
-                    padding: "2px 8px",
-                    borderRadius: 6,
-                  }}
-                >
-                  {d.codigo}
-                </span>
-
-                {/* NOME */}
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: "#1a1a1a",
-                  }}
-                >
-                  {d.nome}
-                </span>
-              </div>
-            ))}
-
-            {/* RESTANTES */}
-            {restantes > 0 && (
               <span
                 style={{
-                  fontSize: 12,
-                  color: "#666",
-                  fontStyle: "italic",
-                  paddingLeft: 4,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  padding: "2px 46px",
                 }}
               >
-                +{restantes} disciplinas adicionais
+                📚 {disciplinas.length} disciplinas
               </span>
-            )}
+
+              <Button
+                size="small"
+                icon={<BookOutlined />}
+                onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
+                style={{
+                  fontSize: 16  ,
+                  padding: "14px 38px",
+                  marginRight: "60px"
+                  
+                }}
+                >
+                Ver
+              </Button>
+            </div>
+
+            {/* RESTANTES */}
           </div>
         );
       },
     },
 
+    /* AÇÕES SEM O BOTÃO VER */
     {
       title: "Ações",
-      width: 300,
+      width: 160,
       align: "center",
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <Space size={24}>
-          <Button
-            icon={<BookOutlined />}
-            onClick={() => navigate(`/cursos/${r.id}/disciplinas`)}
-          >
-            Ver
-          </Button>
-
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => edit(r)}
-          >
+        <Space>
+          <Button icon={<EditOutlined />} onClick={() => edit(r)}>
             Editar
           </Button>
 
@@ -257,11 +194,10 @@ export default function Cursos() {
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 18,
+          marginBottom: 8,
         }}
       >
         <Input
-          size="middle"
           placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
           allowClear
@@ -273,11 +209,6 @@ export default function Cursos() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{
-            height: 40,
-            fontSize: 14,
-            fontWeight: 500,
-          }}
         >
           Novo Curso
         </Button>
@@ -288,7 +219,6 @@ export default function Cursos() {
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        style={{ borderRadius: 8 }}
         columns={columns}
       />
 
@@ -297,8 +227,6 @@ export default function Cursos() {
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
-        okText="Salvar"
-        cancelText="Cancelar"
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item
@@ -306,7 +234,7 @@ export default function Cursos() {
             label="Nome do Curso"
             rules={[{ required: true }]}
           >
-            <Input size="middle" placeholder="Digite o nome do curso" />
+            <Input placeholder="Digite o nome do curso" />
           </Form.Item>
         </Form>
       </Modal>

@@ -24,7 +24,7 @@ module.exports = function renderGradeHTML({
 <style>
 @page {
   size: A4;
-  margin: 14mm 12mm 16mm 12mm;
+  margin: 10mm 5mm 5mm 5mm;
 }
 
 body {
@@ -37,12 +37,12 @@ body {
 
 .header {
   text-align: center;
-  margin-bottom: 28px; /* 🔥 aumentado */
+  margin-bottom: 38px; /* aumentado */
 }
 
 .logo {
-  width: 75px;
-  margin-bottom: 18px; /* 🔥 aumentado (era 10px) */
+  width: 65px;
+  margin-bottom: 10px; /*  aumentado (era 10px) */
 }
 
 .header h1 {
@@ -50,10 +50,11 @@ body {
   font-size: 16px;
   color: #093e5e;
   font-weight: 600;
+
 }
 
 .header h2 {
-  margin: 6px 0 0 0; /* 🔥 aumentado */
+  margin: 6px 0 0 0; /*  aumentado */
   font-size: 14px;
   font-weight: 500;
   color: #093e5e;
@@ -62,18 +63,18 @@ body {
 /* ================= INFORMAÇÕES ================= */
 
 .info {
-  background: #f4f7fb;
+  background: #f8fafc;
   border: 1px solid #d9e2ec;
   border-left: 4px solid #093e5e;
-  padding: 10px 14px; /* 🔥 leve aumento */
-  margin-bottom: 24px; /* 🔥 mais espaço antes da grade */
+  padding: 10px 14px; /*  leve aumento */
+  margin-bottom: 10px; /*  mais espaço antes da grade */
   border-radius: 4px;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px 24px; /* 🔥 mais espaçamento */
+  gap: 10px 24px; /*  mais espaçamento */
   font-size: 10px;
 }
 
@@ -98,9 +99,9 @@ body {
 .semester-title {
   background: #093e5e;
   color: #fff;
-  padding: 6px 10px; /* 🔥 levemente maior */
+  padding: 5px 4px; /* 🔥 levemente maior */
   font-weight: bold;
-  margin-bottom: 8px; /* 🔥 espaço antes da tabela */
+  margin-bottom: 0px; /* 🔥 espaço antes da tabela */
 }
 
 /* ================= TABELA ================= */
@@ -108,7 +109,7 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 6px; /* 🔥 espaço da grade */
+  margin-top: px; /* 🔥 espaço da grade */
   page-break-inside: avoid;
   break-inside: avoid;
 }
@@ -230,7 +231,7 @@ ${semestres.map(semestre => `
 `).join('')}
 
 <footer>
-  Sistema de Gestão Acadêmica • UFCSPA
+
   <br>
   Universidade Federal de Ciências da Saúde de Porto Alegre
 </footer>
