@@ -174,7 +174,7 @@ export default function Disciplinas() {
               <div style={{ padding: '10px 26px' }}>
                 <span style={{
                   fontWeight: 600,
-                  fontSize: 17
+                  fontSize: 15
                  
                 }}>
                   {text}

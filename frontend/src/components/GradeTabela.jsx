@@ -14,14 +14,12 @@ import {
 } from "antd";
 
 import {
-  HomeOutlined,
   SaveOutlined,
   FilePdfOutlined,
   ClearOutlined,
 } from "@ant-design/icons";
 
-import { api } from "../services/api";
-
+import { api, getUsuarioLogado } from "../services/api";
 import AppLayout from "../components/AppLayout";
 
 const { Title, Text } = Typography;
@@ -37,6 +35,11 @@ const headerStyle = {
 };
 
 export default function GradeTabela() {
+  const usuario = getUsuarioLogado();
+
+  const isVisualizacao = usuario?.role === "visualizacao";
+  const podeEditar = usuario?.role === "edicao" || usuario?.role === "administrador";
+
   const [cursos, setCursos] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
   const [semestres, setSemestres] = useState([]);
@@ -53,9 +56,8 @@ export default function GradeTabela() {
     curriculo: null,
   });
 
-  const saveTimeout = useRef(null); // ⬅️ para debounce do salvamento automático
+  const saveTimeout = useRef(null);
 
-  // Arrays de anos e currículos para os selects
   const anos = [];
   for (let ano = 2020; ano <= 2040; ano++) {
     anos.push({ value: `${ano}/1`, label: `${ano}/1` });
@@ -128,6 +130,8 @@ export default function GradeTabela() {
 
   /* ================= SLOT ================= */
   const updateSlot = (payload) => {
+    if (!podeEditar) return; // 🔒 bloqueia edição
+
     setGradeDraft((prev) => {
       const copy = [...prev];
       const idx = copy.findIndex(
@@ -143,11 +147,11 @@ export default function GradeTabela() {
     });
   };
 
-  /* ================= SALVAMENTO AUTOMÁTICO ================= */
-  const salvarGradeAutomatica = async () => {
-    const { curso_id, semestre_id, ano, curriculo } = contexto;
+  /* ================= SALVAR ================= */
+  const salvarGrade = async () => {
+    if (!podeEditar) return;
 
-    if (!curso_id || !semestre_id || !ano || !curriculo) return;
+    const { curso_id, semestre_id, ano, curriculo } = contexto;
 
     try {
       const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
@@ -166,19 +170,22 @@ export default function GradeTabela() {
         slots: gradeDraft,
       });
 
-      console.log("Grade salva automaticamente");
+      message.success("Grade salva com sucesso");
     } catch (err) {
-      console.error("Erro ao salvar grade automática", err);
+      console.error(err);
+      message.error("Erro ao salvar grade");
     }
   };
 
-  // useEffect para debouncing
+  /* ================= AUTO SAVE ================= */
   useEffect(() => {
+    if (!podeEditar) return; // 🔒 não salva automático
+
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
     saveTimeout.current = setTimeout(() => {
-      salvarGradeAutomatica();
-    }, 1500); // salva 1,5s após última alteração
+      salvarGrade();
+    }, 1500);
 
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -195,7 +202,7 @@ export default function GradeTabela() {
       ano: null,
       curriculo: null,
     });
-    message.info("Grade e filtros restaurados");
+    message.info("Grade restaurada");
   };
 
   /* ================= COLUNAS ================= */
@@ -223,6 +230,7 @@ export default function GradeTabela() {
           <Select
             size="small"
             allowClear
+            disabled={!podeEditar} // 🔒 bloqueia select
             style={{ width: "100%" }}
             value={cell?.disciplina_id}
             onChange={(disciplina_id) =>
@@ -249,12 +257,6 @@ export default function GradeTabela() {
     horario_id: h.id,
   }));
 
-  /* ================= SALVAR MANUAL ================= */
-  const salvarGrade = async () => {
-    await salvarGradeAutomatica();
-    message.success("Grade salva manualmente");
-  };
-
   /* ================= PDF ================= */
   const gerarPDF = async (todos) => {
     const { curso_id, semestre_id, ano, curriculo } = contexto;
@@ -264,69 +266,44 @@ export default function GradeTabela() {
       return;
     }
 
-    try {
-      const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
-      const currRes = await api.post("/curriculos/get-or-create", {
-        descricao: curriculo,
-      });
+    const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
+    const currRes = await api.post("/curriculos/get-or-create", {
+      descricao: curriculo,
+    });
 
-      const params = new URLSearchParams({
-        curso_id,
-        ano_id: anoRes.data.id,
-        curriculo_id: currRes.data.id,
-      });
+    const params = new URLSearchParams({
+      curso_id,
+      ano_id: anoRes.data.id,
+      curriculo_id: currRes.data.id,
+    });
 
-      if (todos) {
-        params.append("todos", "true");
-      } else {
-        if (!semestre_id) {
-          message.warning("Selecione o semestre");
-          return;
-        }
-        params.append("semestre_id", semestre_id);
-      }
-
-      window.open(
-        `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-        "_blank",
-      );
-    } catch (err) {
-      console.error(err);
-      message.error("Erro ao gerar PDF");
+    if (!todos) {
+      if (!semestre_id) return message.warning("Selecione o semestre");
+      params.append("semestre_id", semestre_id);
+    } else {
+      params.append("todos", "true");
     }
+
+    window.open(
+      `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
+      "_blank",
+    );
   };
 
   return (
     <AppLayout>
-      <Layout
-        style={{
-          minHeight: "10vh",
-          backgroundColor: "white",
-          padding: "0px 0px",
-        }}
-      >
-        <Header
-          style={{
-            backgroundColor: "#093e5e",
-            padding: "1px 22px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderRadius: 6,
-            marginBottom: 10,
-          }}
-        >
-          <Title level={3} style={{ color: "#fff", margin: 0 }}></Title>
-
-          <Space size="middle">
-            <Button
-              icon={<SaveOutlined />}
-              type="primary"
-              style={{ borderRadius: 6 }}
-              onClick={salvarGrade}
-            >
-              Salvar
-            </Button>
+      <Layout style={{ backgroundColor: "white" }}>
+        <Header style={{ backgroundColor: "#093e5e", marginBottom: 10 }}>
+          <Space>
+            {podeEditar && (
+              <Button
+                icon={<SaveOutlined />}
+                type="primary"
+                onClick={salvarGrade}
+              >
+                Salvar
+              </Button>
+            )}
 
             <Dropdown
               menu={{
@@ -340,7 +317,7 @@ export default function GradeTabela() {
                   {
                     key: "2",
                     icon: <FilePdfOutlined />,
-                    label: "PDF todos os semestres",
+                    label: "PDF todos",
                     onClick: () => gerarPDF(true),
                   },
                 ],
@@ -349,32 +326,24 @@ export default function GradeTabela() {
               <Button icon={<FilePdfOutlined />}>PDF</Button>
             </Dropdown>
 
-            <Popconfirm
-              title="Tem certeza que deseja restaurar?"
-              onConfirm={limparTudo}
-            >
-              <Button danger icon={<ClearOutlined />}>
-                Restaurar
-              </Button>
-            </Popconfirm>
+            {podeEditar && (
+              <Popconfirm
+                title="Restaurar grade?"
+                onConfirm={limparTudo}
+              >
+                <Button danger icon={<ClearOutlined />}>
+                  Restaurar
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         </Header>
 
-        <Content
-          style={{
-            backgroundColor: "#fff",
-            padding: 6,
-            borderRadius: 6,
-            boxShadow: "0 1px 10px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          {/* FILTROS */}
+        <Content>
           <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-            <Col xs={24} sm={12} md={6}>
+            <Col span={6}>
               <Text strong>Curso</Text>
               <Select
-                size="middle"
-                placeholder="Selecione o curso"
                 style={{ width: "100%" }}
                 value={contexto.curso_id}
                 options={cursos.map((c) => ({ label: c.nome, value: c.id }))}
@@ -383,11 +352,9 @@ export default function GradeTabela() {
               />
             </Col>
 
-            <Col xs={24} sm={12} md={6}>
+            <Col span={6}>
               <Text strong>Coordenador</Text>
               <Select
-                size="middle"
-                placeholder="Selecione o coordenador"
                 style={{ width: "100%" }}
                 value={contexto.coordenador_id}
                 options={coordenadores.map((c) => ({
@@ -401,11 +368,9 @@ export default function GradeTabela() {
               />
             </Col>
 
-            <Col xs={24} sm={12} md={4}>
+            <Col span={4}>
               <Text strong>Ano</Text>
               <Select
-                size="middle"
-                placeholder="Selecione o ano"
                 style={{ width: "100%" }}
                 value={contexto.ano}
                 options={anos}
@@ -414,60 +379,46 @@ export default function GradeTabela() {
               />
             </Col>
 
-            <Col xs={24} sm={12} md={4}>
+            <Col span={4}>
               <Text strong>Semestre</Text>
               <Select
-                size="middle"
-                placeholder="Selecione o semestre"
                 style={{ width: "100%" }}
                 value={contexto.semestre_id}
                 options={semestres.map((s) => ({
                   label: s.descricao,
                   value: s.id,
                 }))}
-                onChange={(v) => setContexto((c) => ({ ...c, semestre_id: v }))}
+                onChange={(v) =>
+                  setContexto((c) => ({ ...c, semestre_id: v }))
+                }
                 allowClear
               />
             </Col>
 
-            <Col xs={24} sm={12} md={4}>
+            <Col span={4}>
               <Text strong>Currículo</Text>
               <Select
-                size="middle"
-                placeholder="Selecione o currículo"
                 style={{ width: "100%" }}
                 value={contexto.curriculo}
                 options={curriculos}
-                onChange={(v) => setContexto((c) => ({ ...c, curriculo: v }))}
+                onChange={(v) =>
+                  setContexto((c) => ({ ...c, curriculo: v }))
+                }
                 allowClear
               />
             </Col>
           </Row>
 
-          {/* TABELA */}
           <Table
-            size="middle"
             columns={columns}
             dataSource={dataSource}
             pagination={false}
             bordered
             scroll={{ x: "max-content" }}
-            style={{ borderRadius: 6 }}
-            sticky
           />
         </Content>
 
-        <Footer
-          style={{
-            textAlign: "center",
-            padding: 0,
-            color: "#999",
-            marginTop: 0,
-            backgroundColor: "#fafafa",
-            borderTop: "1px solid #e8e8e8",
-            borderRadius: 0, // 🔥 garantia
-          }}
-        ></Footer>
+        <Footer style={{ textAlign: "center" }} />
       </Layout>
     </AppLayout>
   );
