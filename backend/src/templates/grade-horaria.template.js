@@ -10,7 +10,7 @@ module.exports = function renderGradeHTML({
   universidade,
   curso,
   curriculo,
-  coordenador,
+  coordenador, // nome do coordenador
   anoLetivo,
   semestres
 }) {
@@ -31,8 +31,6 @@ body {
   font-size: 10px;
   color: #1f2d3d;
 }
-
-/* ================= CABEÇALHO ================= */
 
 .header {
   text-align: center;
@@ -57,8 +55,6 @@ body {
   color: #4a5d6a;
 }
 
-/* ================= INFO (ROXO SUAVE) ================= */
-
 .info {
   border: 1px solid #b5b5b5;
   background: #f5f3ff;
@@ -77,8 +73,13 @@ body {
   font-weight: 600;
 }
 
-/* ================= SEMESTRE ================= */
+/* destaque especial para coordenador */
+.info .coordenador {
+  font-weight: 600;
+  color: #1a5f3a;
+}
 
+/* semestre e tabela */
 .semester {
   margin-bottom: 14px;
   page-break-inside: avoid;
@@ -95,15 +96,12 @@ body {
   font-size: 10px;
 }
 
-/* ================= TABELA ================= */
-
 table {
   width: 100%;
   border-collapse: collapse;
   border: 1.5px solid #000; 
 }
 
-/* CABEÇALHO */
 thead th {
   background: #093e5e;
   color: #fff;
@@ -113,7 +111,6 @@ thead th {
   border: 1px solid #000;
 }
 
-/* CÉLULAS */
 th, td {
   border: 1px solid #444; 
   padding: 4px;
@@ -121,7 +118,6 @@ th, td {
   font-size: 9px;
 }
 
-/* HORÁRIO */
 th.horario,
 td.horario {
   width: 48px;
@@ -132,19 +128,15 @@ td.horario {
   border: 1px solid #000;
 }
 
-/* GRADE LIMPA */
 td.disciplina {
   height: 30px;
   vertical-align: middle;
   background: #ffffff;
 }
 
-/* REMOVE QUALQUER POLUIÇÃO */
 tbody tr td.disciplina {
   background: #ffffff;
 }
-
-/* ================= LEGENDA ================= */
 
 .legend {
   margin-top: 6px;
@@ -160,8 +152,6 @@ tbody tr td.disciplina {
 .legend-item {
   margin-bottom: 2px;
 }
-
-/* ================= RODAPÉ ================= */
 
 footer {
   margin-top: 16px;
@@ -187,7 +177,7 @@ footer {
     <div><strong>Curso:</strong> ${curso}</div>
     <div><strong>Currículo:</strong> ${curriculo}</div>
     <div><strong>Ano Letivo:</strong> ${anoLetivo}</div>
-    <div><strong>Coordenação:</strong> ${coordenador || '-'}</div>
+    <div><strong>Coordenação:</strong> <span class="coordenador">${coordenador || '-'}</span></div>
   </div>
 </div>
 
@@ -208,13 +198,7 @@ ${semestres.map(semestre => `
       ${semestre.linhas.map(linha => `
         <tr>
           <td class="horario">${linha.horario}</td>
-
-          ${linha.celulas.map(c => `
-            <td class="disciplina">
-              ${c || ''}
-            </td>
-          `).join('')}
-
+          ${linha.celulas.map(c => `<td class="disciplina">${c || ''}</td>`).join('')}
         </tr>
       `).join('')}
     </tbody>

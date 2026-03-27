@@ -7,7 +7,6 @@ import {
   Input,
   Popconfirm,
   message,
-  Tooltip,
 } from "antd";
 
 import {
@@ -25,9 +24,9 @@ import { api } from "../services/api";
 const headerCellStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
-  fontWeight: 600,
-  padding: "10px 12px",
-  fontSize: 16,
+  fontWeight: 700,
+  padding: "14px 16px",
+  fontSize: 18,
   textAlign: "center",
 };
 
@@ -41,8 +40,7 @@ export default function Cursos() {
 
   const load = async () => {
     try {
-      const res = await api.get("/cursos");
-      // assumindo que cada curso vem com "coordenador" {nome: ""}
+      const res = await api.get("/cursos"); // cada curso deve vir com "disciplinas" []
       setCursos(res.data);
     } catch {
       message.error("Erro ao carregar cursos");
@@ -84,7 +82,6 @@ export default function Cursos() {
     setEditing(curso);
     form.setFieldsValue({
       nome: curso.nome,
-      coordenador: curso.coordenador?.nome || "",
     });
     setOpen(true);
   };
@@ -100,101 +97,85 @@ export default function Cursos() {
   );
 
   const buttonStyle = {
-    height: 32,
-    padding: "0 12px",
+    height: 36,
     display: "flex",
     alignItems: "center",
-    gap: 4,
+    gap: 12,
   };
-
-  const actionsGap = 12;
 
   const columns = [
     {
-      title: "Cursos",
+      title: "Curso",
       dataIndex: "nome",
       width: 220,
       ellipsis: true,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (text) => (
-        <div style={{ padding: "10px 12px" }}>
-          <span style={{ fontSize: 18, fontWeight: 600 }}>{text}</span>
+        <div style={{ padding: "10px 54px" }}>
+          <p style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{text}</p>
         </div>
       ),
     },
     {
       title: "Disciplinas",
       dataIndex: "disciplinas",
+      width: 140,
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (disciplinas = []) => (
+        <div style={{ padding: "10px 14px" }}>
+          <p style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
+            {disciplinas.length} disciplina{disciplinas.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: "Editar",
       width: 220,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = [], record) => (
+      render: (_, record) => (
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-start",
             alignItems: "center",
-            gap: 72,
-            padding: "8px 12px",
+            gap: 120,
+            padding: "10px 50px",
           }}
         >
-          <span style={{ fontSize: 16, fontWeight: 500 }}>
-            📚 {disciplinas.length}
-          </span>
-
           <Button
-            size="small"
+            size="middle"
             icon={<BookOutlined />}
             onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
             style={buttonStyle}
           >
-            Ver
+            Ver Disciplinas
+          </Button>
+          <Button
+            size="middle"
+            icon={<EditOutlined />}
+            onClick={() => edit(record)}
+            style={buttonStyle}
+          >
+            Editar
           </Button>
         </div>
       ),
     },
     {
-      title: "Coordenador",
-      dataIndex: ["coordenador", "nome"],
-      width: 180,
+      title: "Excluir",
+      width: 80,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (nome) => (
-        <div style={{ padding: "10px 12px" }}>
-          <span style={{ fontSize: 14, fontWeight: 500 }}>
-            {nome || "—"}
-          </span>
-        </div>
-      ),
-    },
-    {
-      title: "Ações",
-      width: 180,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (_, r) => (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-start",
-            gap: actionsGap,
-            paddingLeft: 12,
-          }}
-        >
-          <Tooltip title="Editar">
+      render: (_, record) => (
+        <div style={{ textAlign: "center", padding: "10px 0" }}>
+          <Popconfirm
+            title="Deseja realmente excluir este curso?"
+            onConfirm={() => remove(record.id)}
+          >
             <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => edit(r)}
-              style={buttonStyle}
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
             />
-          </Tooltip>
-          <Popconfirm title="Excluir?" onConfirm={() => remove(r.id)}>
-            <Tooltip title="Excluir">
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                style={buttonStyle}
-              />
-            </Tooltip>
           </Popconfirm>
         </div>
       ),
@@ -209,7 +190,7 @@ export default function Cursos() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 16,
+          marginBottom: 20,
           width: "100%",
         }}
       >
@@ -217,14 +198,14 @@ export default function Cursos() {
           placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 260, height: 36 }}
+          style={{ width: 280, height: 38 }}
           onChange={(e) => setSearch(e.target.value)}
         />
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ height: 36, padding: "0 16px" }}
+          style={{ height: 38, padding: "0 18px" }}
         >
           Novo Curso
         </Button>
@@ -255,13 +236,6 @@ export default function Cursos() {
             rules={[{ required: true }]}
           >
             <Input placeholder="Digite o nome do curso" />
-          </Form.Item>
-
-          <Form.Item
-            name="coordenador"
-            label="Coordenador"
-          >
-            <Input placeholder="Nome do coordenador" />
           </Form.Item>
         </Form>
       </Modal>

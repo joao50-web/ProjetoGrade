@@ -6,14 +6,16 @@ import {
   Form,
   Input,
   Select,
-  Radio,
-  Popconfirm,
   message,
+  Popconfirm,
   Space,
-  Tag
+  Tag,
+  Tooltip
 } from 'antd';
 
 import {
+  CheckCircleTwoTone,
+  CloseCircleTwoTone,
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
@@ -23,84 +25,89 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= CORES SUAVES ================= */
-const hierarquiaColors = {
-  Coordenador: { bg: '#e6f4ff' },
-  Professor: { bg: '#e8f5ff' },
-  Estagiario: { bg: '#f6ffed' },
-  Estagiário: { bg: '#f6ffed' },
-  Admin: { bg: '#fff1f0' }
+// Azul institucional fraco para cargos
+const cargoColors = {
+  Administrador: { bg: '#f5f4f0', color: '#093e5e' },
+  'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
+  Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
+  PROGRAD: { bg: '#f5f4f0', color: '#093e5e' },
+  Professor: { bg: '#f5f4f0', color: '#093e5e' }
 };
 
-/* ================= HEADER ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '12px 16px',
-  fontSize: 14,
+  padding: '14px 20px',
+  fontSize: 16,
   textAlign: 'center'
 };
 
-export default function Usuarios() {
-  const [usuarios, setUsuarios] = useState([]);
+export default function Pessoas() {
   const [pessoas, setPessoas] = useState([]);
-  const [hierarquias, setHierarquias] = useState([]);
+  const [cargos, setCargos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
 
   const load = async () => {
     try {
-      const [usuariosRes, pessoasRes, hierarquiasRes] = await Promise.all([
-        api.get('/usuarios'),
+      const [pessoasRes, cargosRes] = await Promise.all([
         api.get('/pessoas'),
-        api.get('/hierarquias')
+        api.get('/cargos')
       ]);
-
-      setUsuarios(usuariosRes.data);
-      setPessoas(pessoasRes.data.filter(p => !p.usuario));
-      setHierarquias(hierarquiasRes.data);
+      setPessoas(pessoasRes.data);
+      setCargos(cargosRes.data);
     } catch {
       message.error('Erro ao carregar dados');
     }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  const submit = async (values) => {
+  const save = async () => {
     try {
-      editing
-        ? await api.put(`/usuarios/${editing.id}`, values)
-        : await api.post('/usuarios', values);
+      const values = await form.validateFields();
+      setLoading(true);
 
-      message.success(editing ? 'Usuário atualizado' : 'Usuário criado');
+      if (editing) {
+        await api.put(`/pessoas/${editing.id}`, values);
+      } else {
+        await api.post('/pessoas', values);
+      }
+
       closeModal();
       load();
     } catch (err) {
-      message.error(err.response?.data?.error || 'Erro ao salvar usuário');
+      if (err.errorFields) return;
+      message.error(err.response?.data?.error || 'Erro ao salvar');
+    } finally {
+      setLoading(false);
     }
   };
 
   const remove = async (id) => {
     try {
-      await api.delete(`/usuarios/${id}`);
-      message.success('Usuário removido');
+      await api.delete(`/pessoas/${id}`);
       load();
-    } catch {
-      message.error('Erro ao excluir usuário');
+    } catch (err) {
+      message.error(err.response?.data?.error);
     }
   };
 
-  const edit = (usuario) => {
-    setEditing(usuario);
+  const edit = (pessoa) => {
+    setEditing(pessoa);
+
     form.setFieldsValue({
-      login: usuario.login,
-      pessoa_id: usuario.pessoa?.id,
-      hierarquia_id: usuario.hierarquia?.id
+      nome: pessoa.nome,
+      email: pessoa.email,
+      cargo_id: pessoa.cargo?.id
     });
+
     setOpen(true);
   };
 
@@ -110,16 +117,15 @@ export default function Usuarios() {
     form.resetFields();
   };
 
-  const filtered = usuarios.filter(u =>
-    [u.login, u.pessoa?.nome, u.hierarquia?.descricao]
+  const filtered = pessoas.filter(p =>
+    [p.nome, p.email, p.cargo?.descricao]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  /* PADRÃO TEXTO */
   const renderText = (text, strong = false) => (
-    <div style={{ padding: '6px 16px' }}>
+    <div style={{ padding: '8px 20px' }}>
       <span style={{
-        fontSize: strong ? 16 : 15,
+        fontSize: strong ? 17 : 16,
         fontWeight: strong ? 500 : 400
       }}>
         {text}
@@ -127,22 +133,18 @@ export default function Usuarios() {
     </div>
   );
 
-  /* TAG HIERARQUIA */
-  const renderHierarquia = (descricao) => {
-    const style = hierarquiaColors[descricao] || { bg: '#fafafa' };
-
+  const renderCargo = (descricao) => {
+    const style = cargoColors[descricao] || { bg: '#e1ebf7', color: '#093e5e' };
     return (
-      <div style={{ padding: '6px 16px' }}>
-        <Tag
-          style={{
-            background: style.bg,
-            borderRadius: 12,
-            padding: '4px 14px',
-            fontSize: 13,
-            fontWeight: 500,
-            border: '1px solid #d9d9d9'
-          }}
-        >
+      <div style={{ padding: '8px 20px' }}>
+        <Tag style={{
+          background: style.bg,
+          color: style.color,
+          borderRadius: 12,
+          padding: '5px 16px',
+          fontSize: 15,
+          fontWeight: 500
+        }}>
           {descricao}
         </Tag>
       </div>
@@ -151,139 +153,131 @@ export default function Usuarios() {
 
   return (
     <AppLayout>
-
-      {/* TOPO */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 18
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
-          placeholder="Buscar usuário..."
+          placeholder="Buscar pessoa..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 260 }}
+          style={{ width: 280, fontSize: 16 }}
           onChange={e => setSearch(e.target.value)}
         />
-
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
-          style={{ height: 40, fontWeight: 500 }}
-        >
-          Novo Usuário
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)} style={{ fontSize: 16 }}>
+          Nova Pessoa
         </Button>
       </div>
 
-      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        style={{ borderRadius: 10 }}
         columns={[
-
           {
-            title: 'Login',
-            dataIndex: 'login',
+            title: 'Nome',
+            dataIndex: 'nome',
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => renderText(text, true)
+            render: (text) => renderText(text, true)
           },
-
           {
-            title: 'Pessoa',
-            dataIndex: ['pessoa', 'nome'],
+            title: 'Email',
+            dataIndex: 'email',
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderText
           },
-
           {
-            title: 'Hierarquia',
-            dataIndex: ['hierarquia', 'descricao'],
+            title: 'Cargo',
+            dataIndex: ['cargo', 'descricao'],
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: renderHierarquia
+            render: renderCargo
           },
-
+          {
+            title: 'Usuário',
+            align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, r) => {
+              return r.usuario?.id
+                ? <CheckCircleTwoTone twoToneColor="#52c41a" />
+                : (
+                  <Tooltip title="Não possui usuário vinculado">
+                    <CloseCircleTwoTone twoToneColor="#ff4d4f" />
+                  </Tooltip>
+                );
+            }
+          },
           {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => (
-              <Space size={18}>
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => edit(r)}
-                  style={{ fontSize: 18 }}
-                />
+            render: (_, r) => {
+              const possuiUsuario = Boolean(r.usuario?.id);
 
-                <Popconfirm
-                  title="Excluir este usuário?"
-                  onConfirm={() => remove(r.id)}
-                >
+              return (
+                <Space size={20}>
                   <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    style={{ fontSize: 18 }}
+                    type="default"
+                    icon={<EditOutlined />}
+                    onClick={() => edit(r)}
+                    style={{
+                      fontSize: 16,
+                      color: '#333333',
+                      borderColor: '#cccccc',
+                      backgroundColor: '#f9f9f9'
+                    }}
                   />
-                </Popconfirm>
-              </Space>
-            )
+                  <Tooltip
+                    title={possuiUsuario ? 'Não é possível excluir: possui usuário vinculado' : ''}
+                  >
+                    {possuiUsuario ? (
+                      <Button type="text" danger disabled icon={<DeleteOutlined />} />
+                    ) : (
+                      <Popconfirm
+                        title="Excluir esta pessoa?"
+                        onConfirm={() => remove(r.id)}
+                      >
+                        <Button type="text" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    )}
+                  </Tooltip>
+                </Space>
+              );
+            }
           }
-
         ]}
+        style={{ fontSize: 16 }}
+        scroll={{ x: 'max-content' }}
       />
 
-      {/* MODAL */}
       <Modal
-        title={editing ? 'Editar Usuário' : 'Novo Usuário'}
+        title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={open}
         onCancel={closeModal}
-        onOk={() => form.submit()}
+        onOk={save}
+        confirmLoading={loading}
         okText="Salvar"
-        destroyOnClose
+        cancelText="Cancelar"
+        bodyStyle={{ fontSize: 16 }}
       >
-        <Form layout="vertical" form={form} onFinish={submit}>
-
-          {!editing && (
-            <Form.Item name="pessoa_id" label="Pessoa" rules={[{ required: true }]}>
-              <Select placeholder="Selecione">
-                {pessoas.map(p => (
-                  <Select.Option key={p.id} value={p.id}>
-                    {p.nome}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          )}
-
-          <Form.Item name="login" label="Login" rules={[{ required: true }]}>
-            <Input />
+        <Form layout="vertical" form={form} style={{ fontSize: 16 }}>
+          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
+            <Input style={{ fontSize: 16 }} />
           </Form.Item>
-
-          <Form.Item name="senha" label="Senha" rules={!editing ? [{ required: true }] : []}>
-            <Input.Password />
+          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
+            <Input style={{ fontSize: 16 }} />
           </Form.Item>
-
-          <Form.Item name="hierarquia_id" label="Hierarquia" rules={[{ required: true }]}>
-            <Radio.Group>
-              {hierarquias.map(h => (
-                <Radio key={h.id} value={h.id}>
-                  {h.descricao}
-                </Radio>
+          <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
+            <Select style={{ fontSize: 16 }}>
+              {cargos.map(c => (
+                <Select.Option key={c.id} value={c.id}>
+                  {c.descricao}
+                </Select.Option>
               ))}
-            </Radio.Group>
+            </Select>
           </Form.Item>
-
         </Form>
       </Modal>
-
     </AppLayout>
   );
 }

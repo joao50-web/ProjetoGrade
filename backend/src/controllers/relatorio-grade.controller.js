@@ -1,4 +1,4 @@
-const renderTemplate = require('../templates/grade-horaria.template');
+const renderTemplate = require('../templates/grade-horaria.template'); 
 const { generatePDF } = require('../services/pdf.service');
 
 const {
@@ -14,17 +14,13 @@ const {
 
 exports.gerarPDF = async (req, res) => {
   try {
-
     const { curso_id, ano_id, curriculo_id, semestre_id, todos } = req.query;
 
     if (!curso_id || !ano_id || !curriculo_id) {
-      return res.status(400).json({
-        error: 'curso_id, ano_id e curriculo_id são obrigatórios'
-      });
+      return res.status(400).json({ error: 'curso_id, ano_id e curriculo_id são obrigatórios' });
     }
 
     /* ================= DADOS BASE ================= */
-
     const curso = await Curso.findByPk(curso_id);
     const ano = await Ano.findByPk(ano_id);
     const curriculo = await Curriculo.findByPk(curriculo_id);
@@ -34,7 +30,6 @@ exports.gerarPDF = async (req, res) => {
     }
 
     /* ================= BUSCA DA GRADE ================= */
-
     const grades = await GradeHoraria.findAll({
       where: {
         curso_id,
@@ -47,76 +42,44 @@ exports.gerarPDF = async (req, res) => {
           model: Disciplina,
           as: 'disciplina',
           attributes: ['id', 'codigo', 'nome'],
-          required: false
+          required: true // só pega se existir disciplina
         },
-        {
-          model: Horario,
-          as: 'horario'
-        },
-        {
-          model: DiaSemana,
-          as: 'diaSemana'
-        },
-        {
-          model: Semestre,
-          as: 'semestre'
-        }
+        { model: Horario, as: 'horario' },
+        { model: DiaSemana, as: 'diaSemana' },
+        { model: Semestre, as: 'semestre' }
       ]
     });
 
     /* ================= HORÁRIOS E DIAS ================= */
-
     const horarios = await Horario.findAll({ order: [['id', 'ASC']] });
     const dias = await DiaSemana.findAll({ order: [['id', 'ASC']] });
 
     /* ================= SEMESTRES ================= */
-
     let semestres = [];
-
-    if (todos === 'true') {
-      semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
-    } else {
-
-      if (!semestre_id) {
-        return res.status(400).json({
-          error: 'semestre_id é obrigatório quando todos=false'
-        });
-      }
-
+    if (todos === 'true') semestres = await Semestre.findAll({ order: [['id', 'ASC']] });
+    else if (semestre_id) {
       const sem = await Semestre.findByPk(semestre_id);
       if (sem) semestres = [sem];
+    } else {
+      return res.status(400).json({ error: 'semestre_id é obrigatório quando todos=false' });
     }
 
     /* ================= MONTAGEM FINAL ================= */
-
     const semestresRender = semestres.map(sem => {
-
-      const registrosSemestre = grades.filter(
-        g => g.semestre_id === sem.id
-      );
+      const registrosSemestre = grades.filter(g => g.semestre_id === sem.id);
 
       const linhas = horarios.map(h => {
-
         const celulas = dias.map(d => {
-
           const slot = registrosSemestre.find(
-            g =>
-              g.horario_id === h.id &&
-              g.dia_semana_id === d.id
+            g => g.horario_id === h.id && g.dia_semana_id === d.id
           );
 
+          // Se não houver disciplina, retorna vazio
           if (!slot || !slot.disciplina) return '';
-
-          
           return `${slot.disciplina.codigo} - ${slot.disciplina.nome}`;
-
         });
 
-        return {
-          horario: h.descricao,
-          celulas
-        };
-
+        return { horario: h.descricao, celulas };
       });
 
       return {
@@ -124,16 +87,13 @@ exports.gerarPDF = async (req, res) => {
         dias: dias.map(d => d.descricao),
         linhas
       };
-
     });
 
     /* ================= TEMPLATE ================= */
-
     const html = renderTemplate({
       universidade: 'Universidade Federal de Ciências da Saúde',
       curso: curso.nome,
       curriculo: curriculo.descricao,
-      coordenador: '',
       anoLetivo: ano.descricao,
       semestres: semestresRender
     });
@@ -141,20 +101,11 @@ exports.gerarPDF = async (req, res) => {
     const pdf = await generatePDF(html);
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename=grade-${curso.nome}.pdf`
-    );
-
+    res.setHeader('Content-Disposition', `inline; filename=grade-${curso.nome}.pdf`);
     return res.end(pdf);
 
   } catch (error) {
-
     console.error(error);
-
-    return res.status(500).json({
-      error: 'Erro ao gerar PDF'
-    });
-
+    return res.status(500).json({ error: 'Erro ao gerar PDF' });
   }
 };

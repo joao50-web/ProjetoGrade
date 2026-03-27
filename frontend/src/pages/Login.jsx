@@ -12,146 +12,104 @@ export default function Login() {
 
   const onFinish = async (values) => {
     try {
-
       const res = await api.post("/auth/login", {
         login: values.email,
         senha: values.senha
       });
 
-     localStorage.setItem("token", res.data.token);
-
-      // Salva usuário logado no localStorage (opcional para PrivateRoute)
+      localStorage.setItem("token", res.data.token);
       localStorage.setItem("usuario", JSON.stringify(res.data.usuario));
 
-       const role = res.data.usuario.role; // ou hierarquia
-      let redirect = "/home"; // padrão
-
-      if (role === "administrador") redirect = "/home"; // pode ser dashboard admin
+      const role = res.data.usuario.role;
+      let redirect = "/home";
+      if (role === "administrador") redirect = "/home";
       else if (role === "visualizacao" || role === "edicao") redirect = "/grade-horaria";
-      
-      message.success("Login realizado com sucesso");
 
+      message.success("Login realizado com sucesso");
       window.location.href = redirect;
 
     } catch (err) {
-
-      message.error(
-        err.response?.data?.error || "Erro ao realizar login"
-      );
-
+      message.error(err.response?.data?.error || "Erro ao realizar login");
     }
   };
 
   return (
-
-    <Layout
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f4f7fb"
-      }}
-    >
+    <Layout style={{ minHeight: "100vh", backgroundColor: "#f4f7fb" }}>
 
       {/* HEADER */}
-
       <Header
         style={{
           backgroundColor: "#093e5e",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: 72
+          height: 90
         }}
       >
-     
-
         <img
           src={logoBranco}
           alt="UFCSPA"
-          style={{
-            height: 110,
-            objectFit: "contain"
-          }}
+          style={{ height: 130, objectFit: "contain" }}
         />
-
       </Header>
 
-      {/* CONTEÚDO */}
-
+      {/* CONTENT */}
       <Content
         style={{
           flex: 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "40px"
+          padding: "40px 20px"
         }}
       >
-
         <Card
           style={{
-            width: 440,
-            borderRadius: 18,
-            borderTop: "4px solid #093e5e",
-            boxShadow: "0 15px 40px rgba(0,0,0,0.10)",
-            border: "none"
+            width: 450,
+            borderRadius: 20,
+            borderTop: "5px solid #093e5e",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.12)",
+            border: "none",
           }}
-          bodyStyle={{
-            padding: 36
-          }}
+          bodyStyle={{ padding: 40 }}
         >
 
-          {/* LOGO DO CARD */}
-
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: 24
-            }}
-          >
+          {/* LOGO CARD */}
+          <div style={{ textAlign: "center", marginBottom: 30 }}>
             <img
               src={logoCard}
               alt="UFCSPA"
-              style={{
-                height: 65,
-                objectFit: "contain"
-              }}
+              style={{ height: 70, objectFit: "contain" }}
             />
           </div>
 
-          {/* TÍTULO */}
-
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
-
-            <Title
-              level={3}
-              style={{
-                color: "#093e5e",
-                marginBottom: 6
-              }}
-            >
+          {/* TITLE */}
+          <div style={{ textAlign: "center", marginBottom: 30 }}>
+            <Title level={3} style={{ color: "#093e5e", marginBottom: 6 }}>
               Acesso ao Sistema
             </Title>
-
             <Text type="secondary">
               Utilize suas credenciais institucionais
             </Text>
-
           </div>
 
           {/* FORM */}
-
           <Form layout="vertical" onFinish={onFinish}>
 
             <Form.Item
-              label="E-mail"
+              label="Login"
               name="email"
               rules={[{ required: true, message: "Informe seu e-mail" }]}
             >
               <Input
-                prefix={<MailOutlined />}
-                placeholder="seu.email@ufcspa.edu.br"
+                prefix={<MailOutlined style={{ color: "#093e5e" }} />}
+                placeholder=""
                 size="large"
-                style={{ borderRadius: 8 }}
+                style={{
+                  borderRadius: 10,
+                  borderColor: "#d9d9d9",
+                  height: 48,
+                }}
               />
             </Form.Item>
 
@@ -161,10 +119,14 @@ export default function Login() {
               rules={[{ required: true, message: "Informe sua senha" }]}
             >
               <Input.Password
-                prefix={<LockOutlined />}
+                prefix={<LockOutlined style={{ color: "#093e5e" }} />}
                 placeholder="••••••••"
                 size="large"
-                style={{ borderRadius: 8 }}
+                style={{
+                  borderRadius: 10,
+                  borderColor: "#d9d9d9",
+                  height: 48,
+                }}
               />
             </Form.Item>
 
@@ -176,30 +138,28 @@ export default function Login() {
               style={{
                 backgroundColor: "#093e5e",
                 borderColor: "#093e5e",
-                height: 46,
-                borderRadius: 10,
+                height: 50,
+                borderRadius: 12,
                 marginTop: 10,
-                fontWeight: 500
+                fontWeight: 600,
+                fontSize: 16,
               }}
             >
               Entrar
             </Button>
 
           </Form>
-
         </Card>
-
       </Content>
 
       {/* FOOTER */}
-
       <Footer
         style={{
           backgroundColor: "#093e5e",
           color: "#ffffff",
           textAlign: "center",
-          fontSize: 12,
-          padding: "12px 0"
+          fontSize: 13,
+          padding: "14px 0"
         }}
       >
         © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre

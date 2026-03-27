@@ -5,11 +5,9 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Popconfirm,
   message,
-  Tooltip,
-  Tag
+  Space
 } from 'antd';
 
 import {
@@ -26,79 +24,66 @@ const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '10px 12px',
-  fontSize: 13,
+  padding: '14px 20px',
+  fontSize: 16,
   textAlign: 'center'
 };
 
 export default function Disciplinas() {
   const [disciplinas, setDisciplinas] = useState([]);
-  const [cursos, setCursos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     try {
       const res = await api.get('/disciplinas');
-      const dados = res.data.map(d => ({
-        ...d,
-        codigo: d.codigo || d.cod_disciplina || '',
-        tipo: d.tipo || 'Obrigatória'
-      }));
-      setDisciplinas(dados);
+      setDisciplinas(res.data);
     } catch {
       message.error('Erro ao carregar disciplinas');
     }
   };
 
-  const loadAux = async () => {
-    try {
-      const [c] = await Promise.all([api.get('/cursos')]);
-      setCursos(c.data);
-    } catch {
-      message.error('Erro ao carregar dados');
-    }
-  };
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-    loadAux();
-  }, []);
-
-  const submit = async (values) => {
+  const save = async () => {
     try {
+      const values = await form.validateFields();
+      setLoading(true);
+
       if (editing) {
         await api.put(`/disciplinas/${editing.id}`, values);
-        await api.post(`/disciplinas/${editing.id}/relations`, { cursos: values.cursos || [] });
-        message.success('Atualizada');
       } else {
-        const res = await api.post('/disciplinas', values);
-        await api.post(`/disciplinas/${res.data.id}/relations`, { cursos: values.cursos || [] });
-        message.success('Criada');
+        await api.post('/disciplinas', values);
       }
+
       closeModal();
       load();
-    } catch {
-      message.error('Erro ao salvar');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Erro ao salvar disciplina');
+    } finally {
+      setLoading(false);
     }
   };
 
   const remove = async (id) => {
     try {
       await api.delete(`/disciplinas/${id}`);
-      message.success('Removida');
+      message.success('Disciplina removida');
       load();
     } catch {
-      message.error('Erro ao excluir');
+      message.error('Erro ao excluir disciplina');
     }
   };
 
   const edit = (disciplina) => {
     setEditing(disciplina);
-    form.setFieldsValue(disciplina);
+    form.setFieldsValue({
+      nome: disciplina.nome,
+      codigo: disciplina.codigo
+    });
     setOpen(true);
   };
 
@@ -109,43 +94,35 @@ export default function Disciplinas() {
   };
 
   const filtered = disciplinas.filter(d =>
-    d.nome?.toLowerCase().includes(search.toLowerCase()) ||
-    d.codigo?.toLowerCase().includes(search.toLowerCase())
+    [d.nome, d.codigo].some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-
-  const getTipoTag = (tipo) => {
-    switch(tipo) {
-      case 'Obrigatória': return <Tag color="blue">{tipo}</Tag>;
-      case 'Optativa': return <Tag color="green">{tipo}</Tag>;
-      case 'Multicurso': return <Tag color="purple">{tipo}</Tag>;
-      default: return <Tag>{tipo}</Tag>;
-    }
-  };
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '8px 16px' }}>
+      <span style={{ fontSize: strong ? 17 : 16, fontWeight: strong ? 500 : 400 }}>
+        {text}
+      </span>
+    </div>
+  );
 
   return (
     <AppLayout>
 
       {/* TOPO */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-        width: '100%'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
           placeholder="Buscar disciplina..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 260, height: 36 }}
+          style={{ width: 280, fontSize: 16 }}
           onChange={e => setSearch(e.target.value)}
         />
+
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ height: 36, padding: '0 16px' }}
+          style={{ height: 40, fontWeight: 500, fontSize: 16 }}
         >
           Nova Disciplina
         </Button>
@@ -155,73 +132,67 @@ export default function Disciplinas() {
       <Table
         rowKey="id"
         dataSource={filtered}
-        bordered
-        size="middle"
         pagination={{ pageSize: 6 }}
-        style={{ width: '100%' }}
+        bordered
+        style={{ borderRadius: 10 }}
         columns={[
 
           {
             title: 'Código',
             dataIndex: 'codigo',
-            width: 140,
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <div style={{ padding: '10px 12px' }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{text}</span>
-              </div>
-            )
+            render: renderText
           },
 
           {
-            title: 'Disciplina',
+            title: 'Nome',
             dataIndex: 'nome',
-            width: 300,
+            align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: text => (
-              <div style={{ padding: '10px 12px' }}>
-                <span style={{ fontSize: 14, fontWeight: 500 }}>{text}</span>
-              </div>
+            render: text => renderText(text, true)
+          },
+
+          {
+            title: 'Editar Disciplina',
+            align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, record) => (
+              <Button
+                type="default"
+                icon={<EditOutlined />}
+                onClick={() => edit(record)}
+                style={{
+                  fontSize: 16,
+                  color: '#333',
+                  borderColor: '#ccc',
+                  backgroundColor: '#f9f9f9'
+                }}
+              />
             )
           },
 
           {
-            title: 'Tipo de Disciplina',
-            dataIndex: 'tipo',
-            width: 160,
+            title: 'Excluir',
+            align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: tipo => (
-              <div style={{ padding: '10px 12px' }}>
-                {getTipoTag(tipo)}
-              </div>
+            render: (_, record) => (
+              <Popconfirm
+                title="Excluir esta disciplina?"
+                onConfirm={() => remove(record.id)}
+              >
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  style={{ fontSize: 16 }}
+                />
+              </Popconfirm>
             )
-          },
-
-      {
-  title: 'Ações',
-  dataIndex: 'acoes',
-  width: 120,
-  onHeaderCell: () => ({ style: headerCellStyle }),
-  render: (_, r) => (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'flex-start', // 👈 alinhado à esquerda
-      gap: 30,
-      paddingLeft: 2
-    }}>
-      <Tooltip title="Editar">
-        <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
-      </Tooltip>
-      <Popconfirm title="Excluir?" onConfirm={() => remove(r.id)}>
-        <Tooltip title="Excluir">
-          <Button type="text" danger icon={<DeleteOutlined />} />
-        </Tooltip>
-      </Popconfirm>
-    </div>
-  )
-}
+          }
 
         ]}
+        scroll={{ x: 'max-content' }}
       />
 
       {/* MODAL */}
@@ -229,33 +200,18 @@ export default function Disciplinas() {
         title={editing ? 'Editar Disciplina' : 'Nova Disciplina'}
         open={open}
         onCancel={closeModal}
-        onOk={() => form.submit()}
+        onOk={save}
+        okText="Salvar"
+        confirmLoading={loading}
+        destroyOnClose
       >
-        <Form layout="vertical" form={form} onFinish={submit}>
+        <Form layout="vertical" form={form}>
           <Form.Item name="codigo" label="Código" rules={[{ required: true }]}>
-            <Input />
+            <Input style={{ fontSize: 16 }} />
           </Form.Item>
 
           <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="tipo" label="Tipo de Disciplina" rules={[{ required: true }]}>
-            <Select>
-              <Select.Option value="Obrigatória">Obrigatória</Select.Option>
-              <Select.Option value="Optativa">Optativa</Select.Option>
-              <Select.Option value="Multicurso">Multicurso</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="cursos" label="Cursos">
-            <Select mode="multiple">
-              {cursos.map(c => (
-                <Select.Option key={c.id} value={c.id}>
-                  {c.nome}
-                </Select.Option>
-              ))}
-            </Select>
+            <Input style={{ fontSize: 16 }} />
           </Form.Item>
         </Form>
       </Modal>

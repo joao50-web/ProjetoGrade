@@ -8,9 +8,8 @@ import {
   Button,
   Dropdown,
   Popconfirm,
-  Space,
-  Layout,
   message,
+  Layout,
 } from "antd";
 
 import {
@@ -29,9 +28,10 @@ const headerStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
   fontWeight: 600,
-  padding: "4px 16px",
+  padding: "6px 16px",
   fontSize: 14,
   textAlign: "center",
+  borderRight: "1px solid #0a4d7a",
 };
 
 export default function GradeTabela() {
@@ -96,7 +96,7 @@ export default function GradeTabela() {
     });
   }, [contexto.curso_id]);
 
-  /* LOAD GRADE (SEM POPUP) */
+  /* LOAD GRADE */
   useEffect(() => {
     const { curso_id, semestre_id, ano, curriculo } = contexto;
     if (!curso_id || !semestre_id || !ano || !curriculo) return;
@@ -141,7 +141,7 @@ export default function GradeTabela() {
     });
   };
 
-  /* SALVAR (COM CONTROLE DE MENSAGEM) */
+  /* SALVAR */
   const salvarGrade = async (mostrarMensagem = true) => {
     if (!podeEditar) return;
 
@@ -174,7 +174,7 @@ export default function GradeTabela() {
     }
   };
 
-  /* AUTO SAVE (TOTALMENTE SILENCIOSO) */
+  /* AUTO SAVE SILENCIOSO */
   useEffect(() => {
     if (!podeEditar) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -194,7 +194,6 @@ export default function GradeTabela() {
       ano: null,
       curriculo: null,
     });
-
     message.info("Grade restaurada");
   };
 
@@ -237,13 +236,13 @@ export default function GradeTabela() {
       title: "Horário",
       dataIndex: "horario",
       fixed: "left",
-      width: 100,
+      width: 120,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
     },
     ...dias.map((d) => ({
       title: d.descricao,
-      width: 200,
+      width: 220,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
@@ -258,7 +257,13 @@ export default function GradeTabela() {
             size="small"
             allowClear
             disabled={!podeEditar}
-            style={{ width: "100%" }}
+            style={{
+              width: "100%",
+              color: !podeEditar ? "#000" : undefined,
+              backgroundColor: !podeEditar ? "#f5f7fa" : "#ffffff",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+            }}
             value={cell?.disciplina_id}
             onChange={(disciplina_id) =>
               updateSlot({
@@ -325,7 +330,7 @@ export default function GradeTabela() {
                   style={{
                     backgroundColor: "#f5f5f5",
                     color: "#333",
-                    border: "1px solid #000",
+                    border: "1px solid #d9d9d9",
                   }}
                   icon={<ClearOutlined />}
                   size="small"
@@ -399,12 +404,14 @@ export default function GradeTabela() {
             columns={columns}
             dataSource={dataSource}
             pagination={false}
-            bordered
+            bordered={false} // removido borda interna pesada
             scroll={{ x: "max-content" }}
+            rowClassName={() => "grade-row"}
             style={{
-              border: "2px solid #000",
-              borderRadius: "4px",
+              border: "1px solid #d9d9d9",
+              borderRadius: 6,
               overflow: "hidden",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
             }}
           />
         </Content>
