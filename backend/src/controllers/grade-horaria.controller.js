@@ -36,7 +36,7 @@ exports.findByContext = async (req, res) => {
 
         {
           model: Disciplina,
-          as: 'disciplina', // ✅ OBRIGATÓRIO
+          as: 'disciplina', 
           attributes: [
             'id',
             'codigo',

@@ -9,7 +9,8 @@ import {
   message,
   Popconfirm,
   Space,
-  Tag
+  Tag,
+  Tooltip
 } from 'antd';
 
 import {
@@ -24,7 +25,6 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* ================= CORES DOS CARGOS (SUAVES) ================= */
 const cargoColors = {
   Administrador: { bg: '#dfecff8c' },
   'Secretario de curso': { bg: '#f4e2ff88' },
@@ -33,7 +33,6 @@ const cargoColors = {
   Professor: { bg: '#e8f5ff' }
 };
 
-/* ================= HEADER PADRÃO ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
@@ -77,10 +76,8 @@ export default function Pessoas() {
 
       if (editing) {
         await api.put(`/pessoas/${editing.id}`, values);
-        message.success('Pessoa atualizada com sucesso');
       } else {
         await api.post('/pessoas', values);
-        message.success('Pessoa criada com sucesso');
       }
 
       closeModal();
@@ -89,9 +86,7 @@ export default function Pessoas() {
     } catch (err) {
       if (err.errorFields) return;
 
-      message.error(
-        err.response?.data?.error || 'Erro ao salvar pessoa'
-      );
+      message.error(err.response?.data?.error || 'Erro ao salvar');
     } finally {
       setLoading(false);
     }
@@ -100,13 +95,9 @@ export default function Pessoas() {
   const remove = async (id) => {
     try {
       await api.delete(`/pessoas/${id}`);
-      message.success('Pessoa removida com sucesso');
       load();
     } catch (err) {
-      message.error(
-        err.response?.data?.error ||
-        'Não é possível excluir. Pessoa vinculada.'
-      );
+      message.error(err.response?.data?.error);
     }
   };
 
@@ -133,36 +124,27 @@ export default function Pessoas() {
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  /* ================= TEXTO PADRÃO ================= */
   const renderText = (text, strong = false) => (
     <div style={{ padding: '6px 16px' }}>
       <span style={{
         fontSize: strong ? 16 : 15,
-        fontWeight: strong ? 500 : 400,
-        color: '#1a1a1a'
+        fontWeight: strong ? 500 : 400
       }}>
         {text}
       </span>
     </div>
   );
 
-  /* ================= TAG DE CARGO ================= */
   const renderCargo = (descricao) => {
     const style = cargoColors[descricao] || { bg: '#fafafa' };
 
     return (
       <div style={{ padding: '6px 16px' }}>
-        <Tag
-          style={{
-            background: style.bg,
-            color: '#262626',
-            borderRadius: 12,
-            padding: '4px 14px',
-            fontSize: 13,
-            fontWeight: 500,
-            border: '1px solid #d9d9d9'
-          }}
-        >
+        <Tag style={{
+          background: style.bg,
+          borderRadius: 12,
+          padding: '4px 14px'
+        }}>
           {descricao}
         </Tag>
       </div>
@@ -172,12 +154,7 @@ export default function Pessoas() {
   return (
     <AppLayout>
 
-      {/* TOPO */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 18
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
         <Input
           placeholder="Buscar pessoa..."
           prefix={<SearchOutlined />}
@@ -186,33 +163,22 @@ export default function Pessoas() {
           onChange={e => setSearch(e.target.value)}
         />
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
-          style={{
-            height: 40,
-            fontWeight: 500
-          }}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
           Nova Pessoa
         </Button>
       </div>
 
-      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        style={{ borderRadius: 10 }}
         columns={[
 
           {
             title: 'Nome',
             dataIndex: 'nome',
             align: 'left',
-            ellipsis: true,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (text) => renderText(text, true)
           },
@@ -221,9 +187,8 @@ export default function Pessoas() {
             title: 'Email',
             dataIndex: 'email',
             align: 'left',
-            ellipsis: true,
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (text) => renderText(text)
+            render: renderText
           },
 
           {
@@ -239,11 +204,9 @@ export default function Pessoas() {
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <div style={{ padding: '6px' }}>
-                {r.usuario?.id
-                  ? <CheckCircleTwoTone twoToneColor="#52c41a" />
-                  : <CloseCircleTwoTone twoToneColor="#ff4d4f" />}
-              </div>
+              r.usuario?.id
+                ? <CheckCircleTwoTone twoToneColor="#52c41a" />
+                : <CloseCircleTwoTone twoToneColor="#ff4d4f" />
             )
           },
 
@@ -256,34 +219,22 @@ export default function Pessoas() {
 
               return (
                 <Space size={18}>
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    onClick={() => edit(r)}
-                    style={{ fontSize: 18 }}
-                  />
+                  <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
 
-                  {possuiUsuario ? (
-                    <Button
-                      type="text"
-                      danger
-                      disabled
-                      icon={<DeleteOutlined />}
-                      style={{ fontSize: 18 }}
-                    />
-                  ) : (
-                    <Popconfirm
-                      title="Excluir esta pessoa?"
-                      onConfirm={() => remove(r.id)}
-                    >
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        style={{ fontSize: 18 }}
-                      />
-                    </Popconfirm>
-                  )}
+                  <Tooltip
+                    title={possuiUsuario ? 'Não é possível excluir: possui usuário vinculado' : ''}
+                  >
+                    {possuiUsuario ? (
+                      <Button type="text" danger disabled icon={<DeleteOutlined />} />
+                    ) : (
+                      <Popconfirm
+                        title="Excluir esta pessoa?"
+                        onConfirm={() => remove(r.id)}
+                      >
+                        <Button type="text" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    )}
+                  </Tooltip>
                 </Space>
               );
             }
@@ -292,27 +243,24 @@ export default function Pessoas() {
         ]}
       />
 
-      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={open}
         onCancel={closeModal}
         onOk={save}
         confirmLoading={loading}
-        okText="Salvar"
-        destroyOnClose
       >
         <Form layout="vertical" form={form}>
           <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
-            <Input size="middle" />
+            <Input />
           </Form.Item>
 
-          <Form.Item name="email" label="Email" rules={[{ required: true }, { type: 'email' }]}>
-            <Input size="middle" />
+          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
+            <Input />
           </Form.Item>
 
           <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
-            <Select placeholder="Selecione">
+            <Select>
               {cargos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.descricao}

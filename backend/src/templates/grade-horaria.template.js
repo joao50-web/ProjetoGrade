@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Carrega o logo em Base64
 const logoBase64 = fs.readFileSync(
   path.resolve(__dirname, '../../assets/logo-ufcspa.png'),
   { encoding: 'base64' }
@@ -24,84 +23,76 @@ module.exports = function renderGradeHTML({
 <style>
 @page {
   size: A4;
-  margin: 10mm 5mm 5mm 5mm;
+  margin: 6mm 2mm;
 }
 
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 10px;
-  color: #093e5e;
+  color: #1f2d3d;
 }
 
 /* ================= CABEÇALHO ================= */
 
 .header {
   text-align: center;
-  margin-bottom: 38px; /* aumentado */
+  margin-bottom: 38px;
 }
 
 .logo {
-  width: 65px;
-  margin-bottom: 10px; /*  aumentado (era 10px) */
+  width: 60px;
+  margin-bottom: 6px;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   color: #093e5e;
   font-weight: 600;
-
 }
 
 .header h2 {
-  margin: 6px 0 0 0; /*  aumentado */
-  font-size: 14px;
-  font-weight: 500;
-  color: #093e5e;
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #4a5d6a;
 }
 
-/* ================= INFORMAÇÕES ================= */
+/* ================= INFO (ROXO SUAVE) ================= */
 
 .info {
-  background: #f8fafc;
-  border: 1px solid #d9e2ec;
-  border-left: 4px solid #093e5e;
-  padding: 10px 14px; /*  leve aumento */
-  margin-bottom: 10px; /*  mais espaço antes da grade */
-  border-radius: 4px;
+  border: 1px solid #b5b5b5;
+  background: #f5f3ff;
+  padding: 6px 10px;
+  margin-bottom: 12px;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px 24px; /*  mais espaçamento */
-  font-size: 10px;
+  gap: 4px 14px;
 }
 
 .info strong {
   color: #093e5e;
+  font-weight: 600;
 }
 
-/* ================= SEMESTRES ================= */
+/* ================= SEMESTRE ================= */
 
 .semester {
-  margin-bottom: 26px; /* 🔥 mais espaço entre blocos */
-  margin-top: 10px; /* 🔥 novo espaço antes da tabela */
+  margin-bottom: 14px;
   page-break-inside: avoid;
-  break-inside: avoid;
 }
 
-/* Somente a partir do 2º semestre quebra página */
 .semester + .semester {
   page-break-before: always;
 }
 
 .semester-title {
-  background: #093e5e;
-  color: #fff;
-  padding: 5px 4px; /* 🔥 levemente maior */
-  font-weight: bold;
-  margin-bottom: 0px; /* 🔥 espaço antes da tabela */
+  font-weight: 600;
+  color: #093e5e;
+  margin-bottom: 4px;
+  font-size: 10px;
 }
 
 /* ================= TABELA ================= */
@@ -109,68 +100,76 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: px; /* 🔥 espaço da grade */
-  page-break-inside: avoid;
-  break-inside: avoid;
+  border: 1.5px solid #000; 
 }
 
-thead {
-  display: table-header-group;
+/* CABEÇALHO */
+thead th {
+  background: #093e5e;
+  color: #fff;
+  font-weight: 600;
+  font-size: 9.5px;
+  padding: 5px;
+  border: 1px solid #000;
 }
 
-tr {
-  page-break-inside: avoid;
-  break-inside: avoid;
-}
-
+/* CÉLULAS */
 th, td {
-  border: 1px solid #3f5261;
-  padding: 5px; /* 🔥 aumentei levemente */
+  border: 1px solid #444; 
+  padding: 4px;
   text-align: center;
   font-size: 9px;
 }
 
+/* HORÁRIO */
 th.horario,
 td.horario {
-  width: 60px;
-  background: #ccdceb;
-  font-weight: bold;
+  width: 48px;
+  font-size: 8.5px;
+  background: #093e5e;
+  color: #ffffff;
+  font-weight: 600;
+  border: 1px solid #000;
 }
 
+/* GRADE LIMPA */
 td.disciplina {
-  background: #f7f9fc;
-  min-height: 24px; /* 🔥 mais altura */
-  white-space: normal;
+  height: 30px;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+/* REMOVE QUALQUER POLUIÇÃO */
+tbody tr td.disciplina {
+  background: #ffffff;
 }
 
 /* ================= LEGENDA ================= */
 
 .legend {
-  margin-top: 12px; /* 🔥 mais respiro */
-  background: #eef3f8;
-  padding: 8px 10px;
-  border-left: 3px solid #093e5e;
-  font-size: 9px;
+  margin-top: 6px;
+  font-size: 8.5px;
 }
 
 .legend-title {
-  font-weight: bold;
-  margin-bottom: 6px;
+  font-weight: 600;
+  color: #5b4b8a;
+  margin-bottom: 3px;
 }
 
 .legend-item {
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 /* ================= RODAPÉ ================= */
 
 footer {
-  margin-top: 24px; /* 🔥 mais espaço */
-  padding-top: 8px;
-  border-top: 1px solid #cfd8e3;
-  font-size: 8px;
-  color: #5a6b7c;
+  margin-top: 16px;
+  border-top: 1px solid #999;
+  padding-top: 5px;
   text-align: center;
+  font-size: 7.5px;
+  color: #6b7c8a;
 }
 </style>
 </head>
@@ -179,7 +178,6 @@ footer {
 
 <div class="header">
   <img class="logo" src="data:image/png;base64,${logoBase64}" />
-
   <h1>${universidade}</h1>
   <h2>Grade Horária</h2>
 </div>
@@ -195,6 +193,7 @@ footer {
 
 ${semestres.map(semestre => `
 <div class="semester">
+
   <div class="semester-title">${semestre.descricao}</div>
 
   <table>
@@ -204,13 +203,18 @@ ${semestres.map(semestre => `
         ${semestre.dias.map(d => `<th>${d}</th>`).join('')}
       </tr>
     </thead>
+
     <tbody>
       ${semestre.linhas.map(linha => `
         <tr>
           <td class="horario">${linha.horario}</td>
+
           ${linha.celulas.map(c => `
-            <td class="disciplina">${c || ''}</td>
+            <td class="disciplina">
+              ${c || ''}
+            </td>
           `).join('')}
+
         </tr>
       `).join('')}
     </tbody>
@@ -218,7 +222,7 @@ ${semestres.map(semestre => `
 
   ${semestre.professores && semestre.professores.length ? `
   <div class="legend">
-    <div class="legend-title">Legenda de Professores</div>
+    <div class="legend-title">Legenda</div>
     ${semestre.professores.map(p => `
       <div class="legend-item">
         <strong>${p.disciplina}</strong> — ${p.professor}
@@ -231,8 +235,6 @@ ${semestres.map(semestre => `
 `).join('')}
 
 <footer>
-
-  <br>
   Universidade Federal de Ciências da Saúde de Porto Alegre
 </footer>
 

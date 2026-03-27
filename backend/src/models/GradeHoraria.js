@@ -9,10 +9,21 @@ const GradeHoraria = sequelize.define(
       autoIncrement: true,
       primaryKey: true
     },
+
     curso_id: DataTypes.INTEGER,
-    coordenador_id: DataTypes.INTEGER,
+
+    coordenador_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+
     disciplina_id: DataTypes.INTEGER,
-    professor_id: DataTypes.INTEGER,
+
+    professor_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+
     horario_id: DataTypes.INTEGER,
     dia_semana_id: DataTypes.INTEGER,
     ano_id: DataTypes.INTEGER,
@@ -41,13 +52,23 @@ const GradeHoraria = sequelize.define(
 
 /* 🔗 RELACIONAMENTOS */
 GradeHoraria.associate = models => {
+
   GradeHoraria.belongsTo(models.Disciplina, {
     foreignKey: 'disciplina_id'
   });
 
   GradeHoraria.belongsTo(models.Pessoa, {
     foreignKey: 'professor_id',
-    as: 'professor'
+    as: 'professor',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
+  });
+  
+  GradeHoraria.belongsTo(models.Pessoa, {
+    foreignKey: 'coordenador_id',
+    as: 'coordenador',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE'
   });
 
   GradeHoraria.belongsTo(models.Horario, {
@@ -64,3 +85,4 @@ GradeHoraria.associate = models => {
 };
 
 module.exports = GradeHoraria;
+

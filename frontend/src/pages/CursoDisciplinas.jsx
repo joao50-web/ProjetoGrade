@@ -36,18 +36,25 @@ export default function CursoDisciplinas() {
 
       setCurso(cursoRes.data);
 
-      // 🔥 CORREÇÃO IMPORTANTE AQUI
+      // 🔥 AQUI ESTÁ A MUDANÇA PRINCIPAL
       setDisciplinas(
-        all.data.map(d => ({
-          key: d.id.toString(),
-          title: d.nome || '' // evita erro na busca
-        }))
+        all.data.map(d => {
+          const codigo = d.codigo || d.cod_disciplina || '';
+
+          return {
+            key: d.id.toString(),
+            title: `${codigo} - ${d.nome || 'Sem nome'}`
+          };
+        })
       );
 
       setTargetKeys(
         vinculadas.data.map(d => d.id.toString())
       );
 
+    } catch (error) {
+      console.error(error);
+      message.error('Erro ao carregar disciplinas');
     } finally {
       setLoading(false);
     }
@@ -131,7 +138,7 @@ export default function CursoDisciplinas() {
             onChange={setTargetKeys}
             showSearch
 
-            // 🔥 CORREÇÃO PRINCIPAL (BUSCA SEGURA)
+            // 🔥 AGORA BUSCA POR CÓDIGO TAMBÉM
             filterOption={(input, item) =>
               item.title
                 ?.toLowerCase()
@@ -141,7 +148,7 @@ export default function CursoDisciplinas() {
             locale={{
               itemUnit: 'disciplina',
               itemsUnit: 'disciplinas',
-              searchPlaceholder: 'Buscar disciplina',
+              searchPlaceholder: 'Buscar código ou disciplina',
               notFoundContent: 'Nenhum resultado encontrado'
             }}
 
@@ -150,7 +157,8 @@ export default function CursoDisciplinas() {
             render={item => (
               <div style={{
                 padding: '6px 10px',
-                borderRadius: 6
+                borderRadius: 6,
+                fontWeight: 500
               }}>
                 {item.title}
               </div>
@@ -166,7 +174,7 @@ export default function CursoDisciplinas() {
               display: 'flex',
               justifyContent: 'center',
               gap: 24,
-              flexWrap: 'wrap' // 🔥 evita quebrar layout
+              flexWrap: 'wrap'
             }}
           />
         )}

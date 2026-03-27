@@ -38,7 +38,6 @@ exports.remove = async (req, res) => {
     return res.status(404).json({ error: 'Hierarquia não encontrada' });
   }
 
-  // Remove acesso dos usuários vinculados
   await Usuario.update(
     { hierarquia_id: null },
     { where: { hierarquia_id: hierarquia.id } }

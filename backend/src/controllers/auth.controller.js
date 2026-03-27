@@ -30,7 +30,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 🔹 pegar hierarquia correta
     const role = usuario.hierarquia
       ? usuario.hierarquia.descricao
       : 'visualizacao';

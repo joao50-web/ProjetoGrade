@@ -13,7 +13,7 @@ exports.findAll = async (req, res) => {
       {
         model: Disciplina,
         as: 'disciplinas',
-        attributes: ['id', 'codigo', 'nome'], // agora inclui o código e nome
+        attributes: ['id', 'codigo', 'nome'], 
         through: { attributes: [] }
       }
     ]
@@ -44,7 +44,6 @@ exports.remove = async (req, res) => {
   res.status(204).send();
 };
 
-// ==== NOVO: ASSOCIAÇÃO CURSO ↔ DISCIPLINAS ====
 
 /**
  * LISTAR DISCIPLINAS ASSOCIADAS AO CURSO

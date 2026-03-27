@@ -6,11 +6,11 @@ import {
   Row,
   Col,
   Button,
-  message,
   Dropdown,
   Popconfirm,
   Space,
   Layout,
+  message,
 } from "antd";
 
 import {
@@ -22,7 +22,7 @@ import {
 import { api, getUsuarioLogado } from "../services/api";
 import AppLayout from "../components/AppLayout";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Header, Content, Footer } = Layout;
 
 const headerStyle = {
@@ -36,9 +36,8 @@ const headerStyle = {
 
 export default function GradeTabela() {
   const usuario = getUsuarioLogado();
-
-  const isVisualizacao = usuario?.role === "visualizacao";
-  const podeEditar = usuario?.role === "edicao" || usuario?.role === "administrador";
+  const podeEditar =
+    usuario?.role === "edicao" || usuario?.role === "administrador";
 
   const [cursos, setCursos] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
@@ -69,7 +68,7 @@ export default function GradeTabela() {
     curriculos.push({ value: `${ano}`, label: `${ano}` });
   }
 
-  /* ================= LOAD FIXOS ================= */
+  /* LOAD FIXOS */
   useEffect(() => {
     api.get("/cursos").then((r) => setCursos(r.data));
     api.get("/pessoas/coordenadores").then((r) => setCoordenadores(r.data));
@@ -78,39 +77,36 @@ export default function GradeTabela() {
     api.get("/dias-semana").then((r) => setDias(r.data));
   }, []);
 
-  /* ================= LOAD DISCIPLINAS ================= */
+  /* DISCIPLINAS */
   useEffect(() => {
     if (!contexto.curso_id) return;
 
     api.get(`/cursos/${contexto.curso_id}/disciplinas`).then((r) => {
-      const lista = Array.isArray(r.data) ? r.data : r.data?.Disciplinas || [];
+      const lista = Array.isArray(r.data)
+        ? r.data
+        : r.data?.Disciplinas || [];
 
-      const disciplinasCorrigidas = lista.map((d) => ({
-        id: d.id,
-        codigo: d.codigo || "",
-        nome: d.nome || "",
-      }));
-
-      setDisciplinas(disciplinasCorrigidas);
+      setDisciplinas(
+        lista.map((d) => ({
+          id: d.id,
+          codigo: d.codigo || "",
+          nome: d.nome || "",
+        }))
+      );
     });
   }, [contexto.curso_id]);
 
-  /* ================= LOAD GRADE ================= */
+  /* LOAD GRADE (SEM POPUP) */
   useEffect(() => {
     const { curso_id, semestre_id, ano, curriculo } = contexto;
-
     if (!curso_id || !semestre_id || !ano || !curriculo) return;
 
     async function carregarGrade() {
       try {
-        const anoRes = await api.post("/anos/get-or-create", {
-          descricao: ano,
-        });
-
+        const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
         const curriculoRes = await api.post("/curriculos/get-or-create", {
           descricao: curriculo,
         });
-
         const res = await api.get("/grade-horaria", {
           params: {
             curso_id,
@@ -119,25 +115,23 @@ export default function GradeTabela() {
             curriculo_id: curriculoRes.data.id,
           },
         });
-
         setGradeDraft(res.data || []);
-      } catch {
-        message.error("Erro ao carregar grade");
-      }
+      } catch { /* empty */ }
     }
+
     carregarGrade();
   }, [contexto]);
 
-  /* ================= SLOT ================= */
+  /* SLOT */
   const updateSlot = (payload) => {
-    if (!podeEditar) return; // 🔒 bloqueia edição
+    if (!podeEditar) return;
 
     setGradeDraft((prev) => {
       const copy = [...prev];
       const idx = copy.findIndex(
         (s) =>
           s.horario_id === payload.horario_id &&
-          s.dia_semana_id === payload.dia_semana_id,
+          s.dia_semana_id === payload.dia_semana_id
       );
 
       if (idx >= 0) copy[idx] = { ...copy[idx], ...payload };
@@ -147,8 +141,8 @@ export default function GradeTabela() {
     });
   };
 
-  /* ================= SALVAR ================= */
-  const salvarGrade = async () => {
+  /* SALVAR (COM CONTROLE DE MENSAGEM) */
+  const salvarGrade = async (mostrarMensagem = true) => {
     if (!podeEditar) return;
 
     const { curso_id, semestre_id, ano, curriculo } = contexto;
@@ -170,29 +164,27 @@ export default function GradeTabela() {
         slots: gradeDraft,
       });
 
-      message.success("Grade salva com sucesso");
-    } catch (err) {
-      console.error(err);
-      message.error("Erro ao salvar grade");
+      if (mostrarMensagem) {
+        message.success("Grade salva com sucesso");
+      }
+    } catch {
+      if (mostrarMensagem) {
+        message.error("Erro ao salvar");
+      }
     }
   };
 
-  /* ================= AUTO SAVE ================= */
+  /* AUTO SAVE (TOTALMENTE SILENCIOSO) */
   useEffect(() => {
-    if (!podeEditar) return; // 🔒 não salva automático
-
+    if (!podeEditar) return;
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
     saveTimeout.current = setTimeout(() => {
-      salvarGrade();
+      salvarGrade(false);
     }, 1500);
-
-    return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    };
+    return () => clearTimeout(saveTimeout.current);
   }, [gradeDraft, contexto]);
 
-  /* ================= RESTAURAR ================= */
+  /* RESTAURAR */
   const limparTudo = () => {
     setGradeDraft([]);
     setContexto({
@@ -202,10 +194,44 @@ export default function GradeTabela() {
       ano: null,
       curriculo: null,
     });
+
     message.info("Grade restaurada");
   };
 
-  /* ================= COLUNAS ================= */
+  /* PDF */
+  const gerarPDF = async (todos) => {
+    const { curso_id, semestre_id, ano, curriculo } = contexto;
+    if (!curso_id || !ano || !curriculo) {
+      message.warning("Selecione curso, ano e currículo");
+      return;
+    }
+
+    const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
+    const currRes = await api.post("/curriculos/get-or-create", { descricao: curriculo });
+
+    const params = new URLSearchParams({
+      curso_id,
+      ano_id: anoRes.data.id,
+      curriculo_id: currRes.data.id,
+    });
+
+    if (!todos) {
+      if (!semestre_id) {
+        message.warning("Selecione o semestre");
+        return;
+      }
+      params.append("semestre_id", semestre_id);
+    } else {
+      params.append("todos", "true");
+    }
+
+    window.open(
+      `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
+      "_blank"
+    );
+  };
+
+  /* COLUNAS */
   const columns = [
     {
       title: "Horário",
@@ -214,7 +240,6 @@ export default function GradeTabela() {
       width: 100,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
-      render: (text) => <strong>{text}</strong>,
     },
     ...dias.map((d) => ({
       title: d.descricao,
@@ -223,14 +248,16 @@ export default function GradeTabela() {
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
         const cell = gradeDraft.find(
-          (g) => g.horario_id === record.horario_id && g.dia_semana_id === d.id,
+          (g) =>
+            g.horario_id === record.horario_id &&
+            g.dia_semana_id === d.id
         );
 
         return (
           <Select
             size="small"
             allowClear
-            disabled={!podeEditar} // 🔒 bloqueia select
+            disabled={!podeEditar}
             style={{ width: "100%" }}
             value={cell?.disciplina_id}
             onChange={(disciplina_id) =>
@@ -257,49 +284,25 @@ export default function GradeTabela() {
     horario_id: h.id,
   }));
 
-  /* ================= PDF ================= */
-  const gerarPDF = async (todos) => {
-    const { curso_id, semestre_id, ano, curriculo } = contexto;
-
-    if (!curso_id || !ano || !curriculo) {
-      message.warning("Selecione curso, ano e currículo");
-      return;
-    }
-
-    const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
-    const currRes = await api.post("/curriculos/get-or-create", {
-      descricao: curriculo,
-    });
-
-    const params = new URLSearchParams({
-      curso_id,
-      ano_id: anoRes.data.id,
-      curriculo_id: currRes.data.id,
-    });
-
-    if (!todos) {
-      if (!semestre_id) return message.warning("Selecione o semestre");
-      params.append("semestre_id", semestre_id);
-    } else {
-      params.append("todos", "true");
-    }
-
-    window.open(
-      `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-      "_blank",
-    );
-  };
-
   return (
     <AppLayout>
       <Layout style={{ backgroundColor: "white" }}>
         <Header style={{ backgroundColor: "#093e5e", marginBottom: 10 }}>
-          <Space>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 16,
+              height: "100%",
+            }}
+          >
             {podeEditar && (
               <Button
                 icon={<SaveOutlined />}
                 type="primary"
-                onClick={salvarGrade}
+                size="small"
+                onClick={() => salvarGrade(true)}
               >
                 Salvar
               </Button>
@@ -308,35 +311,30 @@ export default function GradeTabela() {
             <Dropdown
               menu={{
                 items: [
-                  {
-                    key: "1",
-                    icon: <FilePdfOutlined />,
-                    label: "PDF do semestre",
-                    onClick: () => gerarPDF(false),
-                  },
-                  {
-                    key: "2",
-                    icon: <FilePdfOutlined />,
-                    label: "PDF todos",
-                    onClick: () => gerarPDF(true),
-                  },
+                  { key: "1", label: "PDF do semestre", onClick: () => gerarPDF(false) },
+                  { key: "2", label: "PDF todos", onClick: () => gerarPDF(true) },
                 ],
               }}
             >
-              <Button icon={<FilePdfOutlined />}>PDF</Button>
+              <Button icon={<FilePdfOutlined />} size="small">PDF</Button>
             </Dropdown>
 
             {podeEditar && (
-              <Popconfirm
-                title="Restaurar grade?"
-                onConfirm={limparTudo}
-              >
-                <Button danger icon={<ClearOutlined />}>
+              <Popconfirm title="Restaurar grade?" onConfirm={limparTudo}>
+                <Button
+                  style={{
+                    backgroundColor: "#f5f5f5",
+                    color: "#333",
+                    border: "1px solid #000",
+                  }}
+                  icon={<ClearOutlined />}
+                  size="small"
+                >
                   Restaurar
                 </Button>
               </Popconfirm>
             )}
-          </Space>
+          </div>
         </Header>
 
         <Content>
@@ -357,13 +355,8 @@ export default function GradeTabela() {
               <Select
                 style={{ width: "100%" }}
                 value={contexto.coordenador_id}
-                options={coordenadores.map((c) => ({
-                  label: c.nome,
-                  value: c.id,
-                }))}
-                onChange={(v) =>
-                  setContexto((c) => ({ ...c, coordenador_id: v }))
-                }
+                options={coordenadores.map((c) => ({ label: c.nome, value: c.id }))}
+                onChange={(v) => setContexto((c) => ({ ...c, coordenador_id: v }))}
                 allowClear
               />
             </Col>
@@ -384,13 +377,8 @@ export default function GradeTabela() {
               <Select
                 style={{ width: "100%" }}
                 value={contexto.semestre_id}
-                options={semestres.map((s) => ({
-                  label: s.descricao,
-                  value: s.id,
-                }))}
-                onChange={(v) =>
-                  setContexto((c) => ({ ...c, semestre_id: v }))
-                }
+                options={semestres.map((s) => ({ label: s.descricao, value: s.id }))}
+                onChange={(v) => setContexto((c) => ({ ...c, semestre_id: v }))}
                 allowClear
               />
             </Col>
@@ -401,9 +389,7 @@ export default function GradeTabela() {
                 style={{ width: "100%" }}
                 value={contexto.curriculo}
                 options={curriculos}
-                onChange={(v) =>
-                  setContexto((c) => ({ ...c, curriculo: v }))
-                }
+                onChange={(v) => setContexto((c) => ({ ...c, curriculo: v }))}
                 allowClear
               />
             </Col>
@@ -415,6 +401,11 @@ export default function GradeTabela() {
             pagination={false}
             bordered
             scroll={{ x: "max-content" }}
+            style={{
+              border: "2px solid #000",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
           />
         </Content>
 

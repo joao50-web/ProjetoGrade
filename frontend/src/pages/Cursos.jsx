@@ -7,7 +7,7 @@ import {
   Input,
   Popconfirm,
   message,
-  Space,
+  Tooltip,
 } from "antd";
 
 import {
@@ -26,8 +26,8 @@ const headerCellStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
   fontWeight: 600,
-  padding: "12px 16px",
-  fontSize: 14,
+  padding: "10px 12px",
+  fontSize: 16,
   textAlign: "center",
 };
 
@@ -42,6 +42,7 @@ export default function Cursos() {
   const load = async () => {
     try {
       const res = await api.get("/cursos");
+      // assumindo que cada curso vem com "coordenador" {nome: ""}
       setCursos(res.data);
     } catch {
       message.error("Erro ao carregar cursos");
@@ -81,7 +82,10 @@ export default function Cursos() {
 
   const edit = (curso) => {
     setEditing(curso);
-    form.setFieldsValue({ nome: curso.nome });
+    form.setFieldsValue({
+      nome: curso.nome,
+      coordenador: curso.coordenador?.nome || "",
+    });
     setOpen(true);
   };
 
@@ -92,136 +96,152 @@ export default function Cursos() {
   };
 
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase()),
+    c.nome?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const buttonStyle = {
+    height: 32,
+    padding: "0 12px",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  };
+
+  const actionsGap = 12;
 
   const columns = [
     {
       title: "Cursos",
       dataIndex: "nome",
-      width: 260,
+      width: 220,
       ellipsis: true,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (text) => (
-        <div style={{ padding: "8px 16px" }}>
-          <span style={{ fontSize: 17, fontWeight: 600 }}>{text}</span>
+        <div style={{ padding: "10px 12px" }}>
+          <span style={{ fontSize: 18, fontWeight: 600 }}>{text}</span>
         </div>
       ),
     },
-
-    /* COLUNA DISCIPLINAS COM BOTÃO */
     {
       title: "Disciplinas",
       dataIndex: "disciplinas",
-      width: 420,
+      width: 220,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = [], record) => {
-        return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              border: "1px solid #f0f0f0",
-              padding: "10px",
-              borderRadius: 8,
-            }}
+      render: (disciplinas = [], record) => (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            gap: 72,
+            padding: "8px 12px",
+          }}
+        >
+          <span style={{ fontSize: 16, fontWeight: 500 }}>
+            📚 {disciplinas.length}
+          </span>
+
+          <Button
+            size="small"
+            icon={<BookOutlined />}
+            onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
+            style={buttonStyle}
           >
-            {/* TOPO: CONTADOR + BOTÃO */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 15,
-                  fontWeight: 600,
-                  padding: "2px 46px",
-                }}
-              >
-                📚 {disciplinas.length} disciplinas
-              </span>
-
-              <Button
-                size="small"
-                icon={<BookOutlined />}
-                onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
-                style={{
-                  fontSize: 16  ,
-                  padding: "14px 38px",
-                  marginRight: "60px"
-                  
-                }}
-                >
-                Ver
-              </Button>
-            </div>
-
-            {/* RESTANTES */}
-          </div>
-        );
-      },
+            Ver
+          </Button>
+        </div>
+      ),
     },
-
-    /* AÇÕES SEM O BOTÃO VER */
+    {
+      title: "Coordenador",
+      dataIndex: ["coordenador", "nome"],
+      width: 180,
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (nome) => (
+        <div style={{ padding: "10px 12px" }}>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>
+            {nome || "—"}
+          </span>
+        </div>
+      ),
+    },
     {
       title: "Ações",
-      width: 160,
-      align: "center",
+      width: 180,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => edit(r)}>
-            Editar
-          </Button>
-
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            gap: actionsGap,
+            paddingLeft: 12,
+          }}
+        >
+          <Tooltip title="Editar">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => edit(r)}
+              style={buttonStyle}
+            />
+          </Tooltip>
           <Popconfirm title="Excluir?" onConfirm={() => remove(r.id)}>
-            <Button danger icon={<DeleteOutlined />}>
-              Excluir
-            </Button>
+            <Tooltip title="Excluir">
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                style={buttonStyle}
+              />
+            </Tooltip>
           </Popconfirm>
-        </Space>
+        </div>
       ),
     },
   ];
 
   return (
     <AppLayout>
+      {/* TOPO */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 8,
+          alignItems: "center",
+          marginBottom: 16,
+          width: "100%",
         }}
       >
         <Input
           placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 260 }}
+          style={{ width: 260, height: 36 }}
           onChange={(e) => setSearch(e.target.value)}
         />
-
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
+          style={{ height: 36, padding: "0 16px" }}
         >
           Novo Curso
         </Button>
       </div>
 
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
+        size="middle"
         columns={columns}
+        style={{ width: "100%" }}
       />
 
+      {/* MODAL */}
       <Modal
         title={editing ? "Editar Curso" : "Novo Curso"}
         open={open}
@@ -235,6 +255,13 @@ export default function Cursos() {
             rules={[{ required: true }]}
           >
             <Input placeholder="Digite o nome do curso" />
+          </Form.Item>
+
+          <Form.Item
+            name="coordenador"
+            label="Coordenador"
+          >
+            <Input placeholder="Nome do coordenador" />
           </Form.Item>
         </Form>
       </Modal>

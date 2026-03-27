@@ -22,11 +22,11 @@ exports.findAll = async (req, res) => {
       include: [
         {
           model: Cargo,
-          as: 'cargo' // 🔥 TEM que bater com models/index.js
+          as: 'cargo' 
         },
         {
           model: Usuario,
-          as: 'usuario' // 🔥 TEM que bater com models/index.js
+          as: 'usuario' 
         }
       ],
       order: [['nome', 'ASC']]

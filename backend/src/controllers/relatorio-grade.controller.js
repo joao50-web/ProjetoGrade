@@ -107,7 +107,7 @@ exports.gerarPDF = async (req, res) => {
 
           if (!slot || !slot.disciplina) return '';
 
-          // ✅ AGORA MOSTRA CÓDIGO + NOME
+          
           return `${slot.disciplina.codigo} - ${slot.disciplina.nome}`;
 
         });
