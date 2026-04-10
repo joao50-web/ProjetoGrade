@@ -14,7 +14,7 @@ const Log = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'tb_usuario', // Nome exato da sua tabela de usuários
+        model: 'tb_usuario',
         key: "id",
       },
     },
@@ -31,7 +31,7 @@ const Log = sequelize.define(
       allowNull: true,
     },
     detalhes: {
-      type: DataTypes.JSON, // Use JSON simples se for MySQL
+      type: DataTypes.JSON,
       allowNull: true,
     },
     data_hora: {
@@ -41,11 +41,13 @@ const Log = sequelize.define(
     },
   },
   {
-    tableName: "tb_logs", // Seguindo seu padrão tb_
+    tableName: "tb_logs",
     timestamps: false,
   }
 );
 
+// ✅ ASSOCIAÇÕES
 Log.belongsTo(Usuario, { foreignKey: "usuario_id", as: "usuario" });
+Usuario.hasMany(Log, { foreignKey: "usuario_id", as: "logs" });
 
 module.exports = Log;

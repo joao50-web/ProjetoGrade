@@ -4,13 +4,13 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors());
-
-
-
 app.use(express.json());
 
+// ✅ IMPORTAR MIDDLEWARES
+const authMiddleware = require('./middlewares/auth.middleware');
+const auditMiddleware = require('./middlewares/audit.middleware');
 
-
+// ✅ ROTAS
 const authRoutes = require('./routes/auth.routes');
 const cursoRoutes = require('./routes/curso.routes');
 const disciplinaRoutes = require('./routes/disciplina.routes');
@@ -21,13 +21,21 @@ const hierarquiaRoutes = require('./routes/hierarquia.routes');
 const cargoRoutes = require('./routes/cargo.routes');
 const horarioRoutes = require('./routes/horario.routes');
 const diaSemanaRoutes = require('./routes/dia-semana.routes');
-const gradeHorariaRoutes = require('./routes/grade-horaria.routes')
-const anoRoutes = require('./routes/ano.routes')
-const curriculoRoutes = require('./routes/curriculo.routes')
-const semestreRoutes =  require('./routes/semestre.routes')
-const relatorioRoutes =  require('./routes/relatorio.routes')
+const gradeHorariaRoutes = require('./routes/grade-horaria.routes');
+const anoRoutes = require('./routes/ano.routes');
+const curriculoRoutes = require('./routes/curriculo.routes');
+const semestreRoutes = require('./routes/semestre.routes');
+const relatorioRoutes = require('./routes/relatorio.routes');
+const logRoutes = require('./routes/log.routes'); // ✅ IMPORTANTE
 
-app.use('/auth', authRoutes);
+// ⚠️ ORDEM CORRETA
+
+app.use('/auth', authRoutes); // 🔓 públicas
+
+app.use(authMiddleware);      // 🔐 autentica tudo abaixo
+app.use(auditMiddleware);     // 📝 registra logs
+
+// 🔒 rotas protegidas
 app.use('/cursos', cursoRoutes);
 app.use('/disciplinas', disciplinaRoutes);
 app.use('/curso-disciplinas', cursoDisciplinaRoutes);
@@ -40,8 +48,8 @@ app.use('/dias-semana', diaSemanaRoutes);
 app.use('/grade-horaria', gradeHorariaRoutes);
 app.use('/anos', anoRoutes);
 app.use('/curriculos', curriculoRoutes);
-app.use('/semestres',semestreRoutes);
+app.use('/semestres', semestreRoutes);
 app.use('/relatorios', relatorioRoutes);
-
+app.use('/logs', logRoutes); // ✅ ESSENCIAL
 
 module.exports = app;

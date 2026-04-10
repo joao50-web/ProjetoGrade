@@ -10,7 +10,7 @@ require('./src/models/Usuario');
 require('./src/models/Curso');
 require('./src/models/Disciplina');
 require('./src/models/DisciplinaCurso');
-  
+require('./src/models/Log'); 
 
 sequelize.sync()
   .then(() => {

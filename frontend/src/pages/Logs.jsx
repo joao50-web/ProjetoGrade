@@ -4,8 +4,7 @@ import {
   Button,
   Modal,
   Input,
-  message,
-  Typography
+  message
 } from 'antd';
 
 import {
@@ -13,11 +12,8 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 
-// Caminho corrigido para subir um nível e entrar em services
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
-
-const { Text } = Typography;
 
 const headerCellStyle = {
   backgroundColor: '#093e5e',
@@ -62,6 +58,29 @@ export default function Logs() {
     setCurrentDetails(null);
   };
 
+  // 🔥 AÇÃO MAIS LEGÍVEL
+  const formatAcao = (acao) => {
+    if (!acao) return '';
+
+    const [metodo, rota] = acao.split(' ');
+    const entidade = rota?.split('/')[1] || '';
+
+    const entidadeFormatada = entidade
+      .replace('-', ' ')
+      .replace(/s$/, '');
+
+    switch (metodo) {
+      case 'POST':
+        return `Criou ${entidadeFormatada}`;
+      case 'PUT':
+        return `Atualizou ${entidadeFormatada}`;
+      case 'DELETE':
+        return `Removeu ${entidadeFormatada}`;
+      default:
+        return acao;
+    }
+  };
+
   const filteredLogs = logs.filter(log =>
     [log.acao, log.entidade, log.usuario?.login, log.usuario?.pessoa?.nome]
       .some(v => v && v.toLowerCase().includes(search.toLowerCase()))
@@ -94,12 +113,34 @@ export default function Logs() {
     }
   };
 
+  // 🔥 DETALHES MAIS HUMANOS
+  const formatDetails = (details) => {
+    if (!details) return 'Sem informações adicionais.';
+
+    const { body, query, params } = details;
+
+    return `
+📌 Informações da ação
+
+🧾 Dados enviados:
+${body && Object.keys(body).length ? JSON.stringify(body, null, 2) : 'Nenhum dado enviado'}
+
+🔎 Parâmetros:
+${params && Object.keys(params).length ? JSON.stringify(params, null, 2) : 'Nenhum parâmetro'}
+
+🔍 Filtros:
+${query && Object.keys(query).length ? JSON.stringify(query, null, 2) : 'Nenhum filtro'}
+
+⚠️ Observação:
+Esta ação foi registrada automaticamente pelo sistema.
+    `;
+  };
+
   const columns = [
     {
       title: 'Data/Hora',
       dataIndex: 'data_hora',
       key: 'data_hora',
-      align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (text) => renderText(formatDate(text))
     },
@@ -107,33 +148,23 @@ export default function Logs() {
       title: 'Usuário',
       dataIndex: ['usuario', 'pessoa', 'nome'],
       key: 'usuario_nome',
-      align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text, record) => renderText(text || record.usuario?.login || 'N/A', true)
+      render: (text, record) =>
+        renderText(text || record.usuario?.login || 'N/A', true)
     },
     {
       title: 'Ação',
       dataIndex: 'acao',
       key: 'acao',
-      align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: renderText
+      render: (text) => renderText(formatAcao(text))
     },
     {
       title: 'Entidade',
       dataIndex: 'entidade',
       key: 'entidade',
-      align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: renderText
-    },
-    {
-      title: 'ID da Entidade',
-      dataIndex: 'entidade_id',
-      key: 'entidade_id',
-      align: 'center',
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(text || 'N/A')
+      render: (text) => renderText(text)
     },
     {
       title: 'Detalhes',
@@ -144,14 +175,8 @@ export default function Logs() {
         <Button
           icon={<EyeOutlined />}
           onClick={() => showDetails(record.detalhes)}
-          style={{
-            fontSize: 16,
-            color: '#333333',
-            borderColor: '#cccccc',
-            backgroundColor: '#f9f9f9'
-          }}
         >
-          Ver Detalhes
+          Ver detalhes
         </Button>
       )
     }
@@ -164,7 +189,7 @@ export default function Logs() {
           placeholder="Buscar log..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280, fontSize: 16 }}
+          style={{ width: 280 }}
           onChange={e => setSearch(e.target.value)}
         />
       </div>
@@ -172,30 +197,30 @@ export default function Logs() {
       <Table
         rowKey="id"
         dataSource={filteredLogs}
-        pagination={{ pageSize: 10 }}
         loading={loading}
+        pagination={{ pageSize: 10 }}
         bordered
         columns={columns}
-        style={{ fontSize: 16 }}
         scroll={{ x: 'max-content' }}
       />
 
       <Modal
-        title="Detalhes do Log"
+        title="Detalhes da Ação"
         open={detailsModalVisible}
         onCancel={closeModal}
         footer={null}
-        width={800}
+        width={700}
       >
-        <pre style={{ 
-          whiteSpace: 'pre-wrap', 
-          wordBreak: 'break-all',
-          backgroundColor: '#f5f5f5',
-          padding: '15px',
-          borderRadius: '5px'
+        <div style={{
+          whiteSpace: 'pre-wrap',
+          lineHeight: 1.6,
+          fontSize: 14,
+          background: '#f5f5f5',
+          padding: 15,
+          borderRadius: 6
         }}>
-          {JSON.stringify(currentDetails, null, 2)}
-        </pre>
+          {formatDetails(currentDetails)}
+        </div>
       </Modal>
     </AppLayout>
   );

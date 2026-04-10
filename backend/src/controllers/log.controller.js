@@ -1,4 +1,6 @@
-const { Log, Usuario, Pessoa } = require("../models");
+const Log = require("../models/Log");
+const Usuario = require("../models/Usuario");
+const Pessoa = require("../models/Pessoa");
 
 exports.findAll = async (req, res) => {
   try {
@@ -21,6 +23,7 @@ exports.findAll = async (req, res) => {
     });
 
     return res.json(logs);
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({
