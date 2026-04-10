@@ -1,43 +1,170 @@
 import { useEffect, useState } from 'react';
-import {
-  Table,
-  Button,
-  Modal,
-  Input,
-  message
-} from 'antd';
-
-import {
-  SearchOutlined,
-  EyeOutlined
-} from '@ant-design/icons';
+import { Table, Button, Modal, Input, message, Space } from 'antd';
+import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import * as XLSX from "xlsx";
+
+// =========================
+// STYLE
+// =========================
+
 const headerCellStyle = {
   backgroundColor: '#093e5e',
-  color: '#ffffff',
+  color: '#fff',
   fontWeight: 600,
-  padding: '14px 20px',
-  fontSize: 16,
-  textAlign: 'center'
+  padding: '12px 16px',
+  fontSize: 15,
+  textAlign: 'left'
 };
+
+// =========================
+// FORMATADORES
+// =========================
+
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(dateString));
+  } catch {
+    return dateString;
+  }
+};
+
+const getActionData = (acao) => {
+  if (!acao) return { action: '—', entity: '—' };
+
+  const [method, route] = acao.split(' ');
+  const entity = route?.split('/')[1] || 'registro';
+
+  const cleanEntity = entity.replace('-', ' ').replace(/s$/, '');
+
+  const actions = {
+    POST: 'Criou',
+    PUT: 'Atualizou',
+    DELETE: 'Removeu'
+  };
+
+  return {
+    action: actions[method] || method,
+    entity: cleanEntity
+  };
+};
+
+const formatUsuario = (log) =>
+  log?.usuario?.pessoa?.nome ||
+  log?.usuario?.login ||
+  'Desconhecido';
+
+// =========================
+// DETALHES
+// =========================
+
+const formatDetails = (details) => {
+  if (!details) return 'Nenhum detalhe registrado.';
+
+  return `
+📄 DETALHES DO REGISTRO
+────────────────────────
+
+🧾 Dados:
+${JSON.stringify(details.body || {}, null, 2)}
+
+🔎 Parâmetros:
+${JSON.stringify(details.params || {}, null, 2)}
+
+🔍 Filtros:
+${JSON.stringify(details.query || {}, null, 2)}
+  `.trim();
+};
+
+// =========================
+// PDF EXPORT
+// =========================
+
+const exportPDF = async () => {
+  const element = document.getElementById("relatorio-logs");
+
+  if (!element) {
+    message.error("Erro ao gerar PDF");
+    return;
+  }
+
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const imgProps = pdf.getImageProperties(imgData);
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("relatorio-logs.pdf");
+
+  } catch (err) {
+    console.error(err);
+    message.error("Falha ao gerar PDF");
+  }
+};
+
+// =========================
+// EXCEL EXPORT
+// =========================
+
+const exportExcel = (logs) => {
+  const data = logs.map((log) => {
+    const { action, entity } = getActionData(log.acao || '');
+
+    return {
+      Data: formatDate(log.data_hora),
+      Usuario: formatUsuario(log),
+      Acao: action,
+      Entidade: entity
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(wb, ws, "Logs");
+
+  XLSX.writeFile(wb, "relatorio-logs.xlsx");
+};
+
+// =========================
+// COMPONENTE
+// =========================
 
 export default function Logs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
-  const [currentDetails, setCurrentDetails] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [details, setDetails] = useState(null);
 
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/logs');
-      setLogs(response.data);
-    // eslint-disable-next-line no-unused-vars
-    } catch (err) {
+      const res = await api.get('/logs');
+      setLogs(res.data);
+    } catch {
       message.error('Erro ao carregar logs');
     } finally {
       setLoading(false);
@@ -48,180 +175,116 @@ export default function Logs() {
     loadLogs();
   }, []);
 
-  const showDetails = (details) => {
-    setCurrentDetails(details);
-    setDetailsModalVisible(true);
+  const openModal = (data) => {
+    setDetails(data);
+    setOpen(true);
   };
 
   const closeModal = () => {
-    setDetailsModalVisible(false);
-    setCurrentDetails(null);
+    setOpen(false);
+    setDetails(null);
   };
 
-  // 🔥 AÇÃO MAIS LEGÍVEL
-  const formatAcao = (acao) => {
-    if (!acao) return '';
-
-    const [metodo, rota] = acao.split(' ');
-    const entidade = rota?.split('/')[1] || '';
-
-    const entidadeFormatada = entidade
-      .replace('-', ' ')
-      .replace(/s$/, '');
-
-    switch (metodo) {
-      case 'POST':
-        return `Criou ${entidadeFormatada}`;
-      case 'PUT':
-        return `Atualizou ${entidadeFormatada}`;
-      case 'DELETE':
-        return `Removeu ${entidadeFormatada}`;
-      default:
-        return acao;
-    }
-  };
-
-  const filteredLogs = logs.filter(log =>
+  const filteredLogs = logs.filter((log) =>
     [log.acao, log.entidade, log.usuario?.login, log.usuario?.pessoa?.nome]
-      .some(v => v && v.toLowerCase().includes(search.toLowerCase()))
+      .some((v) => v?.toLowerCase().includes(search.toLowerCase()))
   );
-
-  const renderText = (text, strong = false) => (
-    <div style={{ padding: '8px 20px' }}>
-      <span style={{
-        fontSize: strong ? 17 : 16,
-        fontWeight: strong ? 500 : 400
-      }}>
-        {text}
-      </span>
-    </div>
-  );
-
-  const formatDate = (dateString) => {
-    try {
-      return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }).format(new Date(dateString));
-    // eslint-disable-next-line no-unused-vars
-    } catch (e) {
-      return dateString;
-    }
-  };
-
-  // 🔥 DETALHES MAIS HUMANOS
-  const formatDetails = (details) => {
-    if (!details) return 'Sem informações adicionais.';
-
-    const { body, query, params } = details;
-
-    return `
-📌 Informações da ação
-
-🧾 Dados enviados:
-${body && Object.keys(body).length ? JSON.stringify(body, null, 2) : 'Nenhum dado enviado'}
-
-🔎 Parâmetros:
-${params && Object.keys(params).length ? JSON.stringify(params, null, 2) : 'Nenhum parâmetro'}
-
-🔍 Filtros:
-${query && Object.keys(query).length ? JSON.stringify(query, null, 2) : 'Nenhum filtro'}
-
-⚠️ Observação:
-Esta ação foi registrada automaticamente pelo sistema.
-    `;
-  };
 
   const columns = [
     {
-      title: 'Data/Hora',
+      title: 'Data',
       dataIndex: 'data_hora',
-      key: 'data_hora',
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(formatDate(text))
+      render: formatDate,
+      onHeaderCell: () => ({ style: headerCellStyle })
     },
     {
       title: 'Usuário',
-      dataIndex: ['usuario', 'pessoa', 'nome'],
-      key: 'usuario_nome',
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text, record) =>
-        renderText(text || record.usuario?.login || 'N/A', true)
+      render: formatUsuario,
+      onHeaderCell: () => ({ style: headerCellStyle })
     },
     {
       title: 'Ação',
       dataIndex: 'acao',
-      key: 'acao',
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(formatAcao(text))
+      render: (v) => getActionData(v).action,
+      onHeaderCell: () => ({ style: headerCellStyle })
     },
     {
       title: 'Entidade',
-      dataIndex: 'entidade',
-      key: 'entidade',
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(text)
+      dataIndex: 'acao',
+      render: (v) => getActionData(v).entity,
+      onHeaderCell: () => ({ style: headerCellStyle })
     },
     {
       title: 'Detalhes',
-      key: 'detalhes',
-      align: 'center',
-      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
         <Button
+          size="small"
           icon={<EyeOutlined />}
-          onClick={() => showDetails(record.detalhes)}
+          onClick={() => openModal(record.detalhes)}
         >
-          Ver detalhes
+          Ver
         </Button>
-      )
+      ),
+      onHeaderCell: () => ({ style: headerCellStyle })
     }
   ];
 
   return (
     <AppLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+
+      {/* BOTÕES */}
+      <Space style={{ marginBottom: 16 }}>
+        <Button type="primary" onClick={exportPDF}>
+          Exportar PDF
+        </Button>
+
+        <Button onClick={() => exportExcel(filteredLogs)}>
+          Exportar Excel
+        </Button>
+
         <Input
-          placeholder="Buscar log..."
+          placeholder="Buscar logs..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 280 }}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </Space>
+
+      {/* ÁREA PDF */}
+      <div id="relatorio-logs">
+        <Table
+          rowKey="id"
+          dataSource={filteredLogs}
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          bordered
+          columns={columns}
+          scroll={{ x: 'max-content' }}
         />
       </div>
 
-      <Table
-        rowKey="id"
-        dataSource={filteredLogs}
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-        bordered
-        columns={columns}
-        scroll={{ x: 'max-content' }}
-      />
-
+      {/* MODAL */}
       <Modal
-        title="Detalhes da Ação"
-        open={detailsModalVisible}
+        title="Detalhes do Registro"
+        open={open}
         onCancel={closeModal}
         footer={null}
-        width={700}
+        width={720}
       >
-        <div style={{
+        <pre style={{
           whiteSpace: 'pre-wrap',
+          fontSize: 13,
           lineHeight: 1.6,
-          fontSize: 14,
-          background: '#f5f5f5',
-          padding: 15,
-          borderRadius: 6
+          background: '#fafafa',
+          padding: 14,
+          borderRadius: 6,
+          border: '1px solid #eee'
         }}>
-          {formatDetails(currentDetails)}
-        </div>
+          {formatDetails(details)}
+        </pre>
       </Modal>
+
     </AppLayout>
   );
 }
