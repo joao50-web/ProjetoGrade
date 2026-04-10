@@ -10,6 +10,7 @@ import Cursos from './pages/Cursos';
 import Disciplinas from './pages/Disciplinas';
 import CursoDisciplinas from './pages/CursoDisciplinas';
 import GradeHoraria from './pages/GradeHoraria';
+import Logs from './pages/Logs';
 
 function PrivateRoute({ children, roles }) {
   const usuario = getUsuarioLogado();
@@ -111,6 +112,15 @@ export default function App() {
               
                 <GradeHoraria />
           
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/logs"
+          element={
+            <PrivateRoute roles={['administrador']}>
+              <Logs />
             </PrivateRoute>
           }
         />

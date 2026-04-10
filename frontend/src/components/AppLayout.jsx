@@ -11,6 +11,7 @@ import {
   IdcardOutlined,
   BookOutlined,
   LogoutOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate, useLocation } from "react-router-dom";
@@ -45,7 +46,8 @@ export default function AppLayout({ children }) {
     if (
       location.pathname === "/pessoas" ||
       location.pathname === "/usuarios" ||
-      location.pathname === "/cargos"
+      location.pathname === "/cargos" ||
+      location.pathname === "/logs"
     ) {
       keys = ["cadastro-admin"];
     }
@@ -60,9 +62,6 @@ export default function AppLayout({ children }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(keys);
   }, [location.pathname]);
-
-
-
 
    const usuario = getUsuarioLogado ()
   /* ================= TITULO PAGINA ================= */
@@ -83,6 +82,8 @@ export default function AppLayout({ children }) {
         return "Disciplinas";
       case "/grade-horaria":
         return "Grade Horária";
+      case "/logs":
+        return "Histórico de Atividades";
       default:
         return "";
     }
@@ -110,6 +111,7 @@ export default function AppLayout({ children }) {
             { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
             { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
             { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
+            { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
           ],
         },
         {
@@ -124,9 +126,8 @@ export default function AppLayout({ children }) {
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
       ];
     }
-  }, [usuario.hierarquia]);
+  }, [usuario.role]);
 
-console.log(usuario)
   const handleMenuClick = ({ key }) => navigate(key);
 
   const onOpenChange = (keys) => {

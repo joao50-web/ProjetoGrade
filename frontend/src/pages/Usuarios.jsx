@@ -14,19 +14,18 @@ import {
 } from 'antd';
 
 import {
-  CheckCircleTwoTone,
-  CloseCircleTwoTone,
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
-  SearchOutlined
+  SearchOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-// Azul institucional fraco para cargos
-const cargoColors = {
+// Paleta de cores para hierarquias (mesmo padrão de cargoColors em Pessoas)
+const hierarquiaColors = {
   Administrador: { bg: '#f5f4f0', color: '#093e5e' },
   'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
   Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
@@ -43,9 +42,10 @@ const headerCellStyle = {
   textAlign: 'center'
 };
 
-export default function Pessoas() {
+export default function Usuarios() {
+  const [usuarios, setUsuarios] = useState([]);
   const [pessoas, setPessoas] = useState([]);
-  const [cargos, setCargos] = useState([]);
+  const [hierarquias, setHierarquias] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -54,12 +54,14 @@ export default function Pessoas() {
 
   const load = async () => {
     try {
-      const [pessoasRes, cargosRes] = await Promise.all([
+      const [usuariosRes, pessoasRes, hierarquiasRes] = await Promise.all([
+        api.get('/usuarios'),
         api.get('/pessoas'),
-        api.get('/cargos')
+        api.get('/hierarquias')
       ]);
+      setUsuarios(usuariosRes.data);
       setPessoas(pessoasRes.data);
-      setCargos(cargosRes.data);
+      setHierarquias(hierarquiasRes.data);
     } catch {
       message.error('Erro ao carregar dados');
     }
@@ -75,9 +77,9 @@ export default function Pessoas() {
       setLoading(true);
 
       if (editing) {
-        await api.put(`/pessoas/${editing.id}`, values);
+        await api.put(`/usuarios/${editing.id}`, values);
       } else {
-        await api.post('/pessoas', values);
+        await api.post('/usuarios', values);
       }
 
       closeModal();
@@ -92,20 +94,21 @@ export default function Pessoas() {
 
   const remove = async (id) => {
     try {
-      await api.delete(`/pessoas/${id}`);
+      await api.delete(`/usuarios/${id}`);
       load();
     } catch (err) {
-      message.error(err.response?.data?.error);
+      message.error(err.response?.data?.error || 'Erro ao remover usuário');
     }
   };
 
-  const edit = (pessoa) => {
-    setEditing(pessoa);
+  const edit = (usuario) => {
+    setEditing(usuario);
 
     form.setFieldsValue({
-      nome: pessoa.nome,
-      email: pessoa.email,
-      cargo_id: pessoa.cargo?.id
+      pessoa_id: usuario.pessoa?.id,
+      login: usuario.login,
+      senha: '',
+      hierarquia_id: usuario.hierarquia?.id
     });
 
     setOpen(true);
@@ -117,8 +120,8 @@ export default function Pessoas() {
     form.resetFields();
   };
 
-  const filtered = pessoas.filter(p =>
-    [p.nome, p.email, p.cargo?.descricao]
+  const filtered = usuarios.filter(u =>
+    [u.login, u.pessoa?.nome, u.hierarquia?.descricao]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -133,8 +136,8 @@ export default function Pessoas() {
     </div>
   );
 
-  const renderCargo = (descricao) => {
-    const style = cargoColors[descricao] || { bg: '#e1ebf7', color: '#093e5e' };
+  const renderHierarquia = (descricao) => {
+    const style = hierarquiaColors[descricao] || { bg: '#e1ebf7', color: '#093e5e' };
     return (
       <div style={{ padding: '8px 20px' }}>
         <Tag style={{
@@ -151,18 +154,29 @@ export default function Pessoas() {
     );
   };
 
+  // Filtra apenas pessoas que ainda não possuem usuário (para criação)
+  // Na edição, inclui a pessoa do próprio usuário sendo editado
+  const pessoasDisponiveis = pessoas.filter(p =>
+    !p.usuario?.id || (editing && p.id === editing.pessoa?.id)
+  );
+
   return (
     <AppLayout>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
-          placeholder="Buscar pessoa..."
+          placeholder="Buscar usuário..."
           prefix={<SearchOutlined />}
           allowClear
           style={{ width: 280, fontSize: 16 }}
           onChange={e => setSearch(e.target.value)}
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)} style={{ fontSize: 16 }}>
-          Nova Pessoa
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setOpen(true)}
+          style={{ fontSize: 16 }}
+        >
+          Novo Usuário
         </Button>
       </div>
 
@@ -173,77 +187,51 @@ export default function Pessoas() {
         bordered
         columns={[
           {
-            title: 'Nome',
-            dataIndex: 'nome',
+            title: 'Pessoa',
+            dataIndex: ['pessoa', 'nome'],
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (text) => renderText(text, true)
           },
           {
-            title: 'Email',
-            dataIndex: 'email',
+            title: 'Login',
+            dataIndex: 'login',
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: renderText
           },
           {
-            title: 'Cargo',
-            dataIndex: ['cargo', 'descricao'],
+            title: 'Hierarquia',
+            dataIndex: ['hierarquia', 'descricao'],
             align: 'left',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: renderCargo
-          },
-          {
-            title: 'Usuário',
-            align: 'center',
-            onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => {
-              return r.usuario?.id
-                ? <CheckCircleTwoTone twoToneColor="#52c41a" />
-                : (
-                  <Tooltip title="Não possui usuário vinculado">
-                    <CloseCircleTwoTone twoToneColor="#ff4d4f" />
-                  </Tooltip>
-                );
-            }
+            render: renderHierarquia
           },
           {
             title: 'Ações',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => {
-              const possuiUsuario = Boolean(r.usuario?.id);
-
-              return (
-                <Space size={20}>
-                  <Button
-                    type="default"
-                    icon={<EditOutlined />}
-                    onClick={() => edit(r)}
-                    style={{
-                      fontSize: 16,
-                      color: '#333333',
-                      borderColor: '#cccccc',
-                      backgroundColor: '#f9f9f9'
-                    }}
-                  />
-                  <Tooltip
-                    title={possuiUsuario ? 'Não é possível excluir: possui usuário vinculado' : ''}
-                  >
-                    {possuiUsuario ? (
-                      <Button type="text" danger disabled icon={<DeleteOutlined />} />
-                    ) : (
-                      <Popconfirm
-                        title="Excluir esta pessoa?"
-                        onConfirm={() => remove(r.id)}
-                      >
-                        <Button type="text" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                    )}
-                  </Tooltip>
-                </Space>
-              );
-            }
+            render: (_, r) => (
+              <Space size={20}>
+                <Button
+                  type="default"
+                  icon={<EditOutlined />}
+                  onClick={() => edit(r)}
+                  style={{
+                    fontSize: 16,
+                    color: '#333333',
+                    borderColor: '#cccccc',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+                <Popconfirm
+                  title="Excluir este usuário?"
+                  onConfirm={() => remove(r.id)}
+                >
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </Space>
+            )
           }
         ]}
         style={{ fontSize: 16 }}
@@ -251,7 +239,7 @@ export default function Pessoas() {
       />
 
       <Modal
-        title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
+        title={editing ? 'Editar Usuário' : 'Novo Usuário'}
         open={open}
         onCancel={closeModal}
         onOk={save}
@@ -261,17 +249,58 @@ export default function Pessoas() {
         bodyStyle={{ fontSize: 16 }}
       >
         <Form layout="vertical" form={form} style={{ fontSize: 16 }}>
-          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
-            <Input style={{ fontSize: 16 }} />
+          <Form.Item
+            name="pessoa_id"
+            label="Pessoa"
+            rules={[{ required: true, message: 'Selecione uma pessoa' }]}
+          >
+            <Select
+              style={{ fontSize: 16 }}
+              disabled={Boolean(editing)}
+              placeholder="Selecione uma pessoa"
+              showSearch
+              optionFilterProp="children"
+            >
+              {pessoasDisponiveis.map(p => (
+                <Select.Option key={p.id} value={p.id}>
+                  {p.nome}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
-            <Input style={{ fontSize: 16 }} />
+
+          <Form.Item
+            name="login"
+            label="Login"
+            rules={[{ required: true, message: 'Informe o login' }]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              style={{ fontSize: 16 }}
+              placeholder="Login do usuário"
+            />
           </Form.Item>
-          <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
-            <Select style={{ fontSize: 16 }}>
-              {cargos.map(c => (
-                <Select.Option key={c.id} value={c.id}>
-                  {c.descricao}
+
+          <Form.Item
+            name="senha"
+            label={editing ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}
+            rules={editing ? [] : [{ required: true, message: 'Informe a senha' }]}
+          >
+            <Input.Password
+              style={{ fontSize: 16 }}
+              placeholder={editing ? 'Nova senha (opcional)' : 'Senha'}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="hierarquia_id"
+            label="Hierarquia"
+            rules={[{ required: true, message: 'Selecione uma hierarquia' }]}
+          >
+            <Select style={{ fontSize: 16 }} placeholder="Selecione uma hierarquia">
+              {hierarquias.map(h => (
+                <Select.Option key={h.id} value={h.id}>
+                  {h.descricao}
                 </Select.Option>
               ))}
             </Select>
