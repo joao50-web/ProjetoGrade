@@ -35,6 +35,7 @@ export default function AppLayout({ children }) {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
     navigate("/login");
   };
 
@@ -47,6 +48,7 @@ export default function AppLayout({ children }) {
       location.pathname === "/pessoas" ||
       location.pathname === "/usuarios" ||
       location.pathname === "/cargos" ||
+      location.pathname === "/departamentos" ||
       location.pathname === "/logs"
     ) {
       keys = ["cadastro-admin"];
@@ -59,11 +61,11 @@ export default function AppLayout({ children }) {
       keys = ["cadastro-academico"];
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(keys);
   }, [location.pathname]);
 
-   const usuario = getUsuarioLogado ()
+  const usuario = getUsuarioLogado();
+
   /* ================= TITULO PAGINA ================= */
 
   const currentPage = useMemo(() => {
@@ -76,6 +78,8 @@ export default function AppLayout({ children }) {
         return "Usuários";
       case "/cargos":
         return "Cargos";
+      case "/departamentos":
+        return "Departamentos";
       case "/cursos":
         return "Cursos";
       case "/disciplinas":
@@ -92,7 +96,7 @@ export default function AppLayout({ children }) {
   /* ================= MENU ================= */
 
   const menuItems = useMemo(() => {
-    if (usuario.role !== "administrador") {
+    if (!usuario || usuario.role?.toLowerCase() !== "administrador") {
       return [
         {
           key: "/grade-horaria",
@@ -111,22 +115,23 @@ export default function AppLayout({ children }) {
             { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
             { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
             { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
+            { key: "/departamentos", icon: <ApartmentOutlined />, label: "Departamentos" },
             { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
           ],
         },
         {
           key: "cadastro-academico",
-          icon: <ApartmentOutlined />,
+          icon: <BookOutlined />,
           label: "Cadastro Acadêmico",
           children: [
-            { key: "/cursos", icon: <ApartmentOutlined />, label: "Cursos" },
+            { key: "/cursos", icon: <BookOutlined />, label: "Cursos" },
             { key: "/disciplinas", icon: <BookOutlined />, label: "Disciplinas" },
           ],
         },
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
       ];
     }
-  }, [usuario.role]);
+  }, [usuario]);
 
   const handleMenuClick = ({ key }) => navigate(key);
 

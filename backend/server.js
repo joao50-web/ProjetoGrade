@@ -11,12 +11,13 @@ require('./src/models/Curso');
 require('./src/models/Disciplina');
 require('./src/models/DisciplinaCurso');
 require('./src/models/Log'); 
+require('./src/models/Departamento'); // ✅ ADICIONADO: Para o módulo de Departamento funcionar
 
 sequelize.sync()
   .then(() => {
     console.log('✔ Tabelas criadas / atualizadas com sucesso');
     app.listen(3001, () => {
-      console.log('🚀 API rodando em http://localhost:3000');
+      console.log('🚀 API rodando em http://localhost:3001' );
     });
   })
   .catch(err => {

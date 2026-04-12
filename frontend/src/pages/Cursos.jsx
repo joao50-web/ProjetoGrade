@@ -1,80 +1,97 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   Table,
   Button,
   Modal,
   Form,
   Input,
-  Popconfirm,
   message,
-} from "antd";
+  Popconfirm,
+  Space,
+  Typography,
+  Select,
+  Tag
+} from 'antd';
 
 import {
   EditOutlined,
   DeleteOutlined,
-  BookOutlined,
   PlusOutlined,
   SearchOutlined,
-} from "@ant-design/icons";
+  BookOutlined,
+  ApartmentOutlined
+} from '@ant-design/icons';
 
-import { useNavigate } from "react-router-dom";
-import AppLayout from "../components/AppLayout";
-import { api } from "../services/api";
+import AppLayout from '../components/AppLayout';
+import { api } from '../services/api';
 
+const { Text } = Typography;
+
+// Estilo idêntico ao de Pessoas e Usuários
 const headerCellStyle = {
-  backgroundColor: "#093e5e",
-  color: "#ffffff",
-  fontWeight: 700,
-  padding: "14px 16px",
-  fontSize: 18,
-  textAlign: "center",
+  backgroundColor: '#093e5e',
+  color: '#ffffff',
+  fontWeight: 600,
+  padding: '14px 20px',
+  fontSize: 16,
+  textAlign: 'center'
 };
 
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]); // ✅ ADICIONADO
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
-  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     try {
-      const res = await api.get("/cursos"); // cada curso deve vir com "disciplinas" []
-      setCursos(res.data);
+      const [resCursos, resDeptos] = await Promise.all([
+        api.get('/cursos'),
+        api.get('/departamentos') // ✅ Carrega departamentos para o Select
+      ]);
+      setCursos(resCursos.data);
+      setDepartamentos(resDeptos.data);
     } catch {
-      message.error("Erro ao carregar cursos");
+      message.error('Erro ao carregar dados');
     }
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
-  const submit = async (values) => {
+  const save = async () => {
     try {
+      const values = await form.validateFields();
+      setLoading(true);
+
       if (editing) {
         await api.put(`/cursos/${editing.id}`, values);
-        message.success("Curso atualizado");
       } else {
-        await api.post("/cursos", values);
-        message.success("Curso criado");
+        await api.post('/cursos', values);
       }
+
       closeModal();
       load();
-    } catch {
-      message.error("Erro ao salvar curso");
+      message.success('Curso salvo com sucesso!');
+    } catch (err) {
+      if (err.errorFields) return;
+      message.error(err.response?.data?.error || 'Erro ao salvar');
+    } finally {
+      setLoading(false);
     }
   };
 
   const remove = async (id) => {
     try {
       await api.delete(`/cursos/${id}`);
-      message.success("Curso removido");
       load();
-    } catch {
-      message.error("Erro ao excluir curso");
+      message.success('Curso removido!');
+    } catch (err) {
+      message.error(err.response?.data?.error || 'Erro ao remover');
     }
   };
 
@@ -82,6 +99,7 @@ export default function Cursos() {
     setEditing(curso);
     form.setFieldsValue({
       nome: curso.nome,
+      departamento_id: curso.departamento_id // ✅ Preenche o departamento na edição
     });
     setOpen(true);
   };
@@ -92,150 +110,139 @@ export default function Cursos() {
     form.resetFields();
   };
 
-  const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase())
+  const filtered = cursos.filter(c =>
+    c.nome?.toLowerCase().includes(search.toLowerCase()) ||
+    c.departamento?.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const buttonStyle = {
-    height: 36,
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  };
-
-  const columns = [
-    {
-      title: "Curso",
-      dataIndex: "nome",
-      width: 220,
-      ellipsis: true,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => (
-        <div style={{ padding: "10px 54px" }}>
-          <p style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{text}</p>
-        </div>
-      ),
-    },
-    {
-      title: "Disciplinas",
-      dataIndex: "disciplinas",
-      width: 140,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = []) => (
-        <div style={{ padding: "10px 14px" }}>
-          <p style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
-            {disciplinas.length} disciplina{disciplinas.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: "Editar",
-      width: 220,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (_, record) => (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 120,
-            padding: "10px 50px",
-          }}
-        >
-          <Button
-            size="middle"
-            icon={<BookOutlined />}
-            onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
-            style={buttonStyle}
-          >
-            Ver Disciplinas
-          </Button>
-          <Button
-            size="middle"
-            icon={<EditOutlined />}
-            onClick={() => edit(record)}
-            style={buttonStyle}
-          >
-            Editar
-          </Button>
-        </div>
-      ),
-    },
-    {
-      title: "Excluir",
-      width: 80,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (_, record) => (
-        <div style={{ textAlign: "center", padding: "10px 0" }}>
-          <Popconfirm
-            title="Deseja realmente excluir este curso?"
-            onConfirm={() => remove(record.id)}
-          >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-            />
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ];
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '8px 20px' }}>
+      <span style={{
+        fontSize: strong ? 17 : 16,
+        fontWeight: strong ? 500 : 400
+      }}>
+        {text}
+      </span>
+    </div>
+  );
 
   return (
     <AppLayout>
-      {/* TOPO */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-          width: "100%",
-        }}
-      >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
-          placeholder="Buscar curso..."
+          placeholder="Buscar curso ou departamento..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280, height: 38 }}
-          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: 320, fontSize: 16 }}
+          onChange={e => setSearch(e.target.value)}
         />
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
-          style={{ height: 38, padding: "0 18px" }}
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />} 
+          onClick={() => setOpen(true)} 
+          style={{ fontSize: 16, height: 40 }}
         >
           Novo Curso
         </Button>
       </div>
 
-      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        size="middle"
-        columns={columns}
-        style={{ width: "100%" }}
+        columns={[
+          {
+            title: 'Nome do Curso',
+            dataIndex: 'nome',
+            align: 'left',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (text) => renderText(text, true)
+          },
+          {
+            title: 'Departamento',
+            dataIndex: ['departamento', 'nome'], // ✅ Mostra o nome do departamento
+            align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (text) => text ? (
+              <Tag color="blue" style={{ fontSize: 14, padding: '4px 10px' }}>
+                {text}
+              </Tag>
+            ) : <Text type="secondary">Não definido</Text>
+          },
+          {
+            title: 'Ações',
+            align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, r) => (
+              <Space size={20}>
+                <Button
+                  type="default"
+                  icon={<EditOutlined />}
+                  onClick={() => edit(r)}
+                  style={{
+                    fontSize: 16,
+                    color: '#333333',
+                    borderColor: '#cccccc',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+                <Popconfirm
+                  title="Excluir este curso?"
+                  onConfirm={() => remove(r.id)}
+                  okText="Sim"
+                  cancelText="Não"
+                >
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </Space>
+            )
+          }
+        ]}
+        style={{ fontSize: 16 }}
+        scroll={{ x: 'max-content' }}
       />
 
-      {/* MODAL */}
       <Modal
-        title={editing ? "Editar Curso" : "Novo Curso"}
+        title={editing ? 'Editar Curso' : 'Novo Curso'}
         open={open}
         onCancel={closeModal}
-        onOk={() => form.submit()}
+        onOk={save}
+        confirmLoading={loading}
+        okText="Salvar"
+        cancelText="Cancelar"
+        width={600}
       >
-        <Form layout="vertical" form={form} onFinish={submit}>
-          <Form.Item
-            name="nome"
-            label="Nome do Curso"
-            rules={[{ required: true }]}
+        <Form layout="vertical" form={form} style={{ marginTop: 20 }}>
+          <Form.Item 
+            name="nome" 
+            label={<Text strong style={{ fontSize: 16 }}>Nome do Curso</Text>} 
+            rules={[{ required: true, message: 'Informe o nome do curso' }]}
           >
-            <Input placeholder="Digite o nome do curso" />
+            <Input 
+              prefix={<BookOutlined />} 
+              style={{ fontSize: 16, height: 40 }} 
+              placeholder="Ex: Sistemas de Informação" 
+            />
+          </Form.Item>
+
+          {/* ✅ NOVO: Seleção de Departamento */}
+          <Form.Item 
+            name="departamento_id" 
+            label={<Text strong style={{ fontSize: 16 }}>Departamento Responsável</Text>} 
+            rules={[{ required: true, message: 'Selecione o departamento' }]}
+          >
+            <Select 
+              placeholder="Selecione o departamento"
+              style={{ height: 40, fontSize: 16 }}
+              suffixIcon={<ApartmentOutlined />}
+            >
+              {departamentos.map(d => (
+                <Select.Option key={d.id} value={d.id}>
+                  {d.nome} ({d.sigla})
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

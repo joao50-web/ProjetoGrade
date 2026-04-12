@@ -7,7 +7,6 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ IMPORTAR MIDDLEWARES
-const authMiddleware = require('./middlewares/auth.middleware');
 const auditMiddleware = require('./middlewares/audit.middleware');
 
 // ✅ ROTAS
@@ -26,16 +25,13 @@ const anoRoutes = require('./routes/ano.routes');
 const curriculoRoutes = require('./routes/curriculo.routes');
 const semestreRoutes = require('./routes/semestre.routes');
 const relatorioRoutes = require('./routes/relatorio.routes');
-const logRoutes = require('./routes/log.routes'); // ✅ IMPORTANTE
+const logRoutes = require('./routes/log.routes');
+const departamentoRoutes = require('./routes/departamento.routes');
 
-// ⚠️ ORDEM CORRETA
+// Middleware de auditoria registra todas as ações no banco
+app.use(auditMiddleware);
 
-app.use('/auth', authRoutes); // 🔓 públicas
-
-app.use(authMiddleware);      // 🔐 autentica tudo abaixo
-app.use(auditMiddleware);     // 📝 registra logs
-
-// 🔒 rotas protegidas
+app.use('/auth', authRoutes);
 app.use('/cursos', cursoRoutes);
 app.use('/disciplinas', disciplinaRoutes);
 app.use('/curso-disciplinas', cursoDisciplinaRoutes);
@@ -50,6 +46,7 @@ app.use('/anos', anoRoutes);
 app.use('/curriculos', curriculoRoutes);
 app.use('/semestres', semestreRoutes);
 app.use('/relatorios', relatorioRoutes);
-app.use('/logs', logRoutes); // ✅ ESSENCIAL
+app.use('/logs', logRoutes);
+app.use('/departamentos', departamentoRoutes);
 
 module.exports = app;

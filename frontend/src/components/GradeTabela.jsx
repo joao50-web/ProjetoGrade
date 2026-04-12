@@ -1,423 +1,311 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
-  Select,
   Table,
-  Typography,
-  Row,
-  Col,
+  Select,
   Button,
-  Dropdown,
-  Popconfirm,
   message,
-  Layout,
+  Typography,
+  Space,
+  Tooltip,
 } from "antd";
-
 import {
   SaveOutlined,
   FilePdfOutlined,
-  ClearOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
-
-import { api, getUsuarioLogado } from "../services/api";
 import AppLayout from "../components/AppLayout";
+import { api, getUsuarioLogado } from "../services/api";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const { Text } = Typography;
-const { Header, Content, Footer } = Layout;
 
 const headerStyle = {
   backgroundColor: "#093e5e",
-  color: "#ffffff",
-  fontWeight: 600,
-  padding: "6px 16px",
-  fontSize: 14,
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: "13px",
   textAlign: "center",
-  borderRight: "1px solid #0a4d7a",
 };
 
-export default function GradeTabela() {
+export default function GradeHoraria() {
   const usuario = getUsuarioLogado();
-  const podeEditar =
-    usuario?.role === "edicao" || usuario?.role === "administrador";
+  const canEdit = ["administrador", "edicao"].includes(
+    usuario?.role?.toLowerCase()
+  );
 
+  const [departamentos, setDepartamentos] = useState([]);
+  const [todosCursos, setTodosCursos] = useState([]);
   const [cursos, setCursos] = useState([]);
-  const [coordenadores, setCoordenadores] = useState([]);
+  const [anos, setAnos] = useState([]);
   const [semestres, setSemestres] = useState([]);
+  const [curriculos, setCurriculos] = useState([]);
   const [horarios, setHorarios] = useState([]);
-  const [dias, setDias] = useState([]);
+  const [diasSemana, setDiasSemana] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
-  const [gradeDraft, setGradeDraft] = useState([]);
 
-  const [contexto, setContexto] = useState({
-    curso_id: null,
-    coordenador_id: null,
-    semestre_id: null,
-    ano: null,
-    curriculo: null,
-  });
+  const [deptoId, setDeptoId] = useState(null);
+  const [cursoId, setCursoId] = useState(null);
+  const [anoId, setAnoId] = useState(null);
+  const [semestreId, setSemestreId] = useState(null);
+  const [curriculoId, setCurriculoId] = useState(null);
 
-  const saveTimeout = useRef(null);
+  const [grade, setGrade] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const anos = [];
-  for (let ano = 2020; ano <= 2040; ano++) {
-    anos.push({ value: `${ano}/1`, label: `${ano}/1` });
-    anos.push({ value: `${ano}/2`, label: `${ano}/2` });
-  }
-
-  const curriculos = [];
-  for (let ano = 2020; ano <= 2040; ano++) {
-    curriculos.push({ value: `${ano}`, label: `${ano}` });
-  }
-
-  /* LOAD FIXOS */
   useEffect(() => {
-    api.get("/cursos").then((r) => setCursos(r.data));
-    api.get("/pessoas/coordenadores").then((r) => setCoordenadores(r.data));
-    api.get("/semestres").then((r) => setSemestres(r.data));
-    api.get("/horarios").then((r) => setHorarios(r.data));
-    api.get("/dias-semana").then((r) => setDias(r.data));
+    const load = async () => {
+      try {
+        const [d, c, a, s, cur, h, dias] = await Promise.all([
+          api.get("/departamentos"),
+          api.get("/cursos"),
+          api.get("/anos"),
+          api.get("/semestres"),
+          api.get("/curriculos"),
+          api.get("/horarios"),
+          api.get("/dias-semana"),
+        ]);
+
+        setDepartamentos(d.data);
+        setTodosCursos(c.data);
+        setCursos(c.data);
+        setAnos(a.data);
+        setSemestres(s.data);
+        setCurriculos(cur.data);
+        setHorarios(h.data);
+        setDiasSemana(dias.data);
+      } catch {
+        message.error("Erro ao carregar dados");
+      }
+    };
+    load();
   }, []);
 
-  /* DISCIPLINAS */
-  useEffect(() => {
-    if (!contexto.curso_id) return;
-
-    api.get(`/cursos/${contexto.curso_id}/disciplinas`).then((r) => {
-      const lista = Array.isArray(r.data)
-        ? r.data
-        : r.data?.Disciplinas || [];
-
-      setDisciplinas(
-        lista.map((d) => ({
-          id: d.id,
-          codigo: d.codigo || "",
-          nome: d.nome || "",
-        }))
-      );
-    });
-  }, [contexto.curso_id]);
-
-  /* LOAD GRADE */
-  useEffect(() => {
-    const { curso_id, semestre_id, ano, curriculo } = contexto;
-    if (!curso_id || !semestre_id || !ano || !curriculo) return;
-
-    async function carregarGrade() {
-      try {
-        const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
-        const curriculoRes = await api.post("/curriculos/get-or-create", {
-          descricao: curriculo,
-        });
-        const res = await api.get("/grade-horaria", {
-          params: {
-            curso_id,
-            semestre_id,
-            ano_id: anoRes.data.id,
-            curriculo_id: curriculoRes.data.id,
-          },
-        });
-        setGradeDraft(res.data || []);
-      } catch { /* empty */ }
-    }
-
-    carregarGrade();
-  }, [contexto]);
-
-  /* SLOT */
-  const updateSlot = (payload) => {
-    if (!podeEditar) return;
-
-    setGradeDraft((prev) => {
-      const copy = [...prev];
-      const idx = copy.findIndex(
-        (s) =>
-          s.horario_id === payload.horario_id &&
-          s.dia_semana_id === payload.dia_semana_id
-      );
-
-      if (idx >= 0) copy[idx] = { ...copy[idx], ...payload };
-      else copy.push(payload);
-
-      return copy;
-    });
-  };
-
-  /* SALVAR */
-  const salvarGrade = async (mostrarMensagem = true) => {
-    if (!podeEditar) return;
-
-    const { curso_id, semestre_id, ano, curriculo } = contexto;
-
-    try {
-      const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
-      const currRes = await api.post("/curriculos/get-or-create", {
-        descricao: curriculo,
-      });
-
-      await api.post("/grade-horaria/save", {
-        contexto: {
-          curso_id,
-          coordenador_id: contexto.coordenador_id,
-          semestre_id,
-          ano_id: anoRes.data.id,
-          curriculo_id: currRes.data.id,
-        },
-        slots: gradeDraft,
-      });
-
-      if (mostrarMensagem) {
-        message.success("Grade salva com sucesso");
-      }
-    } catch {
-      if (mostrarMensagem) {
-        message.error("Erro ao salvar");
-      }
-    }
-  };
-
-  /* AUTO SAVE SILENCIOSO */
-  useEffect(() => {
-    if (!podeEditar) return;
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      salvarGrade(false);
-    }, 1500);
-    return () => clearTimeout(saveTimeout.current);
-  }, [gradeDraft, contexto]);
-
-  /* RESTAURAR */
-  const limparTudo = () => {
-    setGradeDraft([]);
-    setContexto({
-      curso_id: null,
-      coordenador_id: null,
-      semestre_id: null,
-      ano: null,
-      curriculo: null,
-    });
-    message.info("Grade restaurada");
-  };
-
-  /* PDF */
-  const gerarPDF = async (todos) => {
-    const { curso_id, semestre_id, ano, curriculo } = contexto;
-    if (!curso_id || !ano || !curriculo) {
-      message.warning("Selecione curso, ano e currículo");
-      return;
-    }
-
-    const anoRes = await api.post("/anos/get-or-create", { descricao: ano });
-    const currRes = await api.post("/curriculos/get-or-create", { descricao: curriculo });
-
-    const params = new URLSearchParams({
-      curso_id,
-      ano_id: anoRes.data.id,
-      curriculo_id: currRes.data.id,
-    });
-
-    if (!todos) {
-      if (!semestre_id) {
-        message.warning("Selecione o semestre");
-        return;
-      }
-      params.append("semestre_id", semestre_id);
-    } else {
-      params.append("todos", "true");
-    }
-
-    window.open(
-      `${import.meta.env.VITE_API_URL}/relatorios/grade-horaria/pdf?${params}`,
-      "_blank"
+  const handleDeptoChange = (id) => {
+    setDeptoId(id);
+    setCursoId(null);
+    setCursos(
+      id
+        ? todosCursos.filter(
+            (c) => c.departamento_id === id || c.departamento?.id === id
+          )
+        : todosCursos
     );
   };
 
-  /* COLUNAS */
+  useEffect(() => {
+    if (!cursoId) return setDisciplinas([]);
+
+    api.get(`/cursos/${cursoId}/disciplinas`).then((res) => {
+      const lista = res.data.map((i) => i.disciplina || i);
+      setDisciplinas(lista);
+    });
+  }, [cursoId]);
+
+  useEffect(() => {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) return;
+
+    setLoading(true);
+    api
+      .get("/grade-horaria", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+        },
+      })
+      .then((res) => setGrade(res.data || []))
+      .catch(() => message.error("Erro ao buscar grade"))
+      .finally(() => setLoading(false));
+  }, [cursoId, anoId, semestreId, curriculoId]);
+
+  const updateCell = (hId, dId, value) => {
+    setGrade((prev) => {
+      const filtered = prev.filter(
+        (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
+      );
+      if (value)
+        filtered.push({
+          horario_id: hId,
+          dia_semana_id: dId,
+          disciplina_id: value,
+        });
+      return filtered;
+    });
+  };
+
+  const saveGrade = async () => {
+    try {
+      setLoading(true);
+      await api.post("/grade-horaria", {
+        curso_id: cursoId,
+        ano_id: anoId,
+        semestre_id: semestreId,
+        curriculo_id: curriculoId,
+        items: grade,
+      });
+      message.success("Grade salva com sucesso");
+    } catch {
+      message.error("Erro ao salvar");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToExcel = () => {
+    const data = horarios.map((h) => {
+      const row = { Horário: h.descricao };
+      diasSemana.forEach((dia) => {
+        const item = grade.find(
+          (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
+        );
+        const disc = disciplinas.find((d) => d.id === item?.disciplina_id);
+        row[dia.nome] = disc?.nome || "";
+      });
+      return row;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Grade");
+    XLSX.writeFile(wb, "Grade.xlsx");
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF("l");
+    const head = [["Horário", ...diasSemana.map((d) => d.nome)]];
+    const body = horarios.map((h) => {
+      const row = [h.descricao];
+      diasSemana.forEach((dia) => {
+        const item = grade.find(
+          (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
+        );
+        const disc = disciplinas.find((d) => d.id === item?.disciplina_id);
+        row.push(disc?.nome || "");
+      });
+      return row;
+    });
+
+    doc.autoTable({ head, body });
+    doc.save("Grade.pdf");
+  };
+
   const columns = [
     {
       title: "Horário",
-      dataIndex: "horario",
-      fixed: "left",
+      dataIndex: "descricao",
       width: 120,
-      align: "center",
+      fixed: "left",
       onHeaderCell: () => ({ style: headerStyle }),
     },
-    ...dias.map((d) => ({
-      title: d.descricao,
-      width: 220,
-      align: "center",
+    ...diasSemana.map((dia) => ({
+      title: dia.nome,
+      key: dia.id,
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
-        const cell = gradeDraft.find(
-          (g) =>
-            g.horario_id === record.horario_id &&
-            g.dia_semana_id === d.id
+        const item = grade.find(
+          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id
         );
 
         return (
           <Select
             size="small"
+            style={{ width: "100%" }}
+            value={item?.disciplina_id}
+            onChange={(val) => updateCell(record.id, dia.id, val)}
+            disabled={!canEdit}
             allowClear
-            disabled={!podeEditar}
-            style={{
-              width: "100%",
-              color: !podeEditar ? "#000" : undefined,
-              backgroundColor: !podeEditar ? "#f5f7fa" : "#ffffff",
-              border: "1px solid #d9d9d9",
-              borderRadius: 4,
-            }}
-            value={cell?.disciplina_id}
-            onChange={(disciplina_id) =>
-              updateSlot({
-                horario_id: record.horario_id,
-                dia_semana_id: d.id,
-                disciplina_id: disciplina_id || null,
-              })
-            }
-            options={disciplinas.map((disc) => ({
-              value: disc.id,
-              label: `${disc.codigo} - ${disc.nome}`,
-            }))}
-            placeholder="Selecionar"
-          />
+          >
+            {disciplinas.map((d) => (
+              <Select.Option key={d.id} value={d.id}>
+                {d.nome}
+              </Select.Option>
+            ))}
+          </Select>
         );
       },
     })),
   ];
 
-  const dataSource = horarios.map((h) => ({
-    key: h.id,
-    horario: h.descricao,
-    horario_id: h.id,
-  }));
-
   return (
     <AppLayout>
-      <Layout style={{ backgroundColor: "white" }}>
-        <Header style={{ backgroundColor: "#093e5e", marginBottom: 10 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: 16,
-              height: "100%",
-            }}
-          >
-            {podeEditar && (
-              <Button
-                icon={<SaveOutlined />}
-                type="primary"
-                size="small"
-                onClick={() => salvarGrade(true)}
-              >
-                Salvar
-              </Button>
-            )}
-
-            <Dropdown
-              menu={{
-                items: [
-                  { key: "1", label: "PDF do semestre", onClick: () => gerarPDF(false) },
-                  { key: "2", label: "PDF todos", onClick: () => gerarPDF(true) },
-                ],
-              }}
-            >
-              <Button icon={<FilePdfOutlined />} size="small">PDF</Button>
-            </Dropdown>
-
-            {podeEditar && (
-              <Popconfirm title="Restaurar grade?" onConfirm={limparTudo}>
-                <Button
-                  style={{
-                    backgroundColor: "#f5f5f5",
-                    color: "#333",
-                    border: "1px solid #d9d9d9",
-                  }}
-                  icon={<ClearOutlined />}
-                  size="small"
-                >
-                  Restaurar
+      <div style={{ marginBottom: 12 }}>
+        {/* BOTÕES */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+          <Space size={6}>
+            {canEdit && (
+              <Tooltip title="Salvar a grade horária">
+                <Button size="small" icon={<SaveOutlined />} onClick={saveGrade}>
+                  Salvar
                 </Button>
-              </Popconfirm>
+              </Tooltip>
             )}
-          </div>
-        </Header>
 
-        <Content>
-          <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-            <Col span={6}>
-              <Text strong>Curso</Text>
+            <Tooltip title="Exportar em PDF">
+              <Button size="small" icon={<FilePdfOutlined />} onClick={exportToPDF}>
+                PDF
+              </Button>
+            </Tooltip>
+
+            <Tooltip title="Exportar em Excel">
+              <Button size="small" icon={<FileExcelOutlined />} onClick={exportToExcel}>
+                Excel
+              </Button>
+            </Tooltip>
+          </Space>
+        </div>
+
+        {/* FILTROS */}
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            padding: 12,
+            border: "1px solid #d9e4ec",
+            borderRadius: 6,
+            background: "#fff",
+          }}
+        >
+          {[
+            ["Departamento", departamentos, handleDeptoChange],
+            ["Curso", cursos, setCursoId],
+            ["Ano", anos, setAnoId],
+            ["Semestre", semestres, setSemestreId],
+            ["Currículo", curriculos, setCurriculoId],
+          ].map(([label, list, onChange], i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column" }}>
+              <Text style={{ fontWeight: 600, fontSize: 12, marginBottom: 4 }}>
+                {label}
+              </Text>
               <Select
-                style={{ width: "100%" }}
-                value={contexto.curso_id}
-                options={cursos.map((c) => ({ label: c.nome, value: c.id }))}
-                onChange={(v) => setContexto((c) => ({ ...c, curso_id: v }))}
+                size="small"
+                style={{ width: 160 }}
+                onChange={onChange}
                 allowClear
-              />
-            </Col>
+              >
+                {list.map((item) => (
+                  <Select.Option key={item.id} value={item.id}>
+                    {item.nome || item.ano}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          ))}
+        </div>
+      </div>
 
-            <Col span={6}>
-              <Text strong>Coordenador</Text>
-              <Select
-                style={{ width: "100%" }}
-                value={contexto.coordenador_id}
-                options={coordenadores.map((c) => ({ label: c.nome, value: c.id }))}
-                onChange={(v) => setContexto((c) => ({ ...c, coordenador_id: v }))}
-                allowClear
-              />
-            </Col>
-
-            <Col span={4}>
-              <Text strong>Ano</Text>
-              <Select
-                style={{ width: "100%" }}
-                value={contexto.ano}
-                options={anos}
-                onChange={(v) => setContexto((c) => ({ ...c, ano: v }))}
-                allowClear
-              />
-            </Col>
-
-            <Col span={4}>
-              <Text strong>Semestre</Text>
-              <Select
-                style={{ width: "100%" }}
-                value={contexto.semestre_id}
-                options={semestres.map((s) => ({ label: s.descricao, value: s.id }))}
-                onChange={(v) => setContexto((c) => ({ ...c, semestre_id: v }))}
-                allowClear
-              />
-            </Col>
-
-            <Col span={4}>
-              <Text strong>Currículo</Text>
-              <Select
-                style={{ width: "100%" }}
-                value={contexto.curriculo}
-                options={curriculos}
-                onChange={(v) => setContexto((c) => ({ ...c, curriculo: v }))}
-                allowClear
-              />
-            </Col>
-          </Row>
-
-          <Table
-            columns={columns}
-            dataSource={dataSource}
-            pagination={false}
-            bordered={false} // removido borda interna pesada
-            scroll={{ x: "max-content" }}
-            rowClassName={() => "grade-row"}
-            style={{
-              border: "1px solid #d9d9d9",
-              borderRadius: 6,
-              overflow: "hidden",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-            }}
-          />
-        </Content>
-
-        <Footer style={{ textAlign: "center" }} />
-      </Layout>
+      <Table
+        rowKey="id"
+        dataSource={horarios}
+        columns={columns}
+        pagination={false}
+        bordered
+        size="small"
+        loading={loading}
+        scroll={{ x: "max-content", y: 550 }}
+      />
     </AppLayout>
   );
 }

@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const Usuario = require("./Usuario");
 
 const Log = sequelize.define(
   "Log",
@@ -12,11 +11,7 @@ const Log = sequelize.define(
     },
     usuario_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'tb_usuario',
-        key: "id",
-      },
+      allowNull: false
     },
     acao: {
       type: DataTypes.STRING,
@@ -45,9 +40,5 @@ const Log = sequelize.define(
     timestamps: false,
   }
 );
-
-// ✅ ASSOCIAÇÕES
-Log.belongsTo(Usuario, { foreignKey: "usuario_id", as: "usuario" });
-Usuario.hasMany(Log, { foreignKey: "usuario_id", as: "logs" });
 
 module.exports = Log;

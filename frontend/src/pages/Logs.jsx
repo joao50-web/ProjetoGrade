@@ -1,170 +1,52 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Input, message, Space } from 'antd';
-import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+  Popconfirm,
+  Space,
+  Tag,
+  Tooltip,
+  Typography
+} from 'antd';
+
+import {
+  SearchOutlined,
+  EyeOutlined
+} from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
+import moment from 'moment';
 
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
-import * as XLSX from "xlsx";
-
-// =========================
-// STYLE
-// =========================
+const { Text } = Typography;
 
 const headerCellStyle = {
   backgroundColor: '#093e5e',
-  color: '#fff',
+  color: '#ffffff',
   fontWeight: 600,
-  padding: '12px 16px',
-  fontSize: 15,
-  textAlign: 'left'
+  padding: '14px 20px',
+  fontSize: 16,
+  textAlign: 'center'
 };
-
-// =========================
-// FORMATADORES
-// =========================
-
-const formatDate = (dateString) => {
-  if (!dateString) return '—';
-
-  try {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(dateString));
-  } catch {
-    return dateString;
-  }
-};
-
-const getActionData = (acao) => {
-  if (!acao) return { action: '—', entity: '—' };
-
-  const [method, route] = acao.split(' ');
-  const entity = route?.split('/')[1] || 'registro';
-
-  const cleanEntity = entity.replace('-', ' ').replace(/s$/, '');
-
-  const actions = {
-    POST: 'Criou',
-    PUT: 'Atualizou',
-    DELETE: 'Removeu'
-  };
-
-  return {
-    action: actions[method] || method,
-    entity: cleanEntity
-  };
-};
-
-const formatUsuario = (log) =>
-  log?.usuario?.pessoa?.nome ||
-  log?.usuario?.login ||
-  'Desconhecido';
-
-// =========================
-// DETALHES
-// =========================
-
-const formatDetails = (details) => {
-  if (!details) return 'Nenhum detalhe registrado.';
-
-  return `
-📄 DETALHES DO REGISTRO
-────────────────────────
-
-🧾 Dados:
-${JSON.stringify(details.body || {}, null, 2)}
-
-🔎 Parâmetros:
-${JSON.stringify(details.params || {}, null, 2)}
-
-🔍 Filtros:
-${JSON.stringify(details.query || {}, null, 2)}
-  `.trim();
-};
-
-// =========================
-// PDF EXPORT
-// =========================
-
-const exportPDF = async () => {
-  const element = document.getElementById("relatorio-logs");
-
-  if (!element) {
-    message.error("Erro ao gerar PDF");
-    return;
-  }
-
-  try {
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true
-    });
-
-    const imgData = canvas.toDataURL("image/png");
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgProps = pdf.getImageProperties(imgData);
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("relatorio-logs.pdf");
-
-  } catch (err) {
-    console.error(err);
-    message.error("Falha ao gerar PDF");
-  }
-};
-
-// =========================
-// EXCEL EXPORT
-// =========================
-
-const exportExcel = (logs) => {
-  const data = logs.map((log) => {
-    const { action, entity } = getActionData(log.acao || '');
-
-    return {
-      Data: formatDate(log.data_hora),
-      Usuario: formatUsuario(log),
-      Acao: action,
-      Entidade: entity
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(wb, ws, "Logs");
-
-  XLSX.writeFile(wb, "relatorio-logs.xlsx");
-};
-
-// =========================
-// COMPONENTE
-// =========================
 
 export default function Logs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [details, setDetails] = useState(null);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [currentDetails, setCurrentDetails] = useState(null);
 
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/logs');
-      setLogs(res.data);
-    } catch {
+      const response = await api.get('/logs');
+      setLogs(response.data);
+    } catch (err) {
       message.error('Erro ao carregar logs');
     } finally {
       setLoading(false);
@@ -175,116 +57,130 @@ export default function Logs() {
     loadLogs();
   }, []);
 
-  const openModal = (data) => {
-    setDetails(data);
-    setOpen(true);
+  const showDetails = (details) => {
+    setCurrentDetails(details);
+    setDetailsModalVisible(true);
   };
 
   const closeModal = () => {
-    setOpen(false);
-    setDetails(null);
+    setDetailsModalVisible(false);
+    setCurrentDetails(null);
   };
 
-  const filteredLogs = logs.filter((log) =>
+  const filteredLogs = logs.filter(log =>
     [log.acao, log.entidade, log.usuario?.login, log.usuario?.pessoa?.nome]
-      .some((v) => v?.toLowerCase().includes(search.toLowerCase()))
+      .some(v => v && v.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '8px 20px' }}>
+      <span style={{
+        fontSize: strong ? 17 : 16,
+        fontWeight: strong ? 500 : 400
+      }}>
+        {text}
+      </span>
+    </div>
   );
 
   const columns = [
     {
-      title: 'Data',
+      title: 'Data/Hora',
       dataIndex: 'data_hora',
-      render: formatDate,
-      onHeaderCell: () => ({ style: headerCellStyle })
+      key: 'data_hora',
+      align: 'left',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (text) => renderText(moment(text).format('DD/MM/YYYY HH:mm:ss'))
     },
     {
       title: 'Usuário',
-      render: formatUsuario,
-      onHeaderCell: () => ({ style: headerCellStyle })
+      dataIndex: ['usuario', 'pessoa', 'nome'],
+      key: 'usuario_nome',
+      align: 'left',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (text, record) => renderText(text || record.usuario?.login || 'N/A', true)
     },
     {
       title: 'Ação',
       dataIndex: 'acao',
-      render: (v) => getActionData(v).action,
-      onHeaderCell: () => ({ style: headerCellStyle })
+      key: 'acao',
+      align: 'left',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: renderText
     },
     {
       title: 'Entidade',
-      dataIndex: 'acao',
-      render: (v) => getActionData(v).entity,
-      onHeaderCell: () => ({ style: headerCellStyle })
+      dataIndex: 'entidade',
+      key: 'entidade',
+      align: 'left',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: renderText
+    },
+    {
+      title: 'ID da Entidade',
+      dataIndex: 'entidade_id',
+      key: 'entidade_id',
+      align: 'center',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (text) => renderText(text || 'N/A')
     },
     {
       title: 'Detalhes',
+      key: 'detalhes',
+      align: 'center',
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
         <Button
-          size="small"
           icon={<EyeOutlined />}
-          onClick={() => openModal(record.detalhes)}
+          onClick={() => showDetails(record.detalhes)}
+          style={{
+            fontSize: 16,
+            color: '#333333',
+            borderColor: '#cccccc',
+            backgroundColor: '#f9f9f9'
+          }}
         >
-          Ver
+          Ver Detalhes
         </Button>
-      ),
-      onHeaderCell: () => ({ style: headerCellStyle })
+      )
     }
   ];
 
   return (
     <AppLayout>
-
-      {/* BOTÕES */}
-      <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={exportPDF}>
-          Exportar PDF
-        </Button>
-
-        <Button onClick={() => exportExcel(filteredLogs)}>
-          Exportar Excel
-        </Button>
-
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
-          placeholder="Buscar logs..."
+          placeholder="Buscar log..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280 }}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </Space>
-
-      {/* ÁREA PDF */}
-      <div id="relatorio-logs">
-        <Table
-          rowKey="id"
-          dataSource={filteredLogs}
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          bordered
-          columns={columns}
-          scroll={{ x: 'max-content' }}
+          style={{ width: 280, fontSize: 16 }}
+          onChange={e => setSearch(e.target.value)}
         />
       </div>
 
-      {/* MODAL */}
+      <Table
+        rowKey="id"
+        dataSource={filteredLogs}
+        pagination={{ pageSize: 10 }}
+        loading={loading}
+        bordered
+        columns={columns}
+        style={{ fontSize: 16 }}
+        scroll={{ x: 'max-content' }}
+      />
+
       <Modal
-        title="Detalhes do Registro"
-        open={open}
+        title="Detalhes do Log"
+        open={detailsModalVisible}
         onCancel={closeModal}
         footer={null}
-        width={720}
+        width={800}
+        bodyStyle={{ fontSize: 16 }}
       >
-        <pre style={{
-          whiteSpace: 'pre-wrap',
-          fontSize: 13,
-          lineHeight: 1.6,
-          background: '#fafafa',
-          padding: 14,
-          borderRadius: 6,
-          border: '1px solid #eee'
-        }}>
-          {formatDetails(details)}
+        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+          {JSON.stringify(currentDetails, null, 2)}
         </pre>
       </Modal>
-
     </AppLayout>
   );
 }
