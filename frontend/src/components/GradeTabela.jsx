@@ -12,6 +12,7 @@ import {
   SaveOutlined,
   FilePdfOutlined,
   FileExcelOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import AppLayout from "../components/AppLayout";
 import { api, getUsuarioLogado } from "../services/api";
@@ -22,9 +23,9 @@ import "jspdf-autotable";
 const { Text } = Typography;
 
 const headerStyle = {
-  backgroundColor: "#093e5e",
+  backgroundColor: "#0b3d5c",
   color: "#fff",
-  fontWeight: "bold",
+  fontWeight: 600,
   fontSize: "13px",
   textAlign: "center",
 };
@@ -42,7 +43,6 @@ export default function GradeHoraria() {
   const [semestres, setSemestres] = useState([]);
   const [curriculos, setCurriculos] = useState([]);
   const [horarios, setHorarios] = useState([]);
-  const [diasSemana, setDiasSemana] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
 
   const [deptoId, setDeptoId] = useState(null);
@@ -52,32 +52,33 @@ export default function GradeHoraria() {
   const [curriculoId, setCurriculoId] = useState(null);
 
   const [grade, setGrade] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  const diasFixos = [
+    { id: 1, nome: "Segunda" },
+    { id: 2, nome: "Terça" },
+    { id: 3, nome: "Quarta" },
+    { id: 4, nome: "Quinta" },
+    { id: 5, nome: "Sexta" },
+  ];
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const [d, c, a, s, cur, h, dias] = await Promise.all([
-          api.get("/departamentos"),
-          api.get("/cursos"),
-          api.get("/anos"),
-          api.get("/semestres"),
-          api.get("/curriculos"),
-          api.get("/horarios"),
-          api.get("/dias-semana"),
-        ]);
+      const [d, c, a, s, cur, h] = await Promise.all([
+        api.get("/departamentos"),
+        api.get("/cursos"),
+        api.get("/anos"),
+        api.get("/semestres"),
+        api.get("/curriculos"),
+        api.get("/horarios"),
+      ]);
 
-        setDepartamentos(d.data);
-        setTodosCursos(c.data);
-        setCursos(c.data);
-        setAnos(a.data);
-        setSemestres(s.data);
-        setCurriculos(cur.data);
-        setHorarios(h.data);
-        setDiasSemana(dias.data);
-      } catch {
-        message.error("Erro ao carregar dados");
-      }
+      setDepartamentos(d.data);
+      setTodosCursos(c.data);
+      setCursos(c.data);
+      setAnos(a.data);
+      setSemestres(s.data);
+      setCurriculos(cur.data);
+      setHorarios(h.data);
     };
     load();
   }, []);
@@ -85,6 +86,7 @@ export default function GradeHoraria() {
   const handleDeptoChange = (id) => {
     setDeptoId(id);
     setCursoId(null);
+
     setCursos(
       id
         ? todosCursos.filter(
@@ -98,15 +100,13 @@ export default function GradeHoraria() {
     if (!cursoId) return setDisciplinas([]);
 
     api.get(`/cursos/${cursoId}/disciplinas`).then((res) => {
-      const lista = res.data.map((i) => i.disciplina || i);
-      setDisciplinas(lista);
+      setDisciplinas(res.data.map((i) => i.disciplina || i));
     });
   }, [cursoId]);
 
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return;
 
-    setLoading(true);
     api
       .get("/grade-horaria", {
         params: {
@@ -116,9 +116,7 @@ export default function GradeHoraria() {
           curriculo_id: curriculoId,
         },
       })
-      .then((res) => setGrade(res.data || []))
-      .catch(() => message.error("Erro ao buscar grade"))
-      .finally(() => setLoading(false));
+      .then((res) => setGrade(res.data || []));
   }, [cursoId, anoId, semestreId, curriculoId]);
 
   const updateCell = (hId, dId, value) => {
@@ -126,38 +124,70 @@ export default function GradeHoraria() {
       const filtered = prev.filter(
         (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
       );
-      if (value)
-        filtered.push({
-          horario_id: hId,
-          dia_semana_id: dId,
-          disciplina_id: value,
-        });
+
+      filtered.push({
+        horario_id: hId,
+        dia_semana_id: dId,
+        disciplina_id: value || null,
+      });
+
       return filtered;
     });
+
+    saveGrade();
+  };
+
+  const buildSlots = () => {
+    const slots = [];
+
+    horarios.forEach((h) => {
+      diasFixos.forEach((d) => {
+        const item = grade.find(
+          (g) => g.horario_id === h.id && g.dia_semana_id === d.id
+        );
+
+        slots.push({
+          horario_id: h.id,
+          dia_semana_id: d.id,
+          disciplina_id: item?.disciplina_id || null,
+        });
+      });
+    });
+
+    return slots;
   };
 
   const saveGrade = async () => {
-    try {
-      setLoading(true);
-      await api.post("/grade-horaria", {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) return;
+
+    await api.post("/grade-horaria/save", {
+      contexto: {
         curso_id: cursoId,
         ano_id: anoId,
         semestre_id: semestreId,
         curriculo_id: curriculoId,
-        items: grade,
-      });
-      message.success("Grade salva com sucesso");
-    } catch {
-      message.error("Erro ao salvar");
-    } finally {
-      setLoading(false);
-    }
+      },
+      slots: buildSlots(),
+    });
   };
 
+  // 🔥 RESTAURAR FILTROS (LIMPA TELA)
+  const resetFiltros = () => {
+    setDeptoId(null);
+    setCursoId(null);
+    setAnoId(null);
+    setSemestreId(null);
+    setCurriculoId(null);
+    setGrade([]);
+    setDisciplinas([]);
+    setCursos(todosCursos);
+  };
+
+  // EXPORT
   const exportToExcel = () => {
     const data = horarios.map((h) => {
       const row = { Horário: h.descricao };
-      diasSemana.forEach((dia) => {
+      diasFixos.forEach((dia) => {
         const item = grade.find(
           (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
         );
@@ -175,10 +205,11 @@ export default function GradeHoraria() {
 
   const exportToPDF = () => {
     const doc = new jsPDF("l");
-    const head = [["Horário", ...diasSemana.map((d) => d.nome)]];
+
+    const head = [["Horário", ...diasFixos.map((d) => d.nome)]];
     const body = horarios.map((h) => {
       const row = [h.descricao];
-      diasSemana.forEach((dia) => {
+      diasFixos.forEach((dia) => {
         const item = grade.find(
           (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
         );
@@ -200,7 +231,7 @@ export default function GradeHoraria() {
       fixed: "left",
       onHeaderCell: () => ({ style: headerStyle }),
     },
-    ...diasSemana.map((dia) => ({
+    ...diasFixos.map((dia) => ({
       title: dia.nome,
       key: dia.id,
       onHeaderCell: () => ({ style: headerStyle }),
@@ -213,14 +244,27 @@ export default function GradeHoraria() {
           <Select
             size="small"
             style={{ width: "100%" }}
-            value={item?.disciplina_id}
+            value={item?.disciplina_id || undefined}
             onChange={(val) => updateCell(record.id, dia.id, val)}
-            disabled={!canEdit}
             allowClear
+            showSearch
+            optionFilterProp="children"
+            dropdownMatchSelectWidth={false}
+            maxTagCount="responsive"
           >
             {disciplinas.map((d) => (
               <Select.Option key={d.id} value={d.id}>
-                {d.nome}
+                <span
+                  style={{
+                    display: "inline-block",
+                    maxWidth: 200,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {d.nome}
+                </span>
               </Select.Option>
             ))}
           </Select>
@@ -231,41 +275,47 @@ export default function GradeHoraria() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 10 }}>
         {/* BOTÕES */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-          <Space size={6}>
-            {canEdit && (
-              <Tooltip title="Salvar a grade horária">
-                <Button size="small" icon={<SaveOutlined />} onClick={saveGrade}>
-                  Salvar
-                </Button>
-              </Tooltip>
-            )}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <Space>
+            <Tooltip title="Salvar">
+              <Button icon={<SaveOutlined />} onClick={saveGrade}>
+                Salvar
+              </Button>
+            </Tooltip>
 
-            <Tooltip title="Exportar em PDF">
-              <Button size="small" icon={<FilePdfOutlined />} onClick={exportToPDF}>
+            <Tooltip title="Exportar PDF">
+              <Button icon={<FilePdfOutlined />} onClick={exportToPDF}>
                 PDF
               </Button>
             </Tooltip>
 
-            <Tooltip title="Exportar em Excel">
-              <Button size="small" icon={<FileExcelOutlined />} onClick={exportToExcel}>
+            <Tooltip title="Exportar Excel">
+              <Button icon={<FileExcelOutlined />} onClick={exportToExcel}>
                 Excel
+              </Button>
+            </Tooltip>
+
+            <Tooltip title="Limpar filtros">
+              <Button icon={<ReloadOutlined />} onClick={resetFiltros}>
+                Restaurar
               </Button>
             </Tooltip>
           </Space>
         </div>
 
-        {/* FILTROS */}
+        {/* FILTROS RESPONSIVOS */}
         <div
           style={{
             display: "flex",
-            gap: 16,
+            flexWrap: "wrap",
+            gap: 12,
             padding: 12,
-            border: "1px solid #d9e4ec",
-            borderRadius: 6,
-            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            background: "#fafafa",
+            marginTop: 10,
           }}
         >
           {[
@@ -275,13 +325,13 @@ export default function GradeHoraria() {
             ["Semestre", semestres, setSemestreId],
             ["Currículo", curriculos, setCurriculoId],
           ].map(([label, list, onChange], i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column" }}>
-              <Text style={{ fontWeight: 600, fontSize: 12, marginBottom: 4 }}>
+            <div key={i} style={{ minWidth: 180, flex: "1 1 180px" }}>
+              <Text strong style={{ fontSize: 12 }}>
                 {label}
               </Text>
+
               <Select
-                size="small"
-                style={{ width: 160 }}
+                style={{ width: "100%", marginTop: 4 }}
                 onChange={onChange}
                 allowClear
               >
@@ -303,7 +353,6 @@ export default function GradeHoraria() {
         pagination={false}
         bordered
         size="small"
-        loading={loading}
         scroll={{ x: "max-content", y: 550 }}
       />
     </AppLayout>
