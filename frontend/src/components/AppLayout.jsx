@@ -12,6 +12,7 @@ import {
   BookOutlined,
   LogoutOutlined,
   HistoryOutlined,
+  BarChartOutlined
 } from "@ant-design/icons";
 
 import { useNavigate, useLocation } from "react-router-dom";
@@ -32,7 +33,6 @@ export default function AppLayout({ children }) {
   const hoverTimeout = useRef(null);
 
   /* ================= LOGOUT ================= */
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("usuario");
@@ -40,7 +40,6 @@ export default function AppLayout({ children }) {
   };
 
   /* ================= CONTROLE SUBMENU ================= */
-
   useEffect(() => {
     let keys = [];
 
@@ -67,7 +66,6 @@ export default function AppLayout({ children }) {
   const usuario = getUsuarioLogado();
 
   /* ================= TITULO PAGINA ================= */
-
   const currentPage = useMemo(() => {
     switch (location.pathname) {
       case "/home":
@@ -86,6 +84,8 @@ export default function AppLayout({ children }) {
         return "Disciplinas";
       case "/grade-horaria":
         return "Grade Horária";
+      case "/relatorios":
+        return "Relatórios"; // 🔥 NOVO
       case "/logs":
         return "Histórico de Atividades";
       default:
@@ -94,7 +94,6 @@ export default function AppLayout({ children }) {
   }, [location.pathname]);
 
   /* ================= MENU ================= */
-
   const menuItems = useMemo(() => {
     if (!usuario || usuario.role?.toLowerCase() !== "administrador") {
       return [
@@ -102,6 +101,11 @@ export default function AppLayout({ children }) {
           key: "/grade-horaria",
           icon: <CalendarOutlined />,
           label: "Grade Horária",
+        },
+        {
+          key: "/relatorios",
+          icon: <BarChartOutlined />,
+          label: "Relatórios",
         },
       ];
     } else {
@@ -129,6 +133,9 @@ export default function AppLayout({ children }) {
           ],
         },
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
+
+        // 🔥 NOVO MENU
+        { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
       ];
     }
   }, [usuario]);
@@ -141,7 +148,6 @@ export default function AppLayout({ children }) {
   };
 
   /* ================= HOVER SUAVE ================= */
-
   const handleMouseEnter = () => {
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
 
@@ -161,7 +167,6 @@ export default function AppLayout({ children }) {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* HEADER */}
-
       <Header
         style={{
           backgroundColor: "#093e5e",
@@ -173,10 +178,8 @@ export default function AppLayout({ children }) {
           position: "relative",
         }}
       >
-        {/* Logo esquerda */}
         <img src={logoBranco} alt="UFCSPA" style={{ height: 58 }} />
 
-        {/* Logo central */}
         <div
           style={{
             position: "absolute",
@@ -187,7 +190,6 @@ export default function AppLayout({ children }) {
           <img src={logoCentral} alt="UFCSPA" style={{ height: 18 }} />
         </div>
 
-        {/* BOTÃO SAIR */}
         <Button
           size="small"
           icon={<LogoutOutlined />}
@@ -203,13 +205,6 @@ export default function AppLayout({ children }) {
             alignItems: "center",
             gap: 4,
             fontSize: 13,
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.22)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
           }}
         >
           Sair
@@ -218,7 +213,6 @@ export default function AppLayout({ children }) {
 
       <Layout>
         {/* SIDEBAR */}
-
         <Sider
           collapsed={collapsed}
           width={260}
@@ -228,10 +222,6 @@ export default function AppLayout({ children }) {
           style={{
             backgroundColor: "#f0f6fa",
             borderRight: "1px solid #d9e4ec",
-            transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-            boxShadow: collapsed
-              ? "2px 0 6px rgba(0,0,0,0.05)"
-              : "4px 0 12px rgba(0,0,0,0.08)",
           }}
         >
           <Menu
@@ -245,30 +235,19 @@ export default function AppLayout({ children }) {
             style={{
               backgroundColor: "#f0f6fa",
               borderRight: "none",
-              fontSize: 15,
               paddingTop: 20,
-              transition: "all 0.3s ease",
             }}
           />
         </Sider>
 
         {/* CONTEÚDO */}
-
         <Content
           style={{
             padding: "5px 40px",
             backgroundColor: "#f5f7fa",
-            transition: "all 0.3s ease",
           }}
         >
-          <Title
-            level={2}
-            style={{
-              marginBottom: 20,
-              color: "#093e5e",
-              fontWeight: 600,
-            }}
-          >
+          <Title level={2} style={{ color: "#093e5e" }}>
             {currentPage}
           </Title>
 
@@ -279,7 +258,6 @@ export default function AppLayout({ children }) {
               borderRadius: 10,
               border: "1px solid #e4eaf0",
               borderTop: "3px solid #093e5e",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
             }}
           >
             {children}
@@ -288,15 +266,12 @@ export default function AppLayout({ children }) {
       </Layout>
 
       {/* FOOTER */}
-
       <Footer
         style={{
           textAlign: "center",
           backgroundColor: "#093e5e",
           color: "#ffffff",
           fontSize: 11,
-          padding: "10px 0px",
-          lineHeight: 1.2,
         }}
       >
         © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre

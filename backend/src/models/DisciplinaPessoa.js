@@ -7,12 +7,20 @@ const DisciplinaPessoa = sequelize.define(
     disciplina_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'Tb_Disciplina',
+        key: 'id'
+      }
     },
     pessoa_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'Tb_Pessoa',
+        key: 'id'
+      }
     }
   },
   {

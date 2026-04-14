@@ -1,10 +1,10 @@
 const { Curso, Disciplina, Pessoa, Departamento } = require('../models');
 
-// ==== CRUD ATUALIZADO COM DEPARTAMENTO ====
-
+// ===============================
+// CREATE
+// ===============================
 exports.create = async (req, res) => {
   try {
-    // Agora aceita o departamento_id enviado pelo frontend
     const curso = await Curso.create(req.body);
     res.status(201).json(curso);
   } catch (error) {
@@ -13,11 +13,13 @@ exports.create = async (req, res) => {
   }
 };
 
+// ===============================
+// LISTAR TODOS
+// ===============================
 exports.findAll = async (req, res) => {
   try {
     const cursos = await Curso.findAll({
       include: [
-        // ✅ ADICIONADO: Inclui o Departamento do curso
         {
           model: Departamento,
           as: 'departamento',
@@ -32,6 +34,7 @@ exports.findAll = async (req, res) => {
       ],
       order: [['nome', 'ASC']]
     });
+
     res.json(cursos);
   } catch (error) {
     console.error(error);
@@ -39,13 +42,25 @@ exports.findAll = async (req, res) => {
   }
 };
 
+// ===============================
+// BUSCAR POR ID
+// ===============================
 exports.findById = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id, {
-      // ✅ ADICIONADO: Inclui o Departamento na busca por ID
-      include: [{ model: Departamento, as: 'departamento' }]
+      include: [
+        {
+          model: Departamento,
+          as: 'departamento',
+          attributes: ['id', 'nome', 'sigla']
+        }
+      ]
     });
-    if (!curso) return res.status(404).json({ error: 'Curso não encontrado' });
+
+    if (!curso) {
+      return res.status(404).json({ error: 'Curso não encontrado' });
+    }
+
     res.json(curso);
   } catch (error) {
     console.error(error);
@@ -53,13 +68,19 @@ exports.findById = async (req, res) => {
   }
 };
 
+// ===============================
+// UPDATE
+// ===============================
 exports.update = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id);
-    if (!curso) return res.status(404).json({ error: 'Curso não encontrado' });
 
-    // Atualiza os dados, incluindo o departamento_id se enviado
+    if (!curso) {
+      return res.status(404).json({ error: 'Curso não encontrado' });
+    }
+
     await curso.update(req.body);
+
     res.json(curso);
   } catch (error) {
     console.error(error);
@@ -67,12 +88,19 @@ exports.update = async (req, res) => {
   }
 };
 
+// ===============================
+// DELETE
+// ===============================
 exports.remove = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id);
-    if (!curso) return res.status(404).json({ error: 'Curso não encontrado' });
+
+    if (!curso) {
+      return res.status(404).json({ error: 'Curso não encontrado' });
+    }
 
     await curso.destroy();
+
     res.status(204).send();
   } catch (error) {
     console.error(error);
@@ -80,30 +108,50 @@ exports.remove = async (req, res) => {
   }
 };
 
-/**
- * LISTAR DISCIPLINAS ASSOCIADAS AO CURSO
- */
+// ===============================
+// 🔥 LISTAR DISCIPLINAS (AJUSTADO PRA GRADE)
+// ===============================
 exports.listDisciplinas = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id, {
-      include: [{ model: Disciplina, as: 'disciplinas' }]
+      include: [
+        {
+          model: Disciplina,
+          as: 'disciplinas',
+          attributes: ['id', 'nome', 'codigo'],
+          through: { attributes: [] }
+        },
+        {
+          model: Departamento,
+          as: 'departamento',
+          attributes: ['sigla']
+        }
+      ]
     });
 
     if (!curso) {
       return res.status(404).json({ error: 'Curso não encontrado' });
     }
 
-    res.json(curso.disciplinas);
+    // 🔥 FORMATAÇÃO IDEAL PRA GRADE
+    const resultado = curso.disciplinas.map((d) => ({
+      id: d.id,
+      nome: d.nome,
+      codigo: d.codigo,
+      departamento_sigla: curso.departamento?.sigla || ''
+    }));
+
+    res.json(resultado);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao listar disciplinas' });
   }
 };
 
-/**
- * ATUALIZAR DISCIPLINAS DO CURSO
- * (substitui todas as associações)
- */
+// ===============================
+// ATUALIZAR DISCIPLINAS DO CURSO
+// ===============================
 exports.updateDisciplinas = async (req, res) => {
   try {
     const { disciplinas } = req.body;
@@ -127,6 +175,9 @@ exports.updateDisciplinas = async (req, res) => {
   }
 };
 
+// ===============================
+// DISCIPLINAS + PROFESSORES
+// ===============================
 exports.findDisciplinasComProfessores = async (req, res) => {
   try {
     const { id } = req.params;
@@ -148,7 +199,6 @@ exports.findDisciplinasComProfessores = async (req, res) => {
       return res.status(404).json({ error: 'Curso não encontrado' });
     }
 
-    // 🔁 monta as combinações disciplina + professor
     const result = [];
 
     curso.disciplinas.forEach(disciplina => {
@@ -163,6 +213,7 @@ exports.findDisciplinasComProfessores = async (req, res) => {
     });
 
     res.json(result);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao buscar disciplinas com professores' });

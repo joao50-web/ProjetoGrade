@@ -1,9 +1,9 @@
-const { Disciplina, Curso, Pessoa } = require('../models');
+const { Disciplina, Curso, Pessoa, Cargo } = require('../models');
 
-// ==== CRIAR DISCIPLINA (sem professor obrigatório) ====
+// ==== CRIAR DISCIPLINA ====
 exports.create = async (req, res) => {
   try {
-    const disciplina = await Disciplina.create(req.body); // Apenas cria
+    const disciplina = await Disciplina.create(req.body);
     res.status(201).json(disciplina);
   } catch (err) {
     console.error(err);
@@ -11,33 +11,45 @@ exports.create = async (req, res) => {
   }
 };
 
-// ==== LISTAR TODAS AS DISCIPLINAS ====
+// ==== LISTAR TODAS ====
 exports.findAll = async (req, res) => {
-  const disciplinas = await Disciplina.findAll();
+  const disciplinas = await Disciplina.findAll({
+    include: [
+      {
+        model: Pessoa,
+        as: 'professores',
+        attributes: ['id', 'nome'],
+        through: { attributes: [] }
+      }
+    ]
+  });
+
   res.json(disciplinas);
 };
 
-// ==== ATUALIZAR DISCIPLINA ====
+// ==== ATUALIZAR ====
 exports.update = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id);
   if (!disciplina) {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
+
   await disciplina.update(req.body);
   res.json(disciplina);
 };
 
-// ==== REMOVER DISCIPLINA ====
+// ==== REMOVER ====
 exports.remove = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id);
   if (!disciplina) {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
+
   await disciplina.destroy();
   res.status(204).send();
 };
 
-// ==== LISTAR RELAÇÕES (CURSOS E PROFESSORES) ====
+// ==== RELAÇÕES ====
 exports.findRelations = async (req, res) => {
   const disciplina = await Disciplina.findByPk(req.params.id, {
     include: [
@@ -51,6 +63,13 @@ exports.findRelations = async (req, res) => {
         model: Pessoa,
         as: 'professores',
         attributes: ['id', 'nome'],
+        include: [
+          {
+            model: Cargo,
+            as: 'cargo',
+            attributes: ['nome']
+          }
+        ],
         through: { attributes: [] }
       }
     ]
@@ -63,7 +82,7 @@ exports.findRelations = async (req, res) => {
   res.json(disciplina);
 };
 
-// ==== ATUALIZAR RELAÇÕES (CURSOS E PROFESSORES) ====
+// ==== ATUALIZAR RELAÇÕES (COM VALIDAÇÃO) ====
 exports.updateRelations = async (req, res) => {
   const { cursos = [], professores = [] } = req.body;
 
@@ -72,12 +91,27 @@ exports.updateRelations = async (req, res) => {
     return res.status(404).json({ error: 'Disciplina não encontrada' });
   }
 
+  // cursos
   if (Array.isArray(cursos)) {
     await disciplina.setCursos(cursos);
   }
 
+  // professores (VALIDAÇÃO 🔥)
   if (Array.isArray(professores)) {
-    await disciplina.setProfessores(professores); // Professores são opcionais
+    const pessoas = await Pessoa.findAll({
+      where: { id: professores },
+      include: [{ model: Cargo, as: 'cargo' }]
+    });
+
+    const invalidos = pessoas.filter(p => p.cargo?.nome !== 'Professor');
+
+    if (invalidos.length > 0) {
+      return res.status(400).json({
+        error: 'Uma ou mais pessoas não são professores'
+      });
+    }
+
+    await disciplina.setProfessores(professores);
   }
 
   res.json({ message: 'Associações atualizadas com sucesso' });

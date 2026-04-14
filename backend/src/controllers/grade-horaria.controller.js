@@ -5,6 +5,7 @@ const {
   Pessoa,
   Horario,
   DiaSemana,
+  Departamento
 } = require('../models');
 
 /* ================= BUSCAR GRADE ================= */
@@ -24,6 +25,21 @@ exports.findByContext = async (req, res) => {
           as: 'disciplina',
           attributes: ['id', 'codigo', 'nome'],
           required: false,
+          include: [
+            {
+              model: Curso,
+              as: 'cursos',
+              attributes: ['id'],
+              through: { attributes: [] },
+              include: [
+                {
+                  model: Departamento,
+                  as: 'departamento',
+                  attributes: ['sigla']
+                }
+              ]
+            }
+          ]
         },
         {
           model: Horario,
@@ -38,17 +54,44 @@ exports.findByContext = async (req, res) => {
       ],
     });
 
-    const registrosFiltrados = registros.map(r => {
-      if (!r.disciplina) r.disciplina_id = null;
-      return r;
+    // 🔥 FORMATAÇÃO FINAL (já pronta pro frontend)
+    const resultado = registros.map(r => {
+      let textoCompleto = '';
+
+      if (r.disciplina) {
+        const curso = r.disciplina.cursos?.[0];
+        const sigla = curso?.departamento?.sigla || '';
+        const codigo = r.disciplina.codigo || '';
+        const nome = r.disciplina.nome || '';
+
+        textoCompleto = `${sigla} (${codigo})\n${nome}`;
+      }
+
+      return {
+        id: r.id,
+        horario_id: r.horario_id,
+        dia_semana_id: r.dia_semana_id,
+        disciplina_id: r.disciplina_id || null,
+
+        disciplina: r.disciplina
+          ? {
+              id: r.disciplina.id,
+              nome: r.disciplina.nome,
+              codigo: r.disciplina.codigo,
+              texto: textoCompleto // 🔥 já pronto
+            }
+          : null
+      };
     });
 
-    res.json(registrosFiltrados);
+    res.json(resultado);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao buscar grade' });
   }
 };
+
 
 /* ================= SALVAR SLOT ================= */
 exports.saveSlot = async (req, res) => {
@@ -80,13 +123,15 @@ exports.saveSlot = async (req, res) => {
     });
 
     res.json(registro);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao salvar slot' });
   }
 };
 
-/* ================= SALVAR GRADE ================= */
+
+/* ================= SALVAR GRADE (OTIMIZADO) ================= */
 exports.saveGrade = async (req, res) => {
   try {
     const { contexto, slots } = req.body;
@@ -95,34 +140,43 @@ exports.saveGrade = async (req, res) => {
       return res.status(400).json({ error: 'Dados inválidos' });
     }
 
-    for (const slot of slots) {
-      // Remove registros antigos
-      await GradeHoraria.destroy({
-        where: {
-          curso_id: contexto.curso_id,
-          ano_id: contexto.ano_id,
-          semestre_id: contexto.semestre_id,
-          curriculo_id: contexto.curriculo_id,
-          horario_id: slot.horario_id,
-          dia_semana_id: slot.dia_semana_id,
-        },
-      });
+    const {
+      curso_id,
+      ano_id,
+      semestre_id,
+      curriculo_id,
+      coordenador_id
+    } = contexto;
 
-      if (!slot.disciplina_id) continue;
+    if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
+      return res.status(400).json({ error: 'Contexto incompleto' });
+    }
 
-      await GradeHoraria.create({
-        curso_id: contexto.curso_id,
-        coordenador_id: contexto.coordenador_id ,
-        ano_id: contexto.ano_id,
-        semestre_id: contexto.semestre_id,
-        curriculo_id: contexto.curriculo_id,
-        horario_id: slot.horario_id,
-        dia_semana_id: slot.dia_semana_id,
-        disciplina_id: slot.disciplina_id,
-      });
+    // 🔥 REMOVE TUDO DE UMA VEZ
+    await GradeHoraria.destroy({
+      where: { curso_id, ano_id, semestre_id, curriculo_id }
+    });
+
+    // 🔥 PREPARA INSERT
+    const inserts = slots
+      .filter(s => s.disciplina_id)
+      .map(s => ({
+        curso_id,
+        coordenador_id: coordenador_id || null,
+        ano_id,
+        semestre_id,
+        curriculo_id,
+        horario_id: s.horario_id,
+        dia_semana_id: s.dia_semana_id,
+        disciplina_id: s.disciplina_id
+      }));
+
+    if (inserts.length) {
+      await GradeHoraria.bulkCreate(inserts);
     }
 
     res.json({ message: 'Grade salva com sucesso' });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao salvar grade' });

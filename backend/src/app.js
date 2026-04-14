@@ -34,7 +34,7 @@ app.use(auditMiddleware);
 app.use('/auth', authRoutes);
 app.use('/cursos', cursoRoutes);
 app.use('/disciplinas', disciplinaRoutes);
-app.use('/curso-disciplinas', cursoDisciplinaRoutes);
+app.use('/', cursoDisciplinaRoutes);
 app.use('/pessoas', pessoaRoutes);
 app.use('/usuarios', usuarioRoutes);
 app.use('/hierarquias', hierarquiaRoutes);

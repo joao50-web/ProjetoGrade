@@ -1,10 +1,7 @@
 const router = require('express').Router();
 const controller = require('../controllers/curso-disciplina.controller');
-//const auth = require('../middlewares/auth.middleware');
 
-//router.use(auth);
-
-router.post('/vincular', controller.vincular);
-router.get('/curso/:id', controller.listarPorCurso);
+router.get('/cursos/:id/disciplinas', controller.listarPorCurso);
+router.post('/cursos/:id/disciplinas', controller.salvarVinculos);
 
 module.exports = router;

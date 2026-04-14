@@ -3,10 +3,9 @@ import {
   Table,
   Select,
   Button,
-  message,
-  Typography,
   Space,
   Tooltip,
+  message,
 } from "antd";
 import {
   SaveOutlined,
@@ -15,27 +14,17 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import AppLayout from "../components/AppLayout";
-import { api, getUsuarioLogado } from "../services/api";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-
-const { Text } = Typography;
+import { api } from "../services/api";
 
 const headerStyle = {
   backgroundColor: "#0b3d5c",
   color: "#fff",
-  fontWeight: 600,
+  fontWeight: "bold",
   fontSize: "13px",
   textAlign: "center",
 };
 
 export default function GradeHoraria() {
-  const usuario = getUsuarioLogado();
-  const canEdit = ["administrador", "edicao"].includes(
-    usuario?.role?.toLowerCase()
-  );
-
   const [departamentos, setDepartamentos] = useState([]);
   const [todosCursos, setTodosCursos] = useState([]);
   const [cursos, setCursos] = useState([]);
@@ -44,6 +33,7 @@ export default function GradeHoraria() {
   const [curriculos, setCurriculos] = useState([]);
   const [horarios, setHorarios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
+  const [grade, setGrade] = useState([]);
 
   const [deptoId, setDeptoId] = useState(null);
   const [cursoId, setCursoId] = useState(null);
@@ -51,59 +41,71 @@ export default function GradeHoraria() {
   const [semestreId, setSemestreId] = useState(null);
   const [curriculoId, setCurriculoId] = useState(null);
 
-  const [grade, setGrade] = useState([]);
-
   const diasFixos = [
-    { id: 1, nome: "Segunda" },
-    { id: 2, nome: "Terça" },
-    { id: 3, nome: "Quarta" },
-    { id: 4, nome: "Quinta" },
-    { id: 5, nome: "Sexta" },
+    { id: 1, nome: "2ª feira" },
+    { id: 2, nome: "3ª feira" },
+    { id: 3, nome: "4ª feira" },
+    { id: 4, nome: "5ª feira" },
+    { id: 5, nome: "6ª feira" },
   ];
 
+  // ================= LOAD
   useEffect(() => {
     const load = async () => {
-      const [d, c, a, s, cur, h] = await Promise.all([
-        api.get("/departamentos"),
-        api.get("/cursos"),
-        api.get("/anos"),
-        api.get("/semestres"),
-        api.get("/curriculos"),
-        api.get("/horarios"),
-      ]);
+      try {
+        const [d, c, a, s, cur, h] = await Promise.all([
+          api.get("/departamentos"),
+          api.get("/cursos"),
+          api.get("/anos"),
+          api.get("/semestres"),
+          api.get("/curriculos"),
+          api.get("/horarios"),
+        ]);
 
-      setDepartamentos(d.data);
-      setTodosCursos(c.data);
-      setCursos(c.data);
-      setAnos(a.data);
-      setSemestres(s.data);
-      setCurriculos(cur.data);
-      setHorarios(h.data);
+        setDepartamentos(d.data || []);
+        setTodosCursos(c.data || []);
+        setCursos(c.data || []);
+        setAnos(a.data || []);
+        setSemestres(s.data || []);
+        setCurriculos(cur.data || []);
+        setHorarios(h.data || []);
+      } catch (err) {
+        console.error(err);
+        message.error("Erro ao carregar dados");
+      }
     };
     load();
   }, []);
 
+  // ================= DEPTO
   const handleDeptoChange = (id) => {
     setDeptoId(id);
     setCursoId(null);
+    setAnoId(null);
+    setSemestreId(null);
+    setCurriculoId(null);
+    setGrade([]);
+    setDisciplinas([]);
+
+    if (!id) return setCursos(todosCursos);
 
     setCursos(
-      id
-        ? todosCursos.filter(
-            (c) => c.departamento_id === id || c.departamento?.id === id
-          )
-        : todosCursos
+      todosCursos.filter(
+        (c) => c.departamento_id === id || c.departamento?.id === id
+      )
     );
   };
 
+  // ================= DISCIPLINAS
   useEffect(() => {
     if (!cursoId) return setDisciplinas([]);
 
     api.get(`/cursos/${cursoId}/disciplinas`).then((res) => {
-      setDisciplinas(res.data.map((i) => i.disciplina || i));
+      setDisciplinas(res.data || []);
     });
   }, [cursoId]);
 
+  // ================= GRADE
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return;
 
@@ -116,62 +118,82 @@ export default function GradeHoraria() {
           curriculo_id: curriculoId,
         },
       })
-      .then((res) => setGrade(res.data || []));
+      .then((res) => setGrade(res.data || []))
+      .catch(() => setGrade([]));
   }, [cursoId, anoId, semestreId, curriculoId]);
 
+  // ================= UPDATE
   const updateCell = (hId, dId, value) => {
     setGrade((prev) => {
       const filtered = prev.filter(
         (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
       );
 
-      filtered.push({
-        horario_id: hId,
-        dia_semana_id: dId,
-        disciplina_id: value || null,
-      });
+      if (value) {
+        filtered.push({
+          horario_id: hId,
+          dia_semana_id: dId,
+          disciplina_id: value,
+        });
+      }
 
       return filtered;
     });
-
-    saveGrade();
   };
 
-  const buildSlots = () => {
-    const slots = [];
-
-    horarios.forEach((h) => {
-      diasFixos.forEach((d) => {
-        const item = grade.find(
-          (g) => g.horario_id === h.id && g.dia_semana_id === d.id
-        );
-
-        slots.push({
-          horario_id: h.id,
-          dia_semana_id: d.id,
-          disciplina_id: item?.disciplina_id || null,
-        });
+  // ================= SAVE
+  const handleSave = async () => {
+    try {
+      await api.post("/grade-horaria/save", {
+        contexto: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+        },
+        slots: grade,
       });
-    });
 
-    return slots;
+      message.success("Salvo com sucesso!");
+    } catch {
+      message.error("Erro ao salvar");
+    }
   };
 
-  const saveGrade = async () => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) return;
+  // ================= PDF
+  const handlePDF = () => {
+    if (!cursoId || !anoId || !curriculoId) {
+      return message.warning("Selecione os filtros");
+    }
 
-    await api.post("/grade-horaria/save", {
-      contexto: {
-        curso_id: cursoId,
-        ano_id: anoId,
-        semestre_id: semestreId,
-        curriculo_id: curriculoId,
-      },
-      slots: buildSlots(),
-    });
+    const url = `/relatorio/grade?curso_id=${cursoId}&ano_id=${anoId}&curriculo_id=${curriculoId}&semestre_id=${semestreId}`;
+    window.open(api.defaults.baseURL + url, "_blank");
   };
 
-  // 🔥 RESTAURAR FILTROS (LIMPA TELA)
+  // ================= EXCEL
+  const handleExcel = async () => {
+    try {
+      const res = await api.get("/relatorio/grade/excel", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+        },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "grade.xlsx";
+      a.click();
+    } catch {
+      message.error("Erro Excel");
+    }
+  };
+
+  // ================= RESET
   const resetFiltros = () => {
     setDeptoId(null);
     setCursoId(null);
@@ -183,91 +205,51 @@ export default function GradeHoraria() {
     setCursos(todosCursos);
   };
 
-  // EXPORT
-  const exportToExcel = () => {
-    const data = horarios.map((h) => {
-      const row = { Horário: h.descricao };
-      diasFixos.forEach((dia) => {
-        const item = grade.find(
-          (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
-        );
-        const disc = disciplinas.find((d) => d.id === item?.disciplina_id);
-        row[dia.nome] = disc?.nome || "";
-      });
-      return row;
-    });
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Grade");
-    XLSX.writeFile(wb, "Grade.xlsx");
-  };
-
-  const exportToPDF = () => {
-    const doc = new jsPDF("l");
-
-    const head = [["Horário", ...diasFixos.map((d) => d.nome)]];
-    const body = horarios.map((h) => {
-      const row = [h.descricao];
-      diasFixos.forEach((dia) => {
-        const item = grade.find(
-          (g) => g.horario_id === h.id && g.dia_semana_id === dia.id
-        );
-        const disc = disciplinas.find((d) => d.id === item?.disciplina_id);
-        row.push(disc?.nome || "");
-      });
-      return row;
-    });
-
-    doc.autoTable({ head, body });
-    doc.save("Grade.pdf");
-  };
-
+  // ================= COLUNAS
   const columns = [
     {
       title: "Horário",
       dataIndex: "descricao",
-      width: 120,
+      width: 90,
       fixed: "left",
       onHeaderCell: () => ({ style: headerStyle }),
     },
     ...diasFixos.map((dia) => ({
       title: dia.nome,
       key: dia.id,
+      width: 240,
       onHeaderCell: () => ({ style: headerStyle }),
+
       render: (_, record) => {
         const item = grade.find(
-          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id
+          (g) =>
+            g.horario_id === record.id &&
+            g.dia_semana_id === dia.id
+        );
+
+        const selected = disciplinas.find(
+          (d) => d.id === item?.disciplina_id
         );
 
         return (
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            value={item?.disciplina_id || undefined}
-            onChange={(val) => updateCell(record.id, dia.id, val)}
-            allowClear
-            showSearch
-            optionFilterProp="children"
-            dropdownMatchSelectWidth={false}
-            maxTagCount="responsive"
+          <Tooltip
+            title={
+              selected
+                ? `${selected.departamento_sigla || ""} (${selected.codigo}) - ${selected.nome}`
+                : ""
+            }
           >
-            {disciplinas.map((d) => (
-              <Select.Option key={d.id} value={d.id}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    maxWidth: 200,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {d.nome}
-                </span>
-              </Select.Option>
-            ))}
-          </Select>
+            <Select
+              size="small"
+              style={{ width: "100%" }}
+              value={item?.disciplina_id || undefined}
+              onChange={(val) => updateCell(record.id, dia.id, val)}
+              options={disciplinas.map((d) => ({
+                value: d.id,
+                label: `${d.departamento_sigla || ""} (${d.codigo}) - ${d.nome}`,
+              }))}
+            />
+          </Tooltip>
         );
       },
     })),
@@ -275,75 +257,68 @@ export default function GradeHoraria() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 10 }}>
-        {/* BOTÕES */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Space>
-            <Tooltip title="Salvar">
-              <Button icon={<SaveOutlined />} onClick={saveGrade}>
-                Salvar
-              </Button>
-            </Tooltip>
+      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Select
+          placeholder="Depto"
+          style={{ width: 200 }}
+          onChange={handleDeptoChange}
+          value={deptoId}
+          options={departamentos.map((d) => ({
+            value: d.id,
+            label: d.nome,
+          }))}
+        />
 
-            <Tooltip title="Exportar PDF">
-              <Button icon={<FilePdfOutlined />} onClick={exportToPDF}>
-                PDF
-              </Button>
-            </Tooltip>
+        <Select
+          placeholder="Curso"
+          style={{ width: 200 }}
+          onChange={setCursoId}
+          value={cursoId}
+          options={cursos.map((c) => ({
+            value: c.id,
+            label: c.nome,
+          }))}
+        />
 
-            <Tooltip title="Exportar Excel">
-              <Button icon={<FileExcelOutlined />} onClick={exportToExcel}>
-                Excel
-              </Button>
-            </Tooltip>
+        <Select
+          placeholder="Ano"
+          style={{ width: 120 }}
+          onChange={setAnoId}
+          value={anoId}
+          options={anos.map((a) => ({
+            value: a.id,
+            label: a.ano,
+          }))}
+        />
 
-            <Tooltip title="Limpar filtros">
-              <Button icon={<ReloadOutlined />} onClick={resetFiltros}>
-                Restaurar
-              </Button>
-            </Tooltip>
-          </Space>
-        </div>
+        <Select
+          placeholder="Sem"
+          style={{ width: 120 }}
+          onChange={setSemestreId}
+          value={semestreId}
+          options={semestres.map((s) => ({
+            value: s.id,
+            label: s.nome,
+          }))}
+        />
 
-        {/* FILTROS RESPONSIVOS */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-            padding: 12,
-            border: "1px solid #e5e7eb",
-            borderRadius: 8,
-            background: "#fafafa",
-            marginTop: 10,
-          }}
-        >
-          {[
-            ["Departamento", departamentos, handleDeptoChange],
-            ["Curso", cursos, setCursoId],
-            ["Ano", anos, setAnoId],
-            ["Semestre", semestres, setSemestreId],
-            ["Currículo", curriculos, setCurriculoId],
-          ].map(([label, list, onChange], i) => (
-            <div key={i} style={{ minWidth: 180, flex: "1 1 180px" }}>
-              <Text strong style={{ fontSize: 12 }}>
-                {label}
-              </Text>
+        <Select
+          placeholder="Curr"
+          style={{ width: 150 }}
+          onChange={setCurriculoId}
+          value={curriculoId}
+          options={curriculos.map((c) => ({
+            value: c.id,
+            label: c.nome,
+          }))}
+        />
 
-              <Select
-                style={{ width: "100%", marginTop: 4 }}
-                onChange={onChange}
-                allowClear
-              >
-                {list.map((item) => (
-                  <Select.Option key={item.id} value={item.id}>
-                    {item.nome || item.ano}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
-          ))}
-        </div>
+        <Space>
+          <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} />
+          <Button icon={<FilePdfOutlined />} onClick={handlePDF} />
+          <Button icon={<FileExcelOutlined />} onClick={handleExcel} />
+          <Button icon={<ReloadOutlined />} onClick={resetFiltros} />
+        </Space>
       </div>
 
       <Table
@@ -353,7 +328,7 @@ export default function GradeHoraria() {
         pagination={false}
         bordered
         size="small"
-        scroll={{ x: "max-content", y: 550 }}
+        scroll={{ x: 1500, y: 700 }}
       />
     </AppLayout>
   );

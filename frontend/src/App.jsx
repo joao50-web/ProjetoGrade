@@ -12,7 +12,9 @@ import CursoDisciplinas from './pages/CursoDisciplinas';
 import GradeHoraria from './pages/GradeHoraria';
 import Logs from './pages/Logs';
 import Departamentos from './pages/Departamentos';
+import Relatorios from "./pages/Relatorios";
 
+// ================= PROTEÇÃO
 function PrivateRoute({ children, roles }) {
   const usuario = getUsuarioLogado();
   
@@ -25,6 +27,7 @@ function PrivateRoute({ children, roles }) {
   return children;
 }
 
+// ================= APP
 export default function App() {
   return (
     <BrowserRouter>
@@ -35,7 +38,7 @@ export default function App() {
           path="/home"
           element={
             <PrivateRoute roles={['visualizacao','edicao','administrador']}>
-                <Home />
+              <Home />
             </PrivateRoute>
           }
         />
@@ -44,55 +47,61 @@ export default function App() {
           path="/pessoas"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Pessoas />
+              <Pessoas />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/usuarios"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Usuarios />
+              <Usuarios />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/cargos"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Cargos />
+              <Cargos />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/departamentos"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Departamentos />
+              <Departamentos />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/cursos"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Cursos />
+              <Cursos />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/disciplinas"
           element={
             <PrivateRoute roles={['administrador']}>
-                <Disciplinas />
+              <Disciplinas />
             </PrivateRoute>
           }
         />
+
         <Route
           path="/cursos/:id/disciplinas"
           element={
             <PrivateRoute roles={['administrador']}>
-                <CursoDisciplinas />
+              <CursoDisciplinas />
             </PrivateRoute>
           }
         />
@@ -101,7 +110,17 @@ export default function App() {
           path="/grade-horaria"
           element={
             <PrivateRoute roles={['visualizacao','edicao','administrador']}>
-                <GradeHoraria />
+              <GradeHoraria />
+            </PrivateRoute>
+          }
+        />
+
+        {/* 🔥 NOVA ROTA */}
+        <Route
+          path="/relatorios"
+          element={
+            <PrivateRoute roles={['visualizacao','edicao','administrador']}>
+              <Relatorios />
             </PrivateRoute>
           }
         />

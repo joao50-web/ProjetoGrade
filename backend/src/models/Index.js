@@ -12,37 +12,35 @@ const Ano = require('./Ano');
 const Semestre = require('./Semestre');
 const Curriculo = require('./Curriculo');
 const GradeHoraria = require('./GradeHoraria');
-const Departamento = require('./Departamento'); // ✅ ADICIONADO
+const Departamento = require('./Departamento');
 const Log = require('./Log');
 
-// ===============================
-// RELACIONAMENTOS BÁSICOS
-// ===============================
-
+/* ================= PESSOA ================= */
 Pessoa.belongsTo(Cargo, { foreignKey: 'cargo_id', as: 'cargo' });
 Cargo.hasMany(Pessoa, { foreignKey: 'cargo_id', as: 'pessoas' });
 
 Pessoa.hasOne(Usuario, { foreignKey: 'pessoa_id', as: 'usuario' });
 Usuario.belongsTo(Pessoa, { foreignKey: 'pessoa_id', as: 'pessoa' });
 
-// Usuario ↔ Hierarquia
 Usuario.belongsTo(Hierarquia, { foreignKey: 'hierarquia_id', as: 'hierarquia' });
 Hierarquia.hasMany(Usuario, { foreignKey: 'hierarquia_id', as: 'usuarios' });
 
-// ===============================
-// DEPARTAMENTO ↔ CURSO (NOVO!)
-// ===============================
-
-// Um Curso pertence a um Departamento
+/* ================= DEPARTAMENTO ================= */
 Curso.belongsTo(Departamento, { foreignKey: 'departamento_id', as: 'departamento' });
-
-// Um Departamento tem muitos Cursos
 Departamento.hasMany(Curso, { foreignKey: 'departamento_id', as: 'cursos' });
 
-// ===============================
-// CURSO ↔ DISCIPLINA
-// ===============================
+/* 🔥 NOVO (CORREÇÃO DO ERRO) */
+Disciplina.belongsTo(Departamento, {
+  foreignKey: 'departamento_id',
+  as: 'departamento'
+});
 
+Departamento.hasMany(Disciplina, {
+  foreignKey: 'departamento_id',
+  as: 'disciplinas'
+});
+
+/* ================= CURSO ↔ DISCIPLINA ================= */
 Curso.belongsToMany(Disciplina, {
   through: DisciplinaCurso,
   foreignKey: 'curso_id',
@@ -57,10 +55,7 @@ Disciplina.belongsToMany(Curso, {
   as: 'cursos'
 });
 
-// ===============================
-// DISCIPLINA ↔ PESSOA (PROFESSORES)
-// ===============================
-
+/* ================= DISCIPLINA ↔ PROFESSOR ================= */
 Disciplina.belongsToMany(Pessoa, {
   through: DisciplinaPessoa,
   foreignKey: 'disciplina_id',
@@ -75,13 +70,15 @@ Pessoa.belongsToMany(Disciplina, {
   as: 'disciplinas'
 });
 
-// ===============================
-// GRADE HORÁRIA
-// ===============================
-
+/* ================= GRADE ================= */
 GradeHoraria.belongsTo(Curso, { foreignKey: 'curso_id', as: 'curso' });
-GradeHoraria.belongsTo(Pessoa, { foreignKey: 'coordenador_id', as: 'coordenador' });
-GradeHoraria.belongsTo(Pessoa, { foreignKey: 'pessoa_id', as: 'professor' });
+
+GradeHoraria.belongsTo(Pessoa, {
+  foreignKey: 'coordenador_id',
+  as: 'coordenador',
+  constraints: false
+});
+
 GradeHoraria.belongsTo(Disciplina, { foreignKey: 'disciplina_id', as: 'disciplina' });
 GradeHoraria.belongsTo(Horario, { foreignKey: 'horario_id', as: 'horario' });
 GradeHoraria.belongsTo(DiaSemana, { foreignKey: 'dia_semana_id', as: 'diaSemana' });
@@ -89,14 +86,10 @@ GradeHoraria.belongsTo(Ano, { foreignKey: 'ano_id', as: 'ano' });
 GradeHoraria.belongsTo(Semestre, { foreignKey: 'semestre_id', as: 'semestre' });
 GradeHoraria.belongsTo(Curriculo, { foreignKey: 'curriculo_id', as: 'curriculo' });
 
-// ===============================
-// LOGS
-// ===============================
-
+/* ================= LOG ================= */
 Log.belongsTo(Usuario, { foreignKey: 'usuario_id', as: 'usuario' });
 Usuario.hasMany(Log, { foreignKey: 'usuario_id', as: 'logs_atividades' });
 
-// ===============================
 module.exports = {
   Curso,
   Disciplina,
