@@ -46,6 +46,7 @@ export default function Logs() {
     try {
       const response = await api.get('/logs');
       setLogs(response.data);
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
       message.error('Erro ao carregar logs');
     } finally {

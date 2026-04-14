@@ -84,8 +84,8 @@ export default function GradeHoraria() {
 
     setCursos(
       todosCursos.filter(
-        (c) => c.departamento_id === id || c.departamento?.id === id,
-      ),
+        (c) => c.departamento_id === id || c.departamento?.id === id
+      )
     );
   };
 
@@ -115,13 +115,14 @@ export default function GradeHoraria() {
       .catch(() => setGrade([]));
   }, [cursoId, anoId, semestreId, curriculoId]);
 
-  // ================= UPDATE
+  // ================= UPDATE (INCLUI EXCLUSÃO)
   const updateCell = (hId, dId, value) => {
     setGrade((prev) => {
       const filtered = prev.filter(
-        (g) => !(g.horario_id === hId && g.dia_semana_id === dId),
+        (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
       );
 
+      // 🔥 SE value for null → remove disciplina
       if (value) {
         filtered.push({
           horario_id: hId,
@@ -143,8 +144,6 @@ export default function GradeHoraria() {
           ano_id: anoId,
           semestre_id: semestreId,
           curriculo_id: curriculoId,
-
-          // 🔥 ADICIONE ISSO (OU deixe null controlado)
           coordenador_id: null,
         },
         slots: grade,
@@ -156,12 +155,9 @@ export default function GradeHoraria() {
       message.error("Erro ao salvar");
     }
   };
+
   // ================= PDF
   const handlePDF = () => {
-    if (!cursoId || !anoId || !curriculoId) {
-      return message.warning("Selecione os filtros");
-    }
-
     const url = `/relatorio/grade?curso_id=${cursoId}&ano_id=${anoId}&curriculo_id=${curriculoId}&semestre_id=${semestreId}`;
     window.open(api.defaults.baseURL + url, "_blank");
   };
@@ -218,24 +214,21 @@ export default function GradeHoraria() {
 
       render: (_, record) => {
         const item = grade.find(
-          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id,
+          (g) =>
+            g.horario_id === record.id &&
+            g.dia_semana_id === dia.id
         );
 
-        const selected = disciplinas.find((d) => d.id === item?.disciplina_id);
-
         return (
-          <Tooltip
-            title={
-              selected
-                ? `${selected.departamento_sigla || ""} (${selected.codigo}) - ${selected.nome}`
-                : ""
-            }
-          >
+          <Tooltip title="Disciplina">
             <Select
+              allowClear   // ⭐ BOTÃO DE EXCLUIR
               size="small"
               style={{ width: "100%" }}
               value={item?.disciplina_id || undefined}
-              onChange={(val) => updateCell(record.id, dia.id, val)}
+              onChange={(val) =>
+                updateCell(record.id, dia.id, val || null)
+              }
               options={disciplinas.map((d) => ({
                 value: d.id,
                 label: `${d.departamento_sigla || ""} (${d.codigo}) - ${d.nome}`,
@@ -249,9 +242,7 @@ export default function GradeHoraria() {
 
   return (
     <AppLayout>
-      <div
-        style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}
-      >
+      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <Select
           placeholder="Depto"
           style={{ width: 200 }}
