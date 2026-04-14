@@ -152,33 +152,37 @@ exports.saveGrade = async (req, res) => {
       return res.status(400).json({ error: 'Contexto incompleto' });
     }
 
-    // 🔥 REMOVE TUDO DE UMA VEZ
+    const GradeHoraria = require('../models').GradeHoraria;
+
+    // 🔥 limpa grade antiga
     await GradeHoraria.destroy({
       where: { curso_id, ano_id, semestre_id, curriculo_id }
     });
 
-    // 🔥 PREPARA INSERT
+    // 🔥 monta inserts seguros
     const inserts = slots
       .filter(s => s.disciplina_id)
       .map(s => ({
         curso_id,
-        coordenador_id: coordenador_id || null,
         ano_id,
         semestre_id,
         curriculo_id,
         horario_id: s.horario_id,
         dia_semana_id: s.dia_semana_id,
-        disciplina_id: s.disciplina_id
+        disciplina_id: s.disciplina_id,
+
+        // ⚠️ SÓ ENVIA SE EXISTIR
+        ...(coordenador_id ? { coordenador_id } : {})
       }));
 
-    if (inserts.length) {
+    if (inserts.length > 0) {
       await GradeHoraria.bulkCreate(inserts);
     }
 
-    res.json({ message: 'Grade salva com sucesso' });
+    return res.json({ message: 'Grade salva com sucesso' });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Erro ao salvar grade' });
+    return res.status(500).json({ error: 'Erro ao salvar grade' });
   }
 };

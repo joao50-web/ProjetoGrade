@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Table,
-  Select,
-  Button,
-  Space,
-  Tooltip,
-  message,
-} from "antd";
+import { Table, Select, Button, Space, Tooltip, message } from "antd";
 import {
   SaveOutlined,
   FilePdfOutlined,
@@ -91,8 +84,8 @@ export default function GradeHoraria() {
 
     setCursos(
       todosCursos.filter(
-        (c) => c.departamento_id === id || c.departamento?.id === id
-      )
+        (c) => c.departamento_id === id || c.departamento?.id === id,
+      ),
     );
   };
 
@@ -126,7 +119,7 @@ export default function GradeHoraria() {
   const updateCell = (hId, dId, value) => {
     setGrade((prev) => {
       const filtered = prev.filter(
-        (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
+        (g) => !(g.horario_id === hId && g.dia_semana_id === dId),
       );
 
       if (value) {
@@ -150,16 +143,19 @@ export default function GradeHoraria() {
           ano_id: anoId,
           semestre_id: semestreId,
           curriculo_id: curriculoId,
+
+          // 🔥 ADICIONE ISSO (OU deixe null controlado)
+          coordenador_id: null,
         },
         slots: grade,
       });
 
       message.success("Salvo com sucesso!");
-    } catch {
+    } catch (err) {
+      console.error(err);
       message.error("Erro ao salvar");
     }
   };
-
   // ================= PDF
   const handlePDF = () => {
     if (!cursoId || !anoId || !curriculoId) {
@@ -222,14 +218,10 @@ export default function GradeHoraria() {
 
       render: (_, record) => {
         const item = grade.find(
-          (g) =>
-            g.horario_id === record.id &&
-            g.dia_semana_id === dia.id
+          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id,
         );
 
-        const selected = disciplinas.find(
-          (d) => d.id === item?.disciplina_id
-        );
+        const selected = disciplinas.find((d) => d.id === item?.disciplina_id);
 
         return (
           <Tooltip
@@ -257,7 +249,9 @@ export default function GradeHoraria() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div
+        style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}
+      >
         <Select
           placeholder="Depto"
           style={{ width: 200 }}

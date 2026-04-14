@@ -34,6 +34,7 @@ export default function Relatorios() {
   /* ================= LOAD ================= */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     loadFiltros();
   }, []);
 
@@ -56,6 +57,7 @@ export default function Relatorios() {
   /* ================= BUSCA ================= */
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     buscar();
   }, [filtros]);
 
