@@ -3,34 +3,72 @@ const {
   Curso,
   Departamento,
   Pessoa
-} = require('../models');
+} = require("../models");
 
-/* ================= PROFESSOR ================= */
+/* ================= NORMALIZAÇÃO ================= */
+const normalizar = (disciplinas) => {
+  const map = new Map();
+
+  disciplinas.forEach(d => {
+    const id = d.id;
+
+    if (!map.has(id)) {
+      map.set(id, {
+        id: d.id,
+        nome: d.nome,
+        codigo: d.codigo,
+        cursos: [],
+        professores: []
+      });
+    }
+
+    const item = map.get(id);
+
+    (d.cursos || []).forEach(c => {
+      if (!item.cursos.find(x => x.id === c.id)) {
+        item.cursos.push({ id: c.id, nome: c.nome });
+      }
+    });
+
+    (d.professores || []).forEach(p => {
+      if (!item.professores.find(x => x.id === p.id)) {
+        item.professores.push({ id: p.id, nome: p.nome });
+      }
+    });
+  });
+
+  return Array.from(map.values());
+};
+
+/* ================= RELATÓRIO PROFESSOR ================= */
 const relatorioProfessor = async (req, res) => {
   try {
     const { departamento_id, curso_id, professor_id } = req.query;
 
     const disciplinas = await Disciplina.findAll({
-      attributes: ['id', 'nome', 'codigo'],
+      attributes: ["id", "nome", "codigo"],
       include: [
         {
           model: Pessoa,
-          as: 'professores',
-          attributes: ['id', 'nome'],
+          as: "professores",
+          attributes: ["id", "nome"],
           through: { attributes: [] },
+          required: false,
           where: professor_id ? { id: professor_id } : undefined
         },
         {
           model: Curso,
-          as: 'cursos',
-          attributes: ['id', 'nome', 'departamento_id'],
+          as: "cursos",
+          attributes: ["id", "nome", "departamento_id"],
           through: { attributes: [] },
+          required: false,
           where: curso_id ? { id: curso_id } : undefined,
           include: [
             {
               model: Departamento,
-              as: 'departamento',
-              attributes: ['id', 'nome'],
+              as: "departamento",
+              attributes: ["id", "nome"],
+              required: false,
               where: departamento_id ? { id: departamento_id } : undefined
             }
           ]
@@ -38,55 +76,51 @@ const relatorioProfessor = async (req, res) => {
       ]
     });
 
-    res.json(disciplinas);
+    const resultado = normalizar(disciplinas);
+    return res.json(resultado);
 
   } catch (err) {
-    console.error("🔥 ERRO PROFESSOR:", err);
-    res.status(500).json({ error: 'Erro no relatório professor' });
+    console.error(err);
+    return res.status(500).json({ error: "Erro relatório professor" });
   }
 };
 
-/* ================= MULTICURSO ================= */
+/* ================= RELATÓRIO MULTICURSO ================= */
 const relatorioMulticurso = async (req, res) => {
   try {
-    const { departamento_id } = req.query;
-
     const disciplinas = await Disciplina.findAll({
-      attributes: ['id', 'nome', 'codigo'],
+      attributes: ["id", "nome", "codigo"],
       include: [
         {
           model: Curso,
-          as: 'cursos',
-          attributes: ['id', 'nome', 'departamento_id'],
-          through: { attributes: [] }
+          as: "cursos",
+          attributes: ["id", "nome"],
+          through: { attributes: [] },
+          required: false
         }
       ]
     });
 
-    const multicursos = disciplinas
-      .filter(d => {
-        if (d.cursos.length <= 1) return false;
-        if (!departamento_id) return true;
+    const base = normalizar(disciplinas);
 
-        return d.cursos.some(c => c.departamento_id == departamento_id);
-      })
+    const multicurso = base
+      .filter(d => d.cursos.length > 1)
       .map(d => ({
         id: d.id,
         nome: d.nome,
         codigo: d.codigo,
         totalCursos: d.cursos.length,
-        cursos: d.cursos.map(c => c.nome)
+        cursos: d.cursos
       }));
 
-    res.json(multicursos);
+    return res.json(multicurso);
 
   } catch (err) {
-    console.error("🔥 ERRO MULTICURSO:", err);
-    res.status(500).json({ error: 'Erro no relatório multicurso' });
+    console.error(err);
+    return res.status(500).json({ error: "Erro multicurso" });
   }
 };
 
-/* ✅ EXPORT CORRETO */
 module.exports = {
   relatorioProfessor,
   relatorioMulticurso

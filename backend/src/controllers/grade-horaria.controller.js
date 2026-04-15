@@ -11,7 +11,7 @@ const {
 /* ================= BUSCAR GRADE ================= */
 exports.findByContext = async (req, res) => {
   try {
-    const { curso_id, ano_id, semestre_id, curriculo_id, professor_id } = req.query;
+    const { curso_id, ano_id, semestre_id, curriculo_id } = req.query;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
       return res.status(400).json({ error: 'Parâmetros obrigatórios não informados' });
@@ -23,14 +23,12 @@ exports.findByContext = async (req, res) => {
         ano_id,
         semestre_id,
         curriculo_id
-        // 🚫 NÃO filtra por professor aqui
       },
       include: [
         {
           model: Disciplina,
           as: 'disciplina',
           attributes: ['id', 'codigo', 'nome'],
-          required: false,
           include: [
             {
               model: Curso,
@@ -69,7 +67,8 @@ exports.findByContext = async (req, res) => {
         const codigo = r.disciplina.codigo || '';
         const nome = r.disciplina.nome || '';
 
-        textoCompleto = `${sigla} (${codigo})\n${nome}`;
+        // 👇 AQUI ESTÁ O CÓDIGO FORMATADO
+        textoCompleto = `${sigla} (${codigo}) - ${nome}`;
       }
 
       return {
@@ -96,7 +95,6 @@ exports.findByContext = async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar grade' });
   }
 };
-
 
 /* ================= SALVAR SLOT ================= */
 exports.saveSlot = async (req, res) => {
@@ -134,7 +132,6 @@ exports.saveSlot = async (req, res) => {
     res.status(500).json({ error: 'Erro ao salvar slot' });
   }
 };
-
 
 /* ================= SALVAR GRADE ================= */
 exports.saveGrade = async (req, res) => {

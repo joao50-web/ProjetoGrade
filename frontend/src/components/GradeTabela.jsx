@@ -109,8 +109,8 @@ export default function GradeHoraria() {
         ...(professorId ? { professor_id: professorId } : {}),
       },
     })
-    .then((res) => setGrade(res.data || []))
-    .catch(() => setGrade([]));
+      .then((res) => setGrade(res.data || []))
+      .catch(() => setGrade([]));
 
   }, [cursoId, anoId, semestreId, curriculoId, professorId]);
 
@@ -148,24 +148,6 @@ export default function GradeHoraria() {
     message.success("Salvo!");
   };
 
-  // ================= EXCEL
-  const handleExcel = () => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) {
-      message.warning("Preencha os filtros");
-      return;
-    }
-
-    const url = `${api.defaults.baseURL}/api/grade-excel/exportar?curso_id=${cursoId}&ano_id=${anoId}&semestre_id=${semestreId}&curriculo_id=${curriculoId}&professor_id=${professorId || ""}`;
-
-    window.open(url, "_blank");
-  };
-
-  // ================= PDF
-  const handlePDF = () => {
-    const url = `${api.defaults.baseURL}/api/relatorio-grade/pdf?curso_id=${cursoId}&ano_id=${anoId}&curriculo_id=${curriculoId}&semestre_id=${semestreId}`;
-    window.open(url, "_blank");
-  };
-
   // ================= COLUNAS
   const columns = [
     {
@@ -177,7 +159,7 @@ export default function GradeHoraria() {
     },
     ...diasFixos.map((dia) => ({
       title: dia.nome,
-      width: 240,
+      width: 260,
       onHeaderCell: () => ({ style: headerStyle }),
 
       render: (_, record) => {
@@ -191,6 +173,7 @@ export default function GradeHoraria() {
           <Tooltip title="Disciplina">
             <Select
               allowClear
+              showSearch
               size="small"
               style={{ width: "100%" }}
               value={item?.disciplina_id || undefined}
@@ -201,6 +184,13 @@ export default function GradeHoraria() {
                 value: d.id,
                 label: `${d.codigo} - ${d.nome}`,
               }))}
+
+              // ✅ BUSCA POR CÓDIGO + NOME
+              filterOption={(input, option) =>
+                (option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
             />
           </Tooltip>
         );
@@ -212,20 +202,45 @@ export default function GradeHoraria() {
     <AppLayout>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
 
-        <Select placeholder="Depto" style={{ width: 180 }} value={deptoId} onChange={handleDeptoChange}
-          options={departamentos.map(d => ({ value: d.id, label: d.nome }))} />
+        <Select
+          placeholder="Depto"
+          style={{ width: 180 }}
+          value={deptoId}
+          onChange={handleDeptoChange}
+          options={departamentos.map(d => ({ value: d.id, label: d.nome }))}
+        />
 
-        <Select placeholder="Curso" style={{ width: 180 }} value={cursoId} onChange={setCursoId}
-          options={cursos.map(c => ({ value: c.id, label: c.nome }))} />
+        <Select
+          placeholder="Curso"
+          style={{ width: 180 }}
+          value={cursoId}
+          onChange={setCursoId}
+          options={cursos.map(c => ({ value: c.id, label: c.nome }))}
+        />
 
-        <Select placeholder="Ano" style={{ width: 100 }} value={anoId} onChange={setAnoId}
-          options={anos.map(a => ({ value: a.id, label: a.ano }))} />
+        <Select
+          placeholder="Ano"
+          style={{ width: 100 }}
+          value={anoId}
+          onChange={setAnoId}
+          options={anos.map(a => ({ value: a.id, label: a.ano }))}
+        />
 
-        <Select placeholder="Sem" style={{ width: 100 }} value={semestreId} onChange={setSemestreId}
-          options={semestres.map(s => ({ value: s.id, label: s.nome }))} />
+        <Select
+          placeholder="Sem"
+          style={{ width: 100 }}
+          value={semestreId}
+          onChange={setSemestreId}
+          options={semestres.map(s => ({ value: s.id, label: s.nome }))}
+        />
 
-        <Select placeholder="Curr" style={{ width: 120 }} value={curriculoId} onChange={setCurriculoId}
-          options={curriculos.map(c => ({ value: c.id, label: c.nome }))} />
+        <Select
+          placeholder="Curr"
+          style={{ width: 120 }}
+          value={curriculoId}
+          onChange={setCurriculoId}
+          options={curriculos.map(c => ({ value: c.id, label: c.nome }))}
+        />
 
         <Select
           placeholder="Professor (opcional)"
@@ -241,8 +256,8 @@ export default function GradeHoraria() {
 
         <Space>
           <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} />
-          <Button icon={<FilePdfOutlined />} onClick={handlePDF} />
-          <Button icon={<FileExcelOutlined />} onClick={handleExcel} />
+          <Button icon={<FilePdfOutlined />} />
+          <Button icon={<FileExcelOutlined />} />
           <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()} />
         </Space>
 

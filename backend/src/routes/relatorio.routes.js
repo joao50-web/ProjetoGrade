@@ -1,12 +1,12 @@
-const router = require('express').Router();
+const router = require("express").Router();
 
-const gradeController = require('../controllers/relatorio-grade.controller');
-const relatorioController = require('../controllers/relatorio.controller');
+const relatorioController = require("../controllers/relatorio.controller");
+const relatorioExportController = require("../controllers/relatorioExportController");
 
-router.get('/grade-horaria/pdf', gradeController.gerarPDF);
+router.get("/professor", relatorioController.relatorioProfessor);
+router.get("/multicurso", relatorioController.relatorioMulticurso);
 
-// 🔥 ESSAS DUAS LINHAS NÃO PODEM FALHAR
-router.get('/professor', relatorioController.relatorioProfessor);
-router.get('/multicurso', relatorioController.relatorioMulticurso);
+router.get("/export/excel", relatorioExportController.exportRelatorioExcel);
+router.get("/export/pdf", relatorioExportController.exportRelatorioPDF);
 
-module.exports = router;    
+module.exports = router;
