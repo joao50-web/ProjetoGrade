@@ -26,6 +26,7 @@ export default function GradeHoraria() {
   const [curriculos, setCurriculos] = useState([]);
   const [horarios, setHorarios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
+  const [professores, setProfessores] = useState([]);
   const [grade, setGrade] = useState([]);
 
   const [deptoId, setDeptoId] = useState(null);
@@ -33,6 +34,7 @@ export default function GradeHoraria() {
   const [anoId, setAnoId] = useState(null);
   const [semestreId, setSemestreId] = useState(null);
   const [curriculoId, setCurriculoId] = useState(null);
+  const [professorId, setProfessorId] = useState(null);
 
   const diasFixos = [
     { id: 1, nome: "2ª feira" },
@@ -46,13 +48,14 @@ export default function GradeHoraria() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [d, c, a, s, cur, h] = await Promise.all([
+        const [d, c, a, s, cur, h, p] = await Promise.all([
           api.get("/departamentos"),
           api.get("/cursos"),
           api.get("/anos"),
           api.get("/semestres"),
           api.get("/curriculos"),
           api.get("/horarios"),
+          api.get("/pessoas"),
         ]);
 
         setDepartamentos(d.data || []);
@@ -62,8 +65,8 @@ export default function GradeHoraria() {
         setSemestres(s.data || []);
         setCurriculos(cur.data || []);
         setHorarios(h.data || []);
-      } catch (err) {
-        console.error(err);
+        setProfessores(p.data || []);
+      } catch {
         message.error("Erro ao carregar dados");
       }
     };
@@ -74,9 +77,6 @@ export default function GradeHoraria() {
   const handleDeptoChange = (id) => {
     setDeptoId(id);
     setCursoId(null);
-    setAnoId(null);
-    setSemestreId(null);
-    setCurriculoId(null);
     setGrade([]);
     setDisciplinas([]);
 
@@ -91,38 +91,36 @@ export default function GradeHoraria() {
 
   // ================= DISCIPLINAS
   useEffect(() => {
-    if (!cursoId) return setDisciplinas([]);
-
-    api.get(`/cursos/${cursoId}/disciplinas`).then((res) => {
-      setDisciplinas(res.data || []);
-    });
+    if (!cursoId) return;
+    api.get(`/cursos/${cursoId}/disciplinas`)
+      .then((res) => setDisciplinas(res.data || []));
   }, [cursoId]);
 
   // ================= GRADE
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return;
 
-    api
-      .get("/grade-horaria", {
-        params: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-        },
-      })
-      .then((res) => setGrade(res.data || []))
-      .catch(() => setGrade([]));
-  }, [cursoId, anoId, semestreId, curriculoId]);
+    api.get("/grade-horaria", {
+      params: {
+        curso_id: cursoId,
+        ano_id: anoId,
+        semestre_id: semestreId,
+        curriculo_id: curriculoId,
+        ...(professorId ? { professor_id: professorId } : {}),
+      },
+    })
+    .then((res) => setGrade(res.data || []))
+    .catch(() => setGrade([]));
 
-  // ================= UPDATE (INCLUI EXCLUSÃO)
+  }, [cursoId, anoId, semestreId, curriculoId, professorId]);
+
+  // ================= UPDATE
   const updateCell = (hId, dId, value) => {
     setGrade((prev) => {
       const filtered = prev.filter(
         (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
       );
 
-      // 🔥 SE value for null → remove disciplina
       if (value) {
         filtered.push({
           horario_id: hId,
@@ -137,64 +135,35 @@ export default function GradeHoraria() {
 
   // ================= SAVE
   const handleSave = async () => {
-    try {
-      await api.post("/grade-horaria/save", {
-        contexto: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-          coordenador_id: null,
-        },
-        slots: grade,
-      });
+    await api.post("/grade-horaria/save", {
+      contexto: {
+        curso_id: cursoId,
+        ano_id: anoId,
+        semestre_id: semestreId,
+        curriculo_id: curriculoId,
+      },
+      slots: grade,
+    });
 
-      message.success("Salvo com sucesso!");
-    } catch (err) {
-      console.error(err);
-      message.error("Erro ao salvar");
+    message.success("Salvo!");
+  };
+
+  // ================= EXCEL
+  const handleExcel = () => {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
+      message.warning("Preencha os filtros");
+      return;
     }
+
+    const url = `${api.defaults.baseURL}/api/grade-excel/exportar?curso_id=${cursoId}&ano_id=${anoId}&semestre_id=${semestreId}&curriculo_id=${curriculoId}&professor_id=${professorId || ""}`;
+
+    window.open(url, "_blank");
   };
 
   // ================= PDF
   const handlePDF = () => {
-    const url = `/relatorio/grade?curso_id=${cursoId}&ano_id=${anoId}&curriculo_id=${curriculoId}&semestre_id=${semestreId}`;
-    window.open(api.defaults.baseURL + url, "_blank");
-  };
-
-  // ================= EXCEL
-  const handleExcel = async () => {
-    try {
-      const res = await api.get("/relatorio/grade/excel", {
-        params: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-        },
-        responseType: "blob",
-      });
-
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "grade.xlsx";
-      a.click();
-    } catch {
-      message.error("Erro Excel");
-    }
-  };
-
-  // ================= RESET
-  const resetFiltros = () => {
-    setDeptoId(null);
-    setCursoId(null);
-    setAnoId(null);
-    setSemestreId(null);
-    setCurriculoId(null);
-    setGrade([]);
-    setDisciplinas([]);
-    setCursos(todosCursos);
+    const url = `${api.defaults.baseURL}/api/relatorio-grade/pdf?curso_id=${cursoId}&ano_id=${anoId}&curriculo_id=${curriculoId}&semestre_id=${semestreId}`;
+    window.open(url, "_blank");
   };
 
   // ================= COLUNAS
@@ -208,7 +177,6 @@ export default function GradeHoraria() {
     },
     ...diasFixos.map((dia) => ({
       title: dia.nome,
-      key: dia.id,
       width: 240,
       onHeaderCell: () => ({ style: headerStyle }),
 
@@ -222,7 +190,7 @@ export default function GradeHoraria() {
         return (
           <Tooltip title="Disciplina">
             <Select
-              allowClear   // ⭐ BOTÃO DE EXCLUIR
+              allowClear
               size="small"
               style={{ width: "100%" }}
               value={item?.disciplina_id || undefined}
@@ -231,7 +199,7 @@ export default function GradeHoraria() {
               }
               options={disciplinas.map((d) => ({
                 value: d.id,
-                label: `${d.departamento_sigla || ""} (${d.codigo}) - ${d.nome}`,
+                label: `${d.codigo} - ${d.nome}`,
               }))}
             />
           </Tooltip>
@@ -242,59 +210,32 @@ export default function GradeHoraria() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+
+        <Select placeholder="Depto" style={{ width: 180 }} value={deptoId} onChange={handleDeptoChange}
+          options={departamentos.map(d => ({ value: d.id, label: d.nome }))} />
+
+        <Select placeholder="Curso" style={{ width: 180 }} value={cursoId} onChange={setCursoId}
+          options={cursos.map(c => ({ value: c.id, label: c.nome }))} />
+
+        <Select placeholder="Ano" style={{ width: 100 }} value={anoId} onChange={setAnoId}
+          options={anos.map(a => ({ value: a.id, label: a.ano }))} />
+
+        <Select placeholder="Sem" style={{ width: 100 }} value={semestreId} onChange={setSemestreId}
+          options={semestres.map(s => ({ value: s.id, label: s.nome }))} />
+
+        <Select placeholder="Curr" style={{ width: 120 }} value={curriculoId} onChange={setCurriculoId}
+          options={curriculos.map(c => ({ value: c.id, label: c.nome }))} />
+
         <Select
-          placeholder="Depto"
+          placeholder="Professor (opcional)"
+          allowClear
           style={{ width: 200 }}
-          onChange={handleDeptoChange}
-          value={deptoId}
-          options={departamentos.map((d) => ({
-            value: d.id,
-            label: d.nome,
-          }))}
-        />
-
-        <Select
-          placeholder="Curso"
-          style={{ width: 200 }}
-          onChange={setCursoId}
-          value={cursoId}
-          options={cursos.map((c) => ({
-            value: c.id,
-            label: c.nome,
-          }))}
-        />
-
-        <Select
-          placeholder="Ano"
-          style={{ width: 120 }}
-          onChange={setAnoId}
-          value={anoId}
-          options={anos.map((a) => ({
-            value: a.id,
-            label: a.ano,
-          }))}
-        />
-
-        <Select
-          placeholder="Sem"
-          style={{ width: 120 }}
-          onChange={setSemestreId}
-          value={semestreId}
-          options={semestres.map((s) => ({
-            value: s.id,
-            label: s.nome,
-          }))}
-        />
-
-        <Select
-          placeholder="Curr"
-          style={{ width: 150 }}
-          onChange={setCurriculoId}
-          value={curriculoId}
-          options={curriculos.map((c) => ({
-            value: c.id,
-            label: c.nome,
+          value={professorId}
+          onChange={setProfessorId}
+          options={professores.map(p => ({
+            value: p.id,
+            label: p.nome,
           }))}
         />
 
@@ -302,8 +243,9 @@ export default function GradeHoraria() {
           <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} />
           <Button icon={<FilePdfOutlined />} onClick={handlePDF} />
           <Button icon={<FileExcelOutlined />} onClick={handleExcel} />
-          <Button icon={<ReloadOutlined />} onClick={resetFiltros} />
+          <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()} />
         </Space>
+
       </div>
 
       <Table

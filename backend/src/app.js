@@ -27,6 +27,7 @@ const semestreRoutes = require('./routes/semestre.routes');
 const relatorioRoutes = require('./routes/relatorio.routes');
 const logRoutes = require('./routes/log.routes');
 const departamentoRoutes = require('./routes/departamento.routes');
+const relatorioGradeRoutes = require('./routes/relatorio-grade.routes');
 
 // Middleware de auditoria registra todas as ações no banco
 app.use(auditMiddleware);
@@ -48,5 +49,6 @@ app.use('/semestres', semestreRoutes);
 app.use('/relatorios', relatorioRoutes);
 app.use('/logs', logRoutes);
 app.use('/departamentos', departamentoRoutes);
+app.use('/api/relatorio-grade', relatorioGradeRoutes);
 
 module.exports = app;

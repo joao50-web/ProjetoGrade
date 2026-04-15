@@ -11,14 +11,20 @@ const {
 /* ================= BUSCAR GRADE ================= */
 exports.findByContext = async (req, res) => {
   try {
-    const { curso_id, ano_id, semestre_id, curriculo_id } = req.query;
+    const { curso_id, ano_id, semestre_id, curriculo_id, professor_id } = req.query;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
       return res.status(400).json({ error: 'Parâmetros obrigatórios não informados' });
     }
 
     const registros = await GradeHoraria.findAll({
-      where: { curso_id, ano_id, semestre_id, curriculo_id },
+      where: {
+        curso_id,
+        ano_id,
+        semestre_id,
+        curriculo_id
+        // 🚫 NÃO filtra por professor aqui
+      },
       include: [
         {
           model: Disciplina,
@@ -54,7 +60,6 @@ exports.findByContext = async (req, res) => {
       ],
     });
 
-    // 🔥 FORMATAÇÃO FINAL (já pronta pro frontend)
     const resultado = registros.map(r => {
       let textoCompleto = '';
 
@@ -78,7 +83,7 @@ exports.findByContext = async (req, res) => {
               id: r.disciplina.id,
               nome: r.disciplina.nome,
               codigo: r.disciplina.codigo,
-              texto: textoCompleto // 🔥 já pronto
+              texto: textoCompleto
             }
           : null
       };
@@ -131,7 +136,7 @@ exports.saveSlot = async (req, res) => {
 };
 
 
-/* ================= SALVAR GRADE (OTIMIZADO) ================= */
+/* ================= SALVAR GRADE ================= */
 exports.saveGrade = async (req, res) => {
   try {
     const { contexto, slots } = req.body;
@@ -148,18 +153,10 @@ exports.saveGrade = async (req, res) => {
       coordenador_id
     } = contexto;
 
-    if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
-      return res.status(400).json({ error: 'Contexto incompleto' });
-    }
-
-    const GradeHoraria = require('../models').GradeHoraria;
-
-    // 🔥 limpa grade antiga
     await GradeHoraria.destroy({
       where: { curso_id, ano_id, semestre_id, curriculo_id }
     });
 
-    // 🔥 monta inserts seguros
     const inserts = slots
       .filter(s => s.disciplina_id)
       .map(s => ({
@@ -170,8 +167,6 @@ exports.saveGrade = async (req, res) => {
         horario_id: s.horario_id,
         dia_semana_id: s.dia_semana_id,
         disciplina_id: s.disciplina_id,
-
-        // ⚠️ SÓ ENVIA SE EXISTIR
         ...(coordenador_id ? { coordenador_id } : {})
       }));
 
