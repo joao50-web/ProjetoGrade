@@ -6,8 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ IMPORTAR MIDDLEWARES
+// ✅ MIDDLEWARES
 const auditMiddleware = require('./middlewares/audit.middleware');
+app.use(auditMiddleware); // registra ações no banco (opcional, não interfere no PDF)
 
 // ✅ ROTAS
 const authRoutes = require('./routes/auth.routes');
@@ -27,11 +28,9 @@ const semestreRoutes = require('./routes/semestre.routes');
 const relatorioRoutes = require('./routes/relatorio.routes');
 const logRoutes = require('./routes/log.routes');
 const departamentoRoutes = require('./routes/departamento.routes');
-const relatorioGradeRoutes = require('./routes/relatorio-grade.routes');
+const relatorioGradeRoutes = require('./routes/relatorio-grade.routes'); // ← ROTA DO PDF
 
-// Middleware de auditoria registra todas as ações no banco
-app.use(auditMiddleware);
-
+// Registrar rotas (sem duplicação)
 app.use('/auth', authRoutes);
 app.use('/cursos', cursoRoutes);
 app.use('/disciplinas', disciplinaRoutes);
@@ -42,13 +41,19 @@ app.use('/hierarquias', hierarquiaRoutes);
 app.use('/cargos', cargoRoutes);
 app.use('/horarios', horarioRoutes);
 app.use('/dias-semana', diaSemanaRoutes);
-app.use('/grade-horaria', gradeHorariaRoutes);
+app.use('/grade-horaria', gradeHorariaRoutes);          // Rota base para grade (ex: /grade-horaria)
 app.use('/anos', anoRoutes);
 app.use('/curriculos', curriculoRoutes);
 app.use('/semestres', semestreRoutes);
-app.use('/relatorios', relatorioRoutes);
+app.use('/relatorios', relatorioRoutes);                // Relatórios existentes (exemplo)
 app.use('/logs', logRoutes);
 app.use('/departamentos', departamentoRoutes);
-app.use('/api/relatorio-grade', relatorioGradeRoutes);
+app.use('/api/relatorio-grade', relatorioGradeRoutes); // Rota específica para PDF da grade
+
+// Tratamento de erros global (opcional)
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err.stack);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
 
 module.exports = app;
