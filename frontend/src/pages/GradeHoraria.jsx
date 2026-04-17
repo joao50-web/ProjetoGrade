@@ -1,3 +1,4 @@
+// frontend/src/pages/GradeHoraria.jsx
 import GradeLayout from '../components/GradeLayout';
 import GradeTabela from '../components/GradeTabela';
 

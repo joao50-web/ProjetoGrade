@@ -2,41 +2,41 @@ const Log = require("../models/Log");
 
 const auditMiddleware = async (req, res, next) => {
   try {
-    // Não logar requisições GET
+    // Ignora GET (como você já queria)
     if (req.method === "GET") {
       return next();
     }
 
-    const usuarioId = req.user ? req.user.id : null;
+    const usuarioId = req.user?.id;
 
-    // evita erro de NOT NULL
-    if (!usuarioId && !req.path.includes('/auth')) {
+    // 🚨 REGRA IMPORTANTE:
+    // Se não tem usuário logado, NÃO tenta salvar log
+    if (!usuarioId) {
       return next();
     }
 
-    const acao = `${req.method} ${req.path}`;
-    const entidade = req.path.split('/')[1] || null;
-    const entidade_id = req.params.id || null;
+    const acao = `${req.method} ${req.originalUrl || req.path}`;
 
-    const detalhes = {
-      body: req.body,
-      query: req.query,
-      params: req.params
-    };
+    const entidade = req.path.split("/")[1] || null;
+    const entidade_id = req.params?.id || null;
 
     await Log.create({
       usuario_id: usuarioId,
       acao,
       entidade,
       entidade_id,
-      detalhes,
+      detalhes: {
+        body: req.body || null,
+        query: req.query || null,
+        params: req.params || null,
+      },
     });
 
-    next();
+    return next();
 
   } catch (error) {
     console.error("Erro no middleware de auditoria:", error);
-    next();
+    return next(); // nunca quebra API
   }
 };
 

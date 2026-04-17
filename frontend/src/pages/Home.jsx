@@ -65,7 +65,12 @@ export default function Home() {
             <Text type="secondary">
               Cursos e disciplinas.
             </Text>
-            <Button type="primary" onClick={() => navigate('/cursos')}>
+
+            {/* 🔥 SOMENTE ROTAS AJUSTADAS */}
+            <Button
+              type="primary"
+              onClick={() => navigate('/academico/cursos')}
+            >
               Acessar módulo
             </Button>
           </Space>

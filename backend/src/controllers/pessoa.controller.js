@@ -1,138 +1,149 @@
-const { Pessoa, Cargo, Usuario } = require('../models');
+const { Pessoa, Cargo, Usuario } = require("../models");
+const { Op } = require("sequelize");
 
-/**
- * POST /pessoas
- */
+/* ================= CRIAR PESSOA ================= */
 exports.create = async (req, res) => {
   try {
     const pessoa = await Pessoa.create(req.body);
     return res.status(201).json(pessoa);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao criar pessoa' });
+    return res.status(500).json({ error: "Erro ao criar pessoa" });
   }
 };
 
-/**
- * GET /pessoas
- */
+/* ================= LISTAR PESSOAS ================= */
 exports.findAll = async (req, res) => {
   try {
     const pessoas = await Pessoa.findAll({
       include: [
         {
           model: Cargo,
-          as: 'cargo' 
+          as: "cargo",
+          attributes: ["id", "descricao"]
         },
         {
           model: Usuario,
-          as: 'usuario' 
+          as: "usuario",
+          attributes: ["id", "login"]
         }
       ],
-      order: [['nome', 'ASC']]
+      order: [["nome", "ASC"]]
     });
 
     return res.json(pessoas);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao buscar pessoas' });
+    return res.status(500).json({ error: "Erro ao buscar pessoas" });
   }
 };
 
-/**
- * GET /pessoas/:id
- */
+/* ================= BUSCAR POR ID ================= */
 exports.findById = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id, {
       include: [
         {
           model: Cargo,
-          as: 'cargo'
+          as: "cargo",
+          attributes: ["id", "descricao"]
         },
         {
           model: Usuario,
-          as: 'usuario'
+          as: "usuario",
+          attributes: ["id", "login"]
         }
       ]
     });
 
     if (!pessoa) {
-      return res.status(404).json({ error: 'Pessoa não encontrada' });
+      return res.status(404).json({ error: "Pessoa não encontrada" });
     }
 
     return res.json(pessoa);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao buscar pessoa' });
+    return res.status(500).json({ error: "Erro ao buscar pessoa" });
   }
 };
 
-/**
- * PUT /pessoas/:id
- */
+/* ================= ATUALIZAR PESSOA ================= */
 exports.update = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id);
 
     if (!pessoa) {
-      return res.status(404).json({ error: 'Pessoa não encontrada' });
+      return res.status(404).json({ error: "Pessoa não encontrada" });
     }
 
     await pessoa.update(req.body);
     return res.json(pessoa);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao atualizar pessoa' });
+    return res.status(500).json({ error: "Erro ao atualizar pessoa" });
   }
 };
 
-/**
- * GET /pessoas/coordenadores
- */
+/* ================= COORDENADORES ================= */
 exports.findCoordenadores = async (req, res) => {
   try {
-    const pessoas = await Pessoa.findAll({
+    // Busca cargos que contenham "Coordenador" no nome
+    const cargosCoordenador = await Cargo.findAll({
+      where: {
+        descricao: {
+          [Op.like]: "%Coordenador%"
+        }
+      }
+    });
+
+    if (!cargosCoordenador.length) {
+      return res.json([]);
+    }
+
+    const cargoIds = cargosCoordenador.map(c => c.id);
+
+    const coordenadores = await Pessoa.findAll({
+      where: {
+        cargo_id: {
+          [Op.in]: cargoIds
+        }
+      },
       include: [
         {
           model: Cargo,
-          as: 'cargo',
-          where: {
-            descricao: 'Coordenador'
-          }
+          as: "cargo",
+          attributes: ["id", "descricao"]
         }
       ],
-      order: [['nome', 'ASC']]
+      order: [["nome", "ASC"]]
     });
 
-    return res.json(pessoas);
+    return res.json(coordenadores);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao buscar coordenadores' });
+    console.error("Erro ao buscar coordenadores:", error);
+    return res.status(500).json({ error: "Erro ao buscar coordenadores" });
   }
 };
 
-/**
- * DELETE /pessoas/:id
- */
+/* ================= REMOVER PESSOA ================= */
 exports.remove = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id, {
       include: [
         {
           model: Usuario,
-          as: 'usuario'
+          as: "usuario"
         }
       ]
     });
 
     if (!pessoa) {
-      return res.status(404).json({ error: 'Pessoa não encontrada' });
+      return res.status(404).json({ error: "Pessoa não encontrada" });
     }
 
     if (pessoa.usuario) {
       return res.status(400).json({
-        error: 'Pessoa possui usuário e não pode ser removida'
+        error: "Pessoa possui usuário e não pode ser removida"
       });
     }
 
@@ -140,6 +151,6 @@ exports.remove = async (req, res) => {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Erro ao remover pessoa' });
+    return res.status(500).json({ error: "Erro ao remover pessoa" });
   }
 };

@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Layout, Menu, Typography, Button } from "antd";
-import { getUsuarioLogado } from '../services/api';
+import { getUsuarioLogado } from "../services/api";
 
 import {
   TeamOutlined,
@@ -12,7 +12,9 @@ import {
   BookOutlined,
   LogoutOutlined,
   HistoryOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate, useLocation } from "react-router-dom";
@@ -23,163 +25,163 @@ import logoCentral from "../imagens/titulo_branco_2.png";
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
 
-export default function AppLayout({ children }) {
+function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
-  const [collapsed, setCollapsed] = useState(true);
 
-  const hoverTimeout = useRef(null);
+  const usuario = getUsuarioLogado();
+  const isAdmin = usuario?.role?.toLowerCase() === "administrador";
 
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
+    localStorage.clear();
     navigate("/login");
   };
 
-  /* ================= CONTROLE SUBMENU ================= */
+  // ✅ ROTAS CORRETAS (AGORA PADRONIZADO COM /academico)
+  const pageMap = {
+    "/home": "Início",
+
+    "/pessoas": "Pessoas",
+    "/usuarios": "Usuários",
+    "/cargos": "Cargos",
+    "/logs": "Histórico",
+
+    "/academico/departamentos": "Departamentos",
+    "/academico/disciplinas": "Disciplinas",
+    "/academico/cursos": "Cursos",
+
+    "/grade-horaria": "Grade Horária",
+    "/relatorios": "Relatórios",
+  };
+
+  const currentPage = pageMap[location.pathname] || "";
+
+  /* ================= MENU ABERTO INTELIGENTE ================= */
   useEffect(() => {
-    let keys = [];
+    const path = location.pathname;
 
     if (
-      location.pathname === "/pessoas" ||
-      location.pathname === "/usuarios" ||
-      location.pathname === "/cargos" ||
-      location.pathname === "/departamentos" ||
-      location.pathname === "/logs"
+      path.startsWith("/pessoas") ||
+      path.startsWith("/usuarios") ||
+      path.startsWith("/cargos") ||
+      path.startsWith("/logs")
     ) {
-      keys = ["cadastro-admin"];
+      setOpenKeys(["admin"]);
+      return;
     }
 
-    if (
-      location.pathname === "/cursos" ||
-      location.pathname === "/disciplinas"
-    ) {
-      keys = ["cadastro-academico"];
+    if (path.startsWith("/academico")) {
+      setOpenKeys(["academico"]);
+      return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOpenKeys(keys);
-  }, [location.pathname]);
-
-  const usuario = getUsuarioLogado();
-
-  /* ================= TITULO PAGINA ================= */
-  const currentPage = useMemo(() => {
-    switch (location.pathname) {
-      case "/home":
-        return "Início";
-      case "/pessoas":
-        return "Pessoas";
-      case "/usuarios":
-        return "Usuários";
-      case "/cargos":
-        return "Cargos";
-      case "/departamentos":
-        return "Departamentos";
-      case "/cursos":
-        return "Cursos";
-      case "/disciplinas":
-        return "Disciplinas";
-      case "/grade-horaria":
-        return "Grade Horária";
-      case "/relatorios":
-        return "Relatórios"; // 🔥 NOVO
-      case "/logs":
-        return "Histórico de Atividades";
-      default:
-        return "";
-    }
+    setOpenKeys([]);
   }, [location.pathname]);
 
   /* ================= MENU ================= */
   const menuItems = useMemo(() => {
-    if (!usuario || usuario.role?.toLowerCase() !== "administrador") {
+    if (!isAdmin) {
       return [
-        {
-          key: "/grade-horaria",
-          icon: <CalendarOutlined />,
-          label: "Grade Horária",
-        },
-        {
-          key: "/relatorios",
-          icon: <BarChartOutlined />,
-          label: "Relatórios",
-        },
-      ];
-    } else {
-      return [
-        { key: "/home", icon: <HomeOutlined />, label: "Início" },
-        {
-          key: "cadastro-admin",
-          icon: <TeamOutlined />,
-          label: "Cadastro Administrativo",
-          children: [
-            { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
-            { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
-            { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
-            { key: "/departamentos", icon: <ApartmentOutlined />, label: "Departamentos" },
-            { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
-          ],
-        },
-        {
-          key: "cadastro-academico",
-          icon: <BookOutlined />,
-          label: "Cadastro Acadêmico",
-          children: [
-            { key: "/cursos", icon: <BookOutlined />, label: "Cursos" },
-            { key: "/disciplinas", icon: <BookOutlined />, label: "Disciplinas" },
-          ],
-        },
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
-
-        // 🔥 NOVO MENU
         { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
       ];
     }
-  }, [usuario]);
 
-  const handleMenuClick = ({ key }) => navigate(key);
+    return [
+      { key: "/home", icon: <HomeOutlined />, label: "Início" },
 
+      { type: "divider" },
+
+      {
+        key: "admin",
+        label: "Administrativo",
+        children: [
+          { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
+          { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
+          { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
+          { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
+        ],
+      },
+
+      {
+        key: "academico",
+        label: "Acadêmico",
+        children: [
+          {
+            key: "/academico/departamentos",
+            icon: <ApartmentOutlined />,
+            label: "Departamentos",
+          },
+          {
+            key: "/academico/disciplinas",
+            icon: <BookOutlined />,
+            label: "Disciplinas",
+          },
+          {
+            key: "/academico/cursos",
+            icon: <BookOutlined />,
+            label: "Cursos",
+          },
+        ],
+      },
+
+      { type: "divider" },
+
+      {
+        key: "/grade-horaria",
+        icon: <CalendarOutlined />,
+        label: "Grade Horária",
+      },
+      {
+        key: "/relatorios",
+        icon: <BarChartOutlined />,
+        label: "Relatórios",
+      },
+    ];
+  }, [isAdmin]);
+
+  const handleMenuClick = ({ key }) => {
+    if (location.pathname !== key) {
+      navigate(key);
+    }
+  };
+
+  /* ================= CONTROLE DO MENU ================= */
   const onOpenChange = (keys) => {
-    const latestKey = keys.find((key) => !openKeys.includes(key));
-    setOpenKeys(latestKey ? [latestKey] : []);
-  };
+    const latest = keys.find((k) => !openKeys.includes(k));
 
-  /* ================= HOVER SUAVE ================= */
-  const handleMouseEnter = () => {
-    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
-
-    hoverTimeout.current = setTimeout(() => {
-      setCollapsed(false);
-    }, 80);
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
-
-    hoverTimeout.current = setTimeout(() => {
-      setCollapsed(true);
-    }, 250);
+    if (latest) {
+      setOpenKeys([latest]);
+    } else {
+      setOpenKeys(keys);
+    }
   };
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      {/* HEADER */}
       <Header
         style={{
-          backgroundColor: "#093e5e",
+          background: "#093e5e",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 20px",
-          height: 40,
+          padding: "0 12px",
+          height: 44,
           position: "relative",
         }}
       >
-        <img src={logoBranco} alt="UFCSPA" style={{ height: 58 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ color: "#fff" }}
+          />
+          <img src={logoBranco} alt="logo" style={{ height: 38 }} />
+        </div>
 
         <div
           style={{
@@ -188,7 +190,7 @@ export default function AppLayout({ children }) {
             transform: "translateX(-50%)",
           }}
         >
-          <img src={logoCentral} alt="UFCSPA" style={{ height: 18 }} />
+          <img src={logoCentral} alt="titulo" style={{ height: 18 }} />
         </div>
 
         <Button
@@ -196,16 +198,11 @@ export default function AppLayout({ children }) {
           icon={<LogoutOutlined />}
           onClick={handleLogout}
           style={{
-            background: "rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.15)",
             color: "#fff",
-            border: "1px solid rgba(255,255,255,0.25)",
-            borderRadius: 8,
-            height: 30,
-            padding: "0 10px",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            fontSize: 13,
+            borderRadius: 6,
+            height: 26,
+            fontSize: 12,
           }}
         >
           Sair
@@ -213,16 +210,15 @@ export default function AppLayout({ children }) {
       </Header>
 
       <Layout>
-        {/* SIDEBAR */}
         <Sider
+          collapsible
           collapsed={collapsed}
-          width={260}
-          collapsedWidth={80}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          trigger={null}
+          width={200}
+          collapsedWidth={65}
           style={{
-            backgroundColor: "#f0f6fa",
-            borderRight: "1px solid #d9e4ec",
+            background: "#ffffff",
+            borderRight: "1px solid #e5e7eb",
           }}
         >
           <Menu
@@ -233,32 +229,31 @@ export default function AppLayout({ children }) {
             onOpenChange={onOpenChange}
             onClick={handleMenuClick}
             inlineCollapsed={collapsed}
+            motion={false}
             style={{
-              backgroundColor: "#f0f6fa",
-              borderRight: "none",
-              paddingTop: 20,
+              border: "none",
+              fontSize: 13,
+              paddingTop: 6,
             }}
           />
         </Sider>
 
-        {/* CONTEÚDO */}
         <Content
           style={{
-            padding: "5px 40px",
-            backgroundColor: "#f5f7fa",
+            padding: "15px 25px",
+            background: "#f5f7fa",
           }}
         >
-          <Title level={2} style={{ color: "#093e5e" }}>
+          <Title level={4} style={{ color: "#093e5e", marginBottom: 10 }}>
             {currentPage}
           </Title>
 
           <div
             style={{
-              background: "#ffffff",
-              padding: "40px",
-              borderRadius: 10,
-              border: "1px solid #e4eaf0",
-              borderTop: "3px solid #093e5e",
+              background: "#fff",
+              padding: 20,
+              borderRadius: 8,
+              border: "1px solid #e5e7eb",
             }}
           >
             {children}
@@ -266,17 +261,19 @@ export default function AppLayout({ children }) {
         </Content>
       </Layout>
 
-      {/* FOOTER */}
       <Footer
         style={{
           textAlign: "center",
-          backgroundColor: "#093e5e",
-          color: "#ffffff",
-          fontSize: 11,
+          background: "#093e5e",
+          color: "#fff",
+          fontSize: 10,
+          padding: "6px",
         }}
       >
-        © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre
+        © 2026 – UFCSPA
       </Footer>
     </Layout>
   );
 }
+
+export default React.memo(AppLayout);

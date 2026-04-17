@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { Table, Select, Button, Space, Tooltip, message } from "antd";
+import { Table, Select, Button, Space, message, Alert, Tag } from "antd";
 import {
   SaveOutlined,
   FilePdfOutlined,
-  FileExcelOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
 const headerStyle = {
@@ -17,7 +15,8 @@ const headerStyle = {
   textAlign: "center",
 };
 
-export default function GradeHoraria() {
+export default function GradeTabela() {
+  /* ================= STATES ================= */
   const [departamentos, setDepartamentos] = useState([]);
   const [todosCursos, setTodosCursos] = useState([]);
   const [cursos, setCursos] = useState([]);
@@ -27,6 +26,7 @@ export default function GradeHoraria() {
   const [horarios, setHorarios] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
   const [professores, setProfessores] = useState([]);
+  const [coordenadores, setCoordenadores] = useState([]);
   const [grade, setGrade] = useState([]);
 
   const [deptoId, setDeptoId] = useState(null);
@@ -35,6 +35,7 @@ export default function GradeHoraria() {
   const [semestreId, setSemestreId] = useState(null);
   const [curriculoId, setCurriculoId] = useState(null);
   const [professorId, setProfessorId] = useState(null);
+  const [coordenadorId, setCoordenadorId] = useState(null);
 
   const diasFixos = [
     { id: 1, nome: "2ª feira" },
@@ -44,11 +45,11 @@ export default function GradeHoraria() {
     { id: 5, nome: "6ª feira" },
   ];
 
-  // ================= LOAD
+  /* ================= LOAD INICIAL ================= */
   useEffect(() => {
     const load = async () => {
       try {
-        const [d, c, a, s, cur, h, p] = await Promise.all([
+        const [d, c, a, s, cur, h, p, coord] = await Promise.all([
           api.get("/departamentos"),
           api.get("/cursos"),
           api.get("/anos"),
@@ -56,6 +57,7 @@ export default function GradeHoraria() {
           api.get("/curriculos"),
           api.get("/horarios"),
           api.get("/pessoas"),
+          api.get("/pessoas/coordenadores"),
         ]);
 
         setDepartamentos(d.data || []);
@@ -66,21 +68,31 @@ export default function GradeHoraria() {
         setCurriculos(cur.data || []);
         setHorarios(h.data || []);
         setProfessores(p.data || []);
-      } catch {
+        setCoordenadores(coord.data || []);
+
+        if (!coord.data?.length) {
+          message.warning("Nenhum coordenador encontrado.");
+        }
+      } catch (err) {
+        console.error(err);
         message.error("Erro ao carregar dados");
       }
     };
+
     load();
   }, []);
 
-  // ================= DEPTO
+  /* ================= FILTRO DEPARTAMENTO ================= */
   const handleDeptoChange = (id) => {
     setDeptoId(id);
     setCursoId(null);
     setGrade([]);
     setDisciplinas([]);
 
-    if (!id) return setCursos(todosCursos);
+    if (!id) {
+      setCursos(todosCursos);
+      return;
+    }
 
     setCursos(
       todosCursos.filter(
@@ -89,66 +101,65 @@ export default function GradeHoraria() {
     );
   };
 
-  // ================= DISCIPLINAS
+  /* ================= DISCIPLINAS ================= */
   useEffect(() => {
     if (!cursoId) return;
-    api.get(`/cursos/${cursoId}/disciplinas`)
-      .then((res) => setDisciplinas(res.data || []));
+
+    api
+      .get(`/cursos/${cursoId}/disciplinas`)
+      .then((res) => setDisciplinas(res.data || []))
+      .catch(() => setDisciplinas([]));
   }, [cursoId]);
 
-  // ================= GRADE
+  /* ================= BUSCAR GRADE (CORRIGIDO) ================= */
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return;
 
-    api.get("/grade-horaria", {
-      params: {
-        curso_id: cursoId,
-        ano_id: anoId,
-        semestre_id: semestreId,
-        curriculo_id: curriculoId,
-        ...(professorId ? { professor_id: professorId } : {}),
-      },
-    })
+    // 🔥 Envia os parâmetros de forma explícita:
+    // - Se o select estiver vazio (null), envia a string "null" para o backend tratar.
+    // - Se tiver um valor, envia o número.
+    const params = {
+      curso_id: cursoId,
+      ano_id: anoId,
+      semestre_id: semestreId,
+      curriculo_id: curriculoId,
+      professor_id: professorId === null ? "null" : professorId,
+      coordenador_id: coordenadorId === null ? "null" : coordenadorId,
+    };
+
+    console.log("📡 Enviando para /grade-horaria:", params); // debug
+
+    api
+      .get("/grade-horaria", { params })
       .then((res) => setGrade(res.data || []))
-      .catch(() => setGrade([]));
+      .catch((err) => {
+        console.error(err);
+        setGrade([]);
+      });
+  }, [cursoId, anoId, semestreId, curriculoId, professorId, coordenadorId]);
 
-  }, [cursoId, anoId, semestreId, curriculoId, professorId]);
-
-  // ================= UPDATE
-  const updateCell = (hId, dId, value) => {
-    setGrade((prev) => {
-      const filtered = prev.filter(
-        (g) => !(g.horario_id === hId && g.dia_semana_id === dId)
-      );
-
-      if (value) {
-        filtered.push({
-          horario_id: hId,
-          dia_semana_id: dId,
-          disciplina_id: value,
-        });
-      }
-
-      return filtered;
-    });
-  };
-
-  // ================= SAVE
+  /* ================= SALVAR ================= */
   const handleSave = async () => {
-    await api.post("/grade-horaria/save", {
-      contexto: {
-        curso_id: cursoId,
-        ano_id: anoId,
-        semestre_id: semestreId,
-        curriculo_id: curriculoId,
-      },
-      slots: grade,
-    });
-
-    message.success("Salvo!");
+    try {
+      await api.post("/grade-horaria/save", {
+        contexto: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+          coordenador_id: coordenadorId ?? null,
+          professor_id: professorId ?? null,
+        },
+        slots: grade,
+      });
+      message.success("Grade salva com sucesso!");
+    } catch (err) {
+      console.error(err);
+      message.error("Erro ao salvar grade");
+    }
   };
 
-  // ================= COLUNAS
+  /* ================= COLUNAS ================= */
   const columns = [
     {
       title: "Horário",
@@ -161,108 +172,149 @@ export default function GradeHoraria() {
       title: dia.nome,
       width: 260,
       onHeaderCell: () => ({ style: headerStyle }),
-
       render: (_, record) => {
         const item = grade.find(
-          (g) =>
-            g.horario_id === record.id &&
-            g.dia_semana_id === dia.id
+          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id
         );
-
         return (
-          <Tooltip title="Disciplina">
+          <div>
             <Select
               allowClear
               showSearch
               size="small"
               style={{ width: "100%" }}
-              value={item?.disciplina_id || undefined}
+              value={item?.disciplina_id}
               onChange={(val) =>
-                updateCell(record.id, dia.id, val || null)
+                setGrade((prev) => {
+                  const filtered = prev.filter(
+                    (g) =>
+                      !(g.horario_id === record.id && g.dia_semana_id === dia.id)
+                  );
+                  if (val) {
+                    filtered.push({
+                      horario_id: record.id,
+                      dia_semana_id: dia.id,
+                      disciplina_id: val,
+                      professor_id: professorId ?? null,
+                      coordenador_id: coordenadorId ?? null,
+                    });
+                  }
+                  return filtered;
+                })
               }
               options={disciplinas.map((d) => ({
                 value: d.id,
                 label: `${d.codigo} - ${d.nome}`,
               }))}
-
-              // ✅ BUSCA POR CÓDIGO + NOME
-              filterOption={(input, option) =>
-                (option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
             />
-          </Tooltip>
+            {item?.professor && (
+              <div style={{ fontSize: 11 }}>Prof: {item.professor.nome}</div>
+            )}
+            {item?.coordenador && (
+              <div style={{ fontSize: 11 }}>Coord: {item.coordenador.nome}</div>
+            )}
+          </div>
         );
       },
     })),
   ];
 
-  return (
-    <AppLayout>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+  const coordenadorSelecionado = coordenadores.find((c) => c.id === coordenadorId);
 
+  /* ================= UI ================= */
+  return (
+    <>
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
         <Select
-          placeholder="Depto"
-          style={{ width: 180 }}
+          placeholder="Departamento"
+          style={{ width: 160 }}
           value={deptoId}
           onChange={handleDeptoChange}
-          options={departamentos.map(d => ({ value: d.id, label: d.nome }))}
+          allowClear
+          options={departamentos.map((d) => ({ value: d.id, label: d.nome }))}
         />
-
         <Select
           placeholder="Curso"
-          style={{ width: 180 }}
+          style={{ width: 160 }}
           value={cursoId}
           onChange={setCursoId}
-          options={cursos.map(c => ({ value: c.id, label: c.nome }))}
+          allowClear
+          options={cursos.map((c) => ({ value: c.id, label: c.nome }))}
         />
-
         <Select
           placeholder="Ano"
-          style={{ width: 100 }}
+          style={{ width: 90 }}
           value={anoId}
           onChange={setAnoId}
-          options={anos.map(a => ({ value: a.id, label: a.ano }))}
+          allowClear
+          options={anos.map((a) => ({ value: a.id, label: a.ano }))}
         />
-
         <Select
-          placeholder="Sem"
-          style={{ width: 100 }}
+          placeholder="Semestre"
+          style={{ width: 90 }}
           value={semestreId}
           onChange={setSemestreId}
-          options={semestres.map(s => ({ value: s.id, label: s.nome }))}
+          allowClear
+          options={semestres.map((s) => ({ value: s.id, label: s.nome }))}
         />
-
         <Select
-          placeholder="Curr"
-          style={{ width: 120 }}
+          placeholder="Currículo"
+          style={{ width: 110 }}
           value={curriculoId}
           onChange={setCurriculoId}
-          options={curriculos.map(c => ({ value: c.id, label: c.nome }))}
-        />
-
-        <Select
-          placeholder="Professor (opcional)"
           allowClear
-          style={{ width: 200 }}
+          options={curriculos.map((c) => ({ value: c.id, label: c.nome }))}
+        />
+        <Select
+          placeholder="Professor"
+          style={{ width: 180 }}
           value={professorId}
           onChange={setProfessorId}
-          options={professores.map(p => ({
-            value: p.id,
-            label: p.nome,
-          }))}
+          allowClear
+          showSearch
+          options={professores.map((p) => ({ value: p.id, label: p.nome }))}
         />
-
+        <Select
+          placeholder="Coordenador"
+          style={{ width: 180 }}
+          value={coordenadorId}
+          onChange={setCoordenadorId}
+          allowClear
+          showSearch
+          options={coordenadores.map((c) => ({ value: c.id, label: c.nome }))}
+        />
         <Space>
-          <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} />
-          <Button icon={<FilePdfOutlined />} />
-          <Button icon={<FileExcelOutlined />} />
-          <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()} />
+          <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>
+            Salvar
+          </Button>
+          <Button icon={<FilePdfOutlined />}>PDF</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
+            Reset
+          </Button>
         </Space>
-
       </div>
 
+      {/* Contexto (tags) */}
+      {(coordenadorSelecionado || professorId) && (
+        <div style={{ marginBottom: 10 }}>
+          {coordenadorSelecionado && (
+            <Tag color="blue">Coordenador: {coordenadorSelecionado.nome}</Tag>
+          )}
+          {professorId && (
+            <Tag color="green">
+              Professor: {professores.find((p) => p.id === professorId)?.nome}
+            </Tag>
+          )}
+        </div>
+      )}
+
+      {/* Alerta se não houver coordenadores */}
+      {coordenadores.length === 0 && (
+        <Alert message="Nenhum coordenador cadastrado" type="warning" showIcon />
+      )}
+
+      {/* Tabela */}
       <Table
         rowKey="id"
         dataSource={horarios}
@@ -272,6 +324,6 @@ export default function GradeHoraria() {
         size="small"
         scroll={{ x: 1500, y: 700 }}
       />
-    </AppLayout>
+    </>
   );
 }

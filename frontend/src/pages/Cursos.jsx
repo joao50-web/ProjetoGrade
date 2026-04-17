@@ -8,7 +8,7 @@ import {
   Popconfirm,
   message,
   Select,
-  Tag
+  Tag,
 } from "antd";
 
 import {
@@ -17,7 +17,7 @@ import {
   BookOutlined,
   PlusOutlined,
   SearchOutlined,
-  ApartmentOutlined
+  ApartmentOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate } from "react-router-dom";
@@ -102,7 +102,7 @@ export default function Cursos() {
   };
 
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase())
+    c.nome?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const buttonStyle = {
@@ -169,7 +169,9 @@ export default function Cursos() {
           <Button
             size="middle"
             icon={<BookOutlined />}
-            onClick={() => navigate(`/cursos/${record.id}/disciplinas`)}
+            onClick={() =>
+              navigate(`/academico/cursos/${record.id}/disciplinas`)
+            }
             style={buttonStyle}
           >
             Disciplinas

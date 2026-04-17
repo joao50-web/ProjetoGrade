@@ -1,6 +1,7 @@
 import { Layout, Button } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+
 import logoBranco from "../imagens/logo_branco.png";
 import logoCentral from "../imagens/titulo_branco_2.png";
 
@@ -10,14 +11,14 @@ export default function HomeLayout({ children }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    // 🔥 mantém consistência com AppLayout (zera tudo)
+    localStorage.clear();
     navigate("/login");
   };
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "#e8ebf0" }}>
-      {/* HEADER */}
-
+      {/* ================= HEADER ================= */}
       <Header
         style={{
           backgroundColor: "#093e5e",
@@ -25,14 +26,18 @@ export default function HomeLayout({ children }) {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 20px",
-          height: 40,
+          height: 44,
           position: "relative",
         }}
       >
-        {/* Logo esquerda */}
-        <img src={logoBranco} alt="UFCSPA" style={{ height: 58 }} />
+        {/* LOGO ESQUERDA */}
+        <img
+          src={logoBranco}
+          alt="UFCSPA"
+          style={{ height: 38, objectFit: "contain" }}
+        />
 
-        {/* Logo central */}
+        {/* LOGO CENTRAL */}
         <div
           style={{
             position: "absolute",
@@ -40,10 +45,14 @@ export default function HomeLayout({ children }) {
             transform: "translateX(-50%)",
           }}
         >
-          <img src={logoCentral} alt="UFCSPA" style={{ height: 18 }} />
+          <img
+            src={logoCentral}
+            alt="UFCSPA"
+            style={{ height: 18, objectFit: "contain" }}
+          />
         </div>
 
-        {/* Botão sair */}
+        {/* BOTÃO SAIR */}
         <Button
           size="small"
           icon={<LogoutOutlined />}
@@ -53,29 +62,28 @@ export default function HomeLayout({ children }) {
             color: "#fff",
             border: "1px solid rgba(255,255,255,0.25)",
             borderRadius: 8,
-            height: 30,
+            height: 28,
             padding: "0 10px",
             display: "flex",
             alignItems: "center",
             gap: 4,
-            fontSize: 13,
-            transition: "all 0.2s ease",
+            fontSize: 12,
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.22)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(255,255,255,0.22)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "rgba(255,255,255,0.12)")
+          }
         >
           Sair
         </Button>
       </Header>
 
-      {/* CONTENT */}
+      {/* ================= CONTENT ================= */}
       <Content
         style={{
-          padding: "55px 56px",
+          padding: "40px 40px",
           display: "flex",
           justifyContent: "center",
         }}
@@ -85,7 +93,7 @@ export default function HomeLayout({ children }) {
             width: "100%",
             maxWidth: 1200,
             borderRadius: 10,
-            padding: "32px 40px",
+            padding: "28px 32px",
             backgroundColor: "#fff",
             boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
             borderTop: "5px solid #093e5e",
@@ -95,17 +103,17 @@ export default function HomeLayout({ children }) {
         </div>
       </Content>
 
-      {/* FOOTER */}
+      {/* ================= FOOTER ================= */}
       <Footer
         style={{
           backgroundColor: "#093e5e",
           color: "#fff",
           textAlign: "center",
-          fontSize: 12,
+          fontSize: 11,
+          padding: "10px",
         }}
       >
-        © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre
-        (UFCSPA)
+        © 2026 – Universidade Federal de Ciências da Saúde de Porto Alegre (UFCSPA)
       </Footer>
     </Layout>
   );
