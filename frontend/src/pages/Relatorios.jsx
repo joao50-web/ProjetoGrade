@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, Select, Table, Tag, Row, Col, Tabs, Button, Space } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
+import { Table, Select, Button, Row, Col, Tabs, Tag, Input } from "antd";
+import { DownloadOutlined, SearchOutlined } from "@ant-design/icons";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
@@ -9,16 +9,14 @@ export default function Relatorios() {
   const [cursos, setCursos] = useState([]);
   const [professores, setProfessores] = useState([]);
 
-  const [filtros, setFiltros] = useState({
-    departamento_id: null,
-    curso_id: null,
-    professor_id: null,
-  });
-
   const [dadosProfessor, setDadosProfessor] = useState([]);
   const [dadosMulti, setDadosMulti] = useState([]);
-  const [tab, setTab] = useState("professor");
 
+  const [filtros, setFiltros] = useState({});
+  const [tab, setTab] = useState("professor");
+  const [search, setSearch] = useState("");
+
+  /* ================= LOAD ================= */
   useEffect(() => {
     (async () => {
       const [d, c, p] = await Promise.all([
@@ -33,6 +31,7 @@ export default function Relatorios() {
     })();
   }, []);
 
+  /* ================= RELATÓRIOS ================= */
   useEffect(() => {
     (async () => {
       const [prof, multi] = await Promise.all([
@@ -45,37 +44,57 @@ export default function Relatorios() {
     })();
   }, [filtros]);
 
-  const exportExcel = () => {
-    window.open(`${api.defaults.baseURL}/relatorios/export/excel`);
-  };
+  /* ================= FILTRO CASCATA ================= */
+  const cursosFiltrados = filtros.departamento_id
+    ? cursos.filter((c) => c.departamento_id === filtros.departamento_id)
+    : cursos;
 
-  const exportPDF = () => {
-    window.open(`${api.defaults.baseURL}/relatorios/export/pdf`);
-  };
+  const professoresFiltrados = filtros.curso_id
+    ? professores.filter((p) =>
+        p.cursos?.some((c) => c.id === filtros.curso_id)
+      )
+    : professores;
 
+  /* ================= SEARCH ================= */
+  const filteredProfessor = dadosProfessor.filter((d) =>
+    d.nome?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredMulti = dadosMulti.filter((d) =>
+    d.nome?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  /* ================= COLUNAS ================= */
   const colProfessor = [
     {
-      title: "Estrutura Acadêmica",
-      render: (_, d) => (
+      title: "Disciplina",
+      render: (_, r) => (
         <div>
-          <b>{d.nome}</b>
-
-          {d.cursos?.map(c => (
-            <div key={c.id} style={{ marginLeft: 15 }}>
-              <b>{c.nome}</b>
-
-              {c.disciplinas?.map(disc => (
-                <div key={disc.id} style={{ marginLeft: 15 }}>
-                  {disc.nome} ({disc.codigo})
-
-                  <div style={{ fontSize: 12, color: "#888" }}>
-                    {disc.professores?.map(p => p.nome).join(", ")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
+          <b>{r.nome}</b>
+          <div style={{ fontSize: 12 }}>{r.codigo}</div>
         </div>
+      ),
+    },
+    {
+      title: "Cursos",
+      render: (_, r) => (
+        <>
+          {r.cursos?.map((c) => (
+            <Tag key={c.id}>{c.nome}</Tag>
+          ))}
+        </>
+      ),
+    },
+    {
+      title: "Professores",
+      render: (_, r) => (
+        <>
+          {r.professores?.map((p) => (
+            <Tag key={p.id} color="green">
+              {p.nome}
+            </Tag>
+          ))}
+        </>
       ),
     },
   ];
@@ -85,95 +104,131 @@ export default function Relatorios() {
       title: "Disciplina",
       render: (_, r) => (
         <div>
-          {r.nome} <br />
-          <small>{r.codigo}</small>
+          <b>{r.nome}</b>
+          <div style={{ fontSize: 12 }}>{r.codigo}</div>
         </div>
       ),
     },
     {
       title: "Cursos",
-      render: (_, r) => r.cursos?.map(c => <div key={c.id}>{c.nome}</div>),
+      render: (_, r) => (
+        <>
+          {r.cursos?.map((c) => (
+            <Tag key={c.id}>{c.nome}</Tag>
+          ))}
+        </>
+      ),
     },
     {
       title: "Total",
-      render: (_, r) => <Tag>{r.totalCursos}</Tag>,
+      render: (_, r) => <Tag color="purple">{r.totalCursos}</Tag>,
     },
   ];
 
   return (
     <AppLayout>
-      <Card style={{ marginBottom: 10 }}>
-        <Row gutter={10}>
-          <Col span={8}>
-            <Select
-              allowClear
-              placeholder="Departamento"
-              onChange={v => setFiltros(f => ({ ...f, departamento_id: v }))}
-              options={departamentos.map(d => ({ value: d.id, label: d.nome }))}
-            />
-          </Col>
-
-          <Col span={8}>
-            <Select
-              allowClear
-              placeholder="Curso"
-              onChange={v => setFiltros(f => ({ ...f, curso_id: v }))}
-              options={cursos.map(c => ({ value: c.id, label: c.nome }))}
-            />
-          </Col>
-
-          <Col span={8}>
-            <Select
-              allowClear
-              placeholder="Professor"
-              onChange={v => setFiltros(f => ({ ...f, professor_id: v }))}
-              options={professores.map(p => ({ value: p.id, label: p.nome }))}
-            />
-          </Col>
-        </Row>
-
-        <Space style={{ marginTop: 10 }}>
-          <Button icon={<DownloadOutlined />} onClick={exportExcel}>
-            Excel
-          </Button>
-
-          <Button icon={<DownloadOutlined />} onClick={exportPDF}>
-            PDF
-          </Button>
-        </Space>
-      </Card>
-
-      <Card>
-        <Tabs
-          activeKey={tab}
-          onChange={setTab}
-          items={[
-            {
-              key: "professor",
-              label: "Estrutura Acadêmica",
-              children: (
-                <Table
-                  rowKey="id"
-                  columns={colProfessor}
-                  dataSource={dadosProfessor}
-                  pagination={{ pageSize: 6 }}
-                />
-              ),
-            },
-            {
-              key: "multi",
-              label: "Multicurso",
-              children: (
-                <Table
-                  rowKey="id"
-                  columns={colMulti}
-                  dataSource={dadosMulti}
-                />
-              ),
-            },
-          ]}
+      {/* ================= HEADER ================= */}
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <Input
+          placeholder="Buscar..."
+          prefix={<SearchOutlined />}
+          style={{ width: 300 }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-      </Card>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button icon={<DownloadOutlined />}>Excel</Button>
+          <Button icon={<DownloadOutlined />}>PDF</Button>
+        </div>
+      </div>
+
+      {/* ================= FILTROS ================= */}
+      <Row gutter={10} style={{ marginTop: 16 }}>
+        <Col span={8}>
+          <Select
+            allowClear
+            placeholder="Departamento"
+            style={{ width: "100%" }}
+            onChange={(v) =>
+              setFiltros((f) => ({
+                ...f,
+                departamento_id: v,
+                curso_id: undefined,
+              }))
+            }
+            options={departamentos.map((d) => ({
+              value: d.id,
+              label: d.nome,
+            }))}
+          />
+        </Col>
+
+        <Col span={8}>
+          <Select
+            allowClear
+            placeholder="Curso"
+            style={{ width: "100%" }}
+            onChange={(v) =>
+              setFiltros((f) => ({
+                ...f,
+                curso_id: v,
+                professor_id: undefined,
+              }))
+            }
+            options={cursosFiltrados.map((c) => ({
+              value: c.id,
+              label: c.nome,
+            }))}
+          />
+        </Col>
+
+        <Col span={8}>
+          <Select
+            allowClear
+            placeholder="Professor"
+            style={{ width: "100%" }}
+            onChange={(v) =>
+              setFiltros((f) => ({ ...f, professor_id: v }))
+            }
+            options={professoresFiltrados.map((p) => ({
+              value: p.id,
+              label: p.nome,
+            }))}
+          />
+        </Col>
+      </Row>
+
+      {/* ================= TABS ================= */}
+      <Tabs
+        activeKey={tab}
+        onChange={setTab}
+        items={[
+          {
+            key: "professor",
+            label: "Estrutura Acadêmica",
+            children: (
+              <Table
+                rowKey="id"
+                dataSource={filteredProfessor}
+                columns={colProfessor}
+                pagination={{ pageSize: 6 }}
+              />
+            ),
+          },
+          {
+            key: "multi",
+            label: "Multicurso",
+            children: (
+              <Table
+                rowKey="id"
+                dataSource={filteredMulti}
+                columns={colMulti}
+                pagination={{ pageSize: 6 }}
+              />
+            ),
+          },
+        ]}
+      />
     </AppLayout>
   );
 }

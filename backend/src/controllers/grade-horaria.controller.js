@@ -1,4 +1,4 @@
-const { Op } = require("sequelize"); // <-- IMPORTANTE
+const { Op } = require("sequelize");
 const {
   Curso,
   GradeHoraria,
@@ -41,6 +41,7 @@ exports.findByContext = async (req, res) => {
           ? null
           : professor_id;
     }
+
     if (coordenador_id !== undefined && coordenador_id !== "") {
       where.coordenador_id =
         coordenador_id === "null" || coordenador_id === "undefined"
@@ -51,31 +52,11 @@ exports.findByContext = async (req, res) => {
     const registros = await GradeHoraria.findAll({
       where,
       include: [
-        {
-          model: Disciplina,
-          as: "disciplina",
-          attributes: ["id", "codigo", "nome"],
-        },
-        {
-          model: Horario,
-          as: "horario",
-          attributes: ["id", "descricao"],
-        },
-        {
-          model: DiaSemana,
-          as: "diaSemana",
-          attributes: ["id", "descricao"],
-        },
-        {
-          model: Pessoa,
-          as: "professor",
-          attributes: ["id", "nome"],
-        },
-        {
-          model: Pessoa,
-          as: "coordenador",
-          attributes: ["id", "nome"],
-        },
+        { model: Disciplina, as: "disciplina", attributes: ["id", "codigo", "nome"] },
+        { model: Horario, as: "horario", attributes: ["id", "descricao"] },
+        { model: DiaSemana, as: "diaSemana", attributes: ["id", "descricao"] },
+        { model: Pessoa, as: "professor", attributes: ["id", "nome"] },
+        { model: Pessoa, as: "coordenador", attributes: ["id", "nome"] },
       ],
     });
 
@@ -86,9 +67,7 @@ exports.findByContext = async (req, res) => {
       disciplina_id: r.disciplina_id,
       professor_id: r.professor_id,
       coordenador_id: r.coordenador_id,
-      professor: r.professor
-        ? { id: r.professor.id, nome: r.professor.nome }
-        : null,
+      professor: r.professor ? { id: r.professor.id, nome: r.professor.nome } : null,
       coordenador: r.coordenador
         ? { id: r.coordenador.id, nome: r.coordenador.nome }
         : null,
@@ -125,30 +104,29 @@ exports.saveGrade = async (req, res) => {
     professor_id,
   } = contexto;
 
-  // Filtra apenas slots com disciplina selecionada
   const slotsValidos = slots.filter((slot) => slot.disciplina_id != null);
 
   if (slotsValidos.length === 0) {
-    return res
-      .status(400)
-      .json({ error: "Nenhuma disciplina atribuída para salvar" });
+    return res.status(400).json({
+      error: "Nenhuma disciplina atribuída para salvar",
+    });
   }
 
   const transaction = await sequelize.transaction();
 
   try {
-    // 1. Remove registros do contexto atual (incluindo professor_id e coordenador_id para manter separado)
-    const whereDelete = {
-      curso_id,
-      ano_id,
-      semestre_id,
-      curriculo_id,
-      professor_id: professor_id ?? null,
-      coordenador_id: coordenador_id ?? null,
-    };
-    await GradeHoraria.destroy({ where: whereDelete, transaction });
+    // 🔥 1. LIMPA TODA A GRADE DO CONTEXTO (IMPORTANTE)
+    await GradeHoraria.destroy({
+      where: {
+        curso_id,
+        ano_id,
+        semestre_id,
+        curriculo_id,
+      },
+      transaction,
+    });
 
-    // 2. Prepara os novos registros
+    // 🔥 2. PREPARA NOVOS REGISTROS
     const novosRegistros = slotsValidos.map((slot) => ({
       curso_id,
       ano_id,
@@ -161,25 +139,14 @@ exports.saveGrade = async (req, res) => {
       disciplina_id: slot.disciplina_id,
     }));
 
-    // 3. Verifica conflitos com OUTROS contextos (mesmo professor, mesmo dia/horário)
-    //    Se professor_id for null, consideramos que não há conflito (pois a UK não se aplica a null? No MySQL, unique key permite múltiplos nulls)
+    // 🔥 3. VALIDA CONFLITO DE PROFESSOR
     for (const registro of novosRegistros) {
-      // Só verifica conflito se houver professor definido
       if (registro.professor_id !== null) {
         const conflito = await GradeHoraria.findOne({
           where: {
             dia_semana_id: registro.dia_semana_id,
             horario_id: registro.horario_id,
             professor_id: registro.professor_id,
-            // Garante que não é o mesmo contexto (curso/ano/semestre/curriculo/professor/coordenador)
-            [Op.or]: [
-              { curso_id: { [Op.ne]: curso_id } },
-              { ano_id: { [Op.ne]: ano_id } },
-              { semestre_id: { [Op.ne]: semestre_id } },
-              { curriculo_id: { [Op.ne]: curriculo_id } },
-              { professor_id: { [Op.ne]: registro.professor_id } },
-              { coordenador_id: { [Op.ne]: coordenador_id ?? null } },
-            ],
           },
           transaction,
         });
@@ -187,18 +154,17 @@ exports.saveGrade = async (req, res) => {
         if (conflito) {
           await transaction.rollback();
           return res.status(409).json({
-            error: `Conflito de horário: o professor ID ${registro.professor_id} já está alocado no dia ${registro.dia_semana_id}, horário ${registro.horario_id} em outro curso/ano/semestre/currículo.`,
+            error: `Conflito: professor já possui aula nesse horário`,
           });
         }
       }
     }
 
-    // 4. Insere os novos registros
-    if (novosRegistros.length > 0) {
-      await GradeHoraria.bulkCreate(novosRegistros, { transaction });
-    }
+    // 🔥 4. INSERE NOVA GRADE
+    await GradeHoraria.bulkCreate(novosRegistros, { transaction });
 
     await transaction.commit();
+
     return res.json({
       message: "Grade salva com sucesso",
       inseridos: novosRegistros.length,
@@ -206,13 +172,14 @@ exports.saveGrade = async (req, res) => {
   } catch (err) {
     await transaction.rollback();
     console.error("Erro ao salvar grade:", err);
+
     return res.status(500).json({
       error: "Erro ao salvar grade: " + err.message,
     });
   }
 };
 
-/* ================= SALVAR SLOT (opcional) ================= */
+/* ================= SALVAR SLOT ================= */
 exports.saveSlot = async (req, res) => {
   try {
     const {

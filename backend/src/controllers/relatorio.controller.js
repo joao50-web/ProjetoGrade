@@ -1,91 +1,93 @@
-const {
-  Disciplina,
-  Curso,
-  Departamento,
-  Pessoa
-} = require("../models");
+const { Op } = require("sequelize");
+const { Disciplina, Curso, Departamento, Pessoa } = require("../models");
 
-/* ================= NORMALIZAÇÃO ================= */
-const normalizar = (disciplinas) => {
-  const map = new Map();
-
-  disciplinas.forEach(d => {
-    const id = d.id;
-
-    if (!map.has(id)) {
-      map.set(id, {
-        id: d.id,
-        nome: d.nome,
-        codigo: d.codigo,
-        cursos: [],
-        professores: []
-      });
-    }
-
-    const item = map.get(id);
-
-    (d.cursos || []).forEach(c => {
-      if (!item.cursos.find(x => x.id === c.id)) {
-        item.cursos.push({ id: c.id, nome: c.nome });
-      }
-    });
-
-    (d.professores || []).forEach(p => {
-      if (!item.professores.find(x => x.id === p.id)) {
-        item.professores.push({ id: p.id, nome: p.nome });
-      }
-    });
-  });
-
-  return Array.from(map.values());
-};
-
-/* ================= RELATÓRIO PROFESSOR ================= */
+/* =========================================================
+   🔥 RELATÓRIO PROFESSOR (CORRIGIDO E ESTÁVEL)
+========================================================= */
 const relatorioProfessor = async (req, res) => {
   try {
     const { departamento_id, curso_id, professor_id } = req.query;
 
     const disciplinas = await Disciplina.findAll({
       attributes: ["id", "nome", "codigo"],
+
       include: [
+        /* ================= PROFESSORES ================= */
         {
           model: Pessoa,
           as: "professores",
           attributes: ["id", "nome"],
           through: { attributes: [] },
-          required: false,
-          where: professor_id ? { id: professor_id } : undefined
+          required: !!professor_id,
+          ...(professor_id && {
+            where: { id: professor_id },
+          }),
         },
+
+        /* ================= CURSOS ================= */
         {
           model: Curso,
           as: "cursos",
-          attributes: ["id", "nome", "departamento_id"],
+          attributes: ["id", "nome"],
           through: { attributes: [] },
-          required: false,
-          where: curso_id ? { id: curso_id } : undefined,
+
+          required: !!curso_id || !!departamento_id,
+
+          ...(curso_id && {
+            where: { id: curso_id },
+          }),
+
           include: [
             {
               model: Departamento,
               as: "departamento",
               attributes: ["id", "nome"],
-              required: false,
-              where: departamento_id ? { id: departamento_id } : undefined
-            }
-          ]
-        }
-      ]
+
+              required: !!departamento_id,
+
+              ...(departamento_id && {
+                where: { id: departamento_id },
+              }),
+            },
+          ],
+        },
+      ],
     });
 
-    const resultado = normalizar(disciplinas);
-    return res.json(resultado);
+    const resultado = disciplinas
+      .map((d) => {
+        const cursos = (d.cursos || []).map((c) => ({
+          id: c.id,
+          nome: c.nome,
+          departamento: c.departamento || null,
+        }));
 
+        const professores = (d.professores || []).map((p) => ({
+          id: p.id,
+          nome: p.nome,
+        }));
+
+        return {
+          id: d.id,
+          nome: d.nome,
+          codigo: d.codigo,
+          cursos,
+          professores,
+          totalCursos: cursos.length,
+        };
+      })
+      .filter((d) => d.cursos.length > 0);
+
+    return res.json(resultado);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Erro relatório professor" });
   }
 };
 
-/* ================= RELATÓRIO MULTICURSO ================= */
+/* =========================================================
+   🔥 MULTICURSO (CORRIGIDO)
+========================================================= */
 const relatorioMulticurso = async (req, res) => {
   try {
     const disciplinas = await Disciplina.findAll({
@@ -96,25 +98,28 @@ const relatorioMulticurso = async (req, res) => {
           as: "cursos",
           attributes: ["id", "nome"],
           through: { attributes: [] },
-          required: false
-        }
-      ]
+          required: false,
+        },
+      ],
     });
 
-    const base = normalizar(disciplinas);
-
-    const multicurso = base
-      .filter(d => d.cursos.length > 1)
-      .map(d => ({
+    const resultado = disciplinas
+      .map((d) => ({
         id: d.id,
         nome: d.nome,
         codigo: d.codigo,
+        cursos: (d.cursos || []).map((c) => ({
+          id: c.id,
+          nome: c.nome,
+        })),
+      }))
+      .filter((d) => d.cursos.length > 1)
+      .map((d) => ({
+        ...d,
         totalCursos: d.cursos.length,
-        cursos: d.cursos
       }));
 
-    return res.json(multicurso);
-
+    return res.json(resultado);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Erro multicurso" });
@@ -123,5 +128,5 @@ const relatorioMulticurso = async (req, res) => {
 
 module.exports = {
   relatorioProfessor,
-  relatorioMulticurso
+  relatorioMulticurso,
 };

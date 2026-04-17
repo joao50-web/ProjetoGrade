@@ -44,7 +44,7 @@ export default function CursoDisciplinas() {
             key: d.id.toString(),
             title: `${codigo} - ${d.nome || "Sem nome"}`,
           };
-        })
+        }),
       );
 
       setTargetKeys(vinculadas.data.map((d) => d.id.toString()));
@@ -63,8 +63,6 @@ export default function CursoDisciplinas() {
       });
 
       message.success("Disciplinas salvas com sucesso");
-
-      // ✅ CORRETO (evita cair no fallback e “logout”)
       navigate("/academico/cursos");
     } catch {
       message.error("Erro ao salvar");
@@ -87,12 +85,11 @@ export default function CursoDisciplinas() {
         </Breadcrumb>
       </div>
 
-      {/* CARD PRINCIPAL */}
+      {/* CARD */}
       <Card
         style={{
           borderRadius: 12,
           boxShadow: "0 3px 10px rgba(0,0,0,0.06)",
-          width: "100%",
         }}
         title={
           <span
@@ -113,7 +110,6 @@ export default function CursoDisciplinas() {
               style={{ backgroundColor: "#093e5e" }}
             />
 
-            {/* ✅ CORRETO */}
             <Button onClick={() => navigate("/academico/cursos")}>
               Voltar
             </Button>
@@ -124,50 +120,57 @@ export default function CursoDisciplinas() {
           </Space>
         }
       >
-        {/* LOADING */}
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
             <Spin size="large" />
           </div>
         ) : (
-          <Transfer
-            dataSource={disciplinas}
-            targetKeys={targetKeys}
-            onChange={setTargetKeys}
-            showSearch
-            filterOption={(input, item) =>
-              item.title?.toLowerCase().includes(input.toLowerCase())
-            }
-            locale={{
-              itemUnit: "disciplina",
-              itemsUnit: "disciplinas",
-              searchPlaceholder: "Buscar código ou disciplina",
-              notFoundContent: "Nenhum resultado encontrado",
-            }}
-            operations={["Adicionar →", "← Remover"]}
-            render={(item) => (
-              <div
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 6,
-                  fontWeight: 500,
-                }}
-              >
-                {item.title}
-              </div>
-            )}
-            listStyle={{
-              width: 720,
-              height: 520,
-              borderRadius: 10,
-            }}
+          <div
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: 24,
-              flexWrap: "wrap",
+              width: "100%",
             }}
-          />
+          >
+            <Transfer
+              dataSource={disciplinas}
+              targetKeys={targetKeys}
+              onChange={setTargetKeys}
+              showSearch
+              filterOption={(input, item) =>
+                item.title?.toLowerCase().includes(input.toLowerCase())
+              }
+              locale={{
+                itemUnit: "disciplina",
+                itemsUnit: "disciplinas",
+                searchPlaceholder: "Buscar código ou disciplina",
+                notFoundContent: "Nenhum resultado encontrado",
+              }}
+              operations={["Adicionar →", "← Remover"]}
+              render={(item) => (
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    fontWeight: 500,
+                  }}
+                >
+                  {item.title}
+                </div>
+              )}
+              listStyle={{
+                width: "42%", 
+                minWidth: 320, 
+                maxWidth: 1020, 
+                height: 550, 
+                borderRadius: 10,
+              }}
+              style={{
+                width: "100%",
+                maxWidth: 1500,
+              }}
+            />
+          </div>
         )}
       </Card>
     </AppLayout>
