@@ -1,14 +1,17 @@
-const router = require('express').Router();
-const controller = require('../controllers/pessoa.controller');
-// const auth = require('../middlewares/auth.middleware');
+const express = require("express");
+const router = express.Router();
 
-// router.use(auth);
+const pessoaController = require("../controllers/pessoa.controller");
 
-router.get('/coordenadores', controller.findCoordenadores);
-router.post('/', controller.create);
-router.get('/', controller.findAll);
-router.get('/:id', controller.findById);
-router.put('/:id', controller.update);
-router.delete('/:id', controller.remove);
+// 🔥 ROTAS ESPECÍFICAS PRIMEIRO
+router.get("/professores", pessoaController.findProfessores);
+router.get("/coordenadores", pessoaController.findCoordenadores);
+
+// 🔥 DEPOIS AS GENÉRICAS
+router.get("/", pessoaController.findAll);
+router.get("/:id", pessoaController.findById);
+router.post("/", pessoaController.create);
+router.put("/:id", pessoaController.update);
+router.delete("/:id", pessoaController.remove);
 
 module.exports = router;

@@ -12,6 +12,33 @@ exports.create = async (req, res) => {
   }
 };
 
+/* ================= PROFESSORES ================= */
+exports.findProfessores = async (req, res) => {
+  try {
+    const professores = await Pessoa.findAll({
+      include: [
+        {
+          model: Cargo,
+          as: "cargo",
+          attributes: [],
+          where: {
+            descricao: {
+              [Op.like]: "%Professor%",
+            },
+          },
+        },
+      ],
+      attributes: ["id", "nome"],
+      order: [["nome", "ASC"]],
+    });
+
+    return res.json(professores);
+  } catch (error) {
+    console.error("Erro ao buscar professores:", error);
+    return res.status(500).json({ error: "Erro ao buscar professores" });
+  }
+};
+
 /* ================= LISTAR PESSOAS ================= */
 exports.findAll = async (req, res) => {
   try {
@@ -20,15 +47,15 @@ exports.findAll = async (req, res) => {
         {
           model: Cargo,
           as: "cargo",
-          attributes: ["id", "descricao"]
+          attributes: ["id", "descricao"],
         },
         {
           model: Usuario,
           as: "usuario",
-          attributes: ["id", "login"]
-        }
+          attributes: ["id", "login"],
+        },
       ],
-      order: [["nome", "ASC"]]
+      order: [["nome", "ASC"]],
     });
 
     return res.json(pessoas);
@@ -46,14 +73,14 @@ exports.findById = async (req, res) => {
         {
           model: Cargo,
           as: "cargo",
-          attributes: ["id", "descricao"]
+          attributes: ["id", "descricao"],
         },
         {
           model: Usuario,
           as: "usuario",
-          attributes: ["id", "login"]
-        }
-      ]
+          attributes: ["id", "login"],
+        },
+      ],
     });
 
     if (!pessoa) {
@@ -87,35 +114,21 @@ exports.update = async (req, res) => {
 /* ================= COORDENADORES ================= */
 exports.findCoordenadores = async (req, res) => {
   try {
-    // Busca cargos que contenham "Coordenador" no nome
-    const cargosCoordenador = await Cargo.findAll({
-      where: {
-        descricao: {
-          [Op.like]: "%Coordenador%"
-        }
-      }
-    });
-
-    if (!cargosCoordenador.length) {
-      return res.json([]);
-    }
-
-    const cargoIds = cargosCoordenador.map(c => c.id);
-
     const coordenadores = await Pessoa.findAll({
-      where: {
-        cargo_id: {
-          [Op.in]: cargoIds
-        }
-      },
       include: [
         {
           model: Cargo,
           as: "cargo",
-          attributes: ["id", "descricao"]
-        }
+          attributes: ["id", "descricao"],
+          where: {
+            descricao: {
+              [Op.like]: "%Coordenador%",
+            },
+          },
+        },
       ],
-      order: [["nome", "ASC"]]
+      attributes: ["id", "nome"],
+      order: [["nome", "ASC"]],
     });
 
     return res.json(coordenadores);
@@ -132,9 +145,9 @@ exports.remove = async (req, res) => {
       include: [
         {
           model: Usuario,
-          as: "usuario"
-        }
-      ]
+          as: "usuario",
+        },
+      ],
     });
 
     if (!pessoa) {
@@ -143,7 +156,7 @@ exports.remove = async (req, res) => {
 
     if (pessoa.usuario) {
       return res.status(400).json({
-        error: "Pessoa possui usuário e não pode ser removida"
+        error: "Pessoa possui usuário e não pode ser removida",
       });
     }
 

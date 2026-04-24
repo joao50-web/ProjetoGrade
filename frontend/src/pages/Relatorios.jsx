@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Select, Button, Row, Col, Tabs, Tag, Input } from "antd";
+import { Table, Select, Button, Row, Col, Tabs, Tag, Input, message } from "antd";
 import { DownloadOutlined, SearchOutlined } from "@ant-design/icons";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
@@ -15,6 +15,36 @@ export default function Relatorios() {
   const [filtros, setFiltros] = useState({});
   const [tab, setTab] = useState("professor");
   const [search, setSearch] = useState("");
+  const [loadingDownload, setLoadingDownload] = useState(false);
+
+  /* ================= DOWNLOAD ================= */
+  const downloadFile = async (url, filename) => {
+    try {
+      setLoadingDownload(true);
+
+      const response = await api.get(url, {
+        params: filtros,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data]);
+      const link = document.createElement("a");
+
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      message.success("Download iniciado!");
+    } catch (error) {
+      console.error(error);
+      message.error("Erro ao baixar arquivo");
+    } finally {
+      setLoadingDownload(false);
+    }
+  };
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -137,8 +167,25 @@ export default function Relatorios() {
         />
 
         <div style={{ display: "flex", gap: 10 }}>
-          <Button icon={<DownloadOutlined />}>Excel</Button>
-          <Button icon={<DownloadOutlined />}>PDF</Button>
+          <Button
+            loading={loadingDownload}
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              downloadFile("/relatorios/export/excel", "relatorio.xlsx")
+            }
+          >
+            Excel
+          </Button>
+
+          <Button
+            loading={loadingDownload}
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              downloadFile("/relatorios/export/pdf", "relatorio.pdf")
+            }
+          >
+            PDF
+          </Button>
         </div>
       </div>
 

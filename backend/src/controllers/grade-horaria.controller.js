@@ -18,7 +18,6 @@ exports.findByContext = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
-      professor_id,
       coordenador_id,
     } = req.query;
 
@@ -35,13 +34,6 @@ exports.findByContext = async (req, res) => {
       curriculo_id,
     };
 
-    if (professor_id !== undefined && professor_id !== "") {
-      where.professor_id =
-        professor_id === "null" || professor_id === "undefined"
-          ? null
-          : professor_id;
-    }
-
     if (coordenador_id !== undefined && coordenador_id !== "") {
       where.coordenador_id =
         coordenador_id === "null" || coordenador_id === "undefined"
@@ -49,16 +41,38 @@ exports.findByContext = async (req, res) => {
           : coordenador_id;
     }
 
-    const registros = await GradeHoraria.findAll({
-      where,
-      include: [
-        { model: Disciplina, as: "disciplina", attributes: ["id", "codigo", "nome"] },
-        { model: Horario, as: "horario", attributes: ["id", "descricao"] },
-        { model: DiaSemana, as: "diaSemana", attributes: ["id", "descricao"] },
-        { model: Pessoa, as: "professor", attributes: ["id", "nome"] },
-        { model: Pessoa, as: "coordenador", attributes: ["id", "nome"] },
-      ],
-    });
+const registros = await GradeHoraria.findAll({
+  where,
+ include: [
+  { model: Disciplina, as: "disciplina" },
+
+  {
+    model: Pessoa,
+    as: "professor",
+    required: false,
+    include: [
+      {
+        model: require("../models").Cargo,
+        as: "cargo",
+        attributes: [],
+        where: {
+          descricao: {
+            [Op.like]: "%Professor%",
+          },
+        },
+      },
+    ],
+  },
+
+  {
+    model: Pessoa,
+    as: "coordenador",
+  },
+
+  { model: Horario, as: "horario" },
+  { model: DiaSemana, as: "diaSemana" },
+]
+});
 
     const resultado = registros.map((r) => ({
       id: r.id,
@@ -101,10 +115,21 @@ exports.saveGrade = async (req, res) => {
     semestre_id,
     curriculo_id,
     coordenador_id,
-    professor_id,
   } = contexto;
 
-  const slotsValidos = slots.filter((slot) => slot.disciplina_id != null);
+  // 1. Filtra slots válidos e remove duplicatas de horário/dia vindas do frontend
+  const slotsUnicos = [];
+  const mapaSlots = new Map();
+
+  slots.forEach(slot => {
+    if (slot.disciplina_id != null) {
+      const chave = `${slot.horario_id}-${slot.dia_semana_id}`;
+      // Se houver duplicata no array enviado, mantém apenas a última definição
+      mapaSlots.set(chave, slot);
+    }
+  });
+
+  const slotsValidos = Array.from(mapaSlots.values());
 
   if (slotsValidos.length === 0) {
     return res.status(400).json({
@@ -115,7 +140,8 @@ exports.saveGrade = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // 🔥 1. LIMPA TODA A GRADE DO CONTEXTO (IMPORTANTE)
+    // 🔥 2. LIMPA TODA A GRADE DO CONTEXTO ATUAL
+    // Isso evita o erro de Duplicate Entry ao tentar inserir o que já existia
     await GradeHoraria.destroy({
       where: {
         curso_id,
@@ -126,20 +152,20 @@ exports.saveGrade = async (req, res) => {
       transaction,
     });
 
-    // 🔥 2. PREPARA NOVOS REGISTROS
+    // 🔥 3. PREPARA NOVOS REGISTROS
     const novosRegistros = slotsValidos.map((slot) => ({
       curso_id,
       ano_id,
       semestre_id,
       curriculo_id,
       coordenador_id: coordenador_id ?? null,
-      professor_id: professor_id ?? null,
+      professor_id: slot.professor_id ?? null,
       horario_id: slot.horario_id,
       dia_semana_id: slot.dia_semana_id,
       disciplina_id: slot.disciplina_id,
     }));
 
-    // 🔥 3. VALIDA CONFLITO DE PROFESSOR
+    // 🔥 4. VALIDA CONFLITO DE PROFESSOR EM OUTROS CONTEXTOS
     for (const registro of novosRegistros) {
       if (registro.professor_id !== null) {
         const conflito = await GradeHoraria.findOne({
@@ -147,6 +173,14 @@ exports.saveGrade = async (req, res) => {
             dia_semana_id: registro.dia_semana_id,
             horario_id: registro.horario_id,
             professor_id: registro.professor_id,
+            // Importante: Ignora o contexto atual pois ele já foi deletado acima
+            // Mas o Sequelize pode ainda ver se não usarmos a transação corretamente
+            [Op.not]: {
+              curso_id,
+              ano_id,
+              semestre_id,
+              curriculo_id
+            }
           },
           transaction,
         });
@@ -154,13 +188,13 @@ exports.saveGrade = async (req, res) => {
         if (conflito) {
           await transaction.rollback();
           return res.status(409).json({
-            error: `Conflito: professor já possui aula nesse horário`,
+            error: `Conflito: professor já possui aula nesse horário em outro curso/currículo`,
           });
         }
       }
     }
 
-    // 🔥 4. INSERE NOVA GRADE
+    // 🔥 5. INSERE NOVA GRADE
     await GradeHoraria.bulkCreate(novosRegistros, { transaction });
 
     await transaction.commit();
@@ -216,7 +250,7 @@ exports.saveSlot = async (req, res) => {
       dia_semana_id,
       disciplina_id: disciplina_id ?? null,
     });
-
+z
     return res.json(registro);
   } catch (err) {
     console.error(err);
