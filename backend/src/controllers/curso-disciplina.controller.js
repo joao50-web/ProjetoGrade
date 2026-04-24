@@ -37,7 +37,7 @@ exports.salvarVinculos = async (req, res) => {
       return res.status(404).json({ error: 'Curso não encontrado' });
     }
 
-    // 🔥 substitui tudo (sincroniza)
+    //  substitui tudo (sincroniza)
     await curso.setDisciplinas(disciplinas);
 
     return res.json({ message: 'Vínculos atualizados' });
