@@ -24,7 +24,7 @@ const GradeHoraria = sequelize.define(
     freezeTableName: true,
     timestamps: true,
 
-    // 🔥 IGUAL AO BANCO
+    //  IGUAL AO BANCO
     indexes: [
       {
         name: "uk_grade_slot",

@@ -4,10 +4,10 @@ const {
   Disciplina,
   Curso,
   Departamento,
-  Pessoa
+  Pessoa,
 } = require("../models");
 
-/* ================= BASE ================= */
+/* ================= BASE DE DADOS ================= */
 const buscarDados = async (query) => {
   const { departamento_id, curso_id, professor_id } = query;
 
@@ -17,34 +17,83 @@ const buscarDados = async (query) => {
       {
         model: Pessoa,
         as: "professores",
-        attributes: ["nome"],
+        attributes: ["id", "nome"],
         through: { attributes: [] },
-        where: professor_id ? { id: professor_id } : undefined
+        required: !!professor_id,
+        where: professor_id ? { id: professor_id } : undefined,
       },
       {
         model: Curso,
         as: "cursos",
-        attributes: ["nome", "departamento_id"],
+        attributes: ["id", "nome"],
         through: { attributes: [] },
+        required: !!curso_id || !!departamento_id,
         where: curso_id ? { id: curso_id } : undefined,
         include: [
           {
             model: Departamento,
             as: "departamento",
-            attributes: ["nome"],
-            where: departamento_id ? { id: departamento_id } : undefined
-          }
-        ]
-      }
-    ]
+            attributes: ["id", "nome"],
+            required: !!departamento_id,
+            where: departamento_id ? { id: departamento_id } : undefined,
+          },
+        ],
+      },
+    ],
   });
 
-  return disciplinas.map(d => ({
-    nome: d.nome,
-    codigo: d.codigo,
-    cursos: d.cursos?.map(c => c.nome).join(", ") || "",
-    professores: d.professores?.map(p => p.nome).join(", ") || ""
-  }));
+  const resultado = [];
+
+  disciplinas.forEach((d) => {
+    const cursos = d.cursos || [];
+    const professores = d.professores || [];
+
+    // garante pelo menos 1 linha mesmo se vazio
+    if (cursos.length === 0 && professores.length === 0) {
+      resultado.push({
+        codigo: d.codigo,
+        disciplina: d.nome,
+        curso: "",
+        professor: "",
+      });
+      return;
+    }
+
+    cursos.forEach((c) => {
+      professores.forEach((p) => {
+        resultado.push({
+          codigo: d.codigo,
+          disciplina: d.nome,
+          curso: c?.nome || "",
+          professor: p?.nome || "",
+        });
+      });
+
+      // caso tenha curso mas não professor
+      if (professores.length === 0) {
+        resultado.push({
+          codigo: d.codigo,
+          disciplina: d.nome,
+          curso: c?.nome || "",
+          professor: "",
+        });
+      }
+    });
+
+    // caso tenha professor mas não curso
+    if (cursos.length === 0 && professores.length > 0) {
+      professores.forEach((p) => {
+        resultado.push({
+          codigo: d.codigo,
+          disciplina: d.nome,
+          curso: "",
+          professor: p?.nome || "",
+        });
+      });
+    }
+  });
+
+  return resultado;
 };
 
 /* ================= EXCEL ================= */
@@ -56,13 +105,16 @@ const exportRelatorioExcel = async (req, res) => {
     const sheet = workbook.addWorksheet("Relatório");
 
     sheet.columns = [
-      { header: "Disciplina", key: "nome", width: 30 },
       { header: "Código", key: "codigo", width: 15 },
-      { header: "Cursos", key: "cursos", width: 40 },
-      { header: "Professores", key: "professores", width: 40 }
+      { header: "Disciplina", key: "disciplina", width: 35 },
+      { header: "Curso", key: "curso", width: 35 },
+      { header: "Professor", key: "professor", width: 35 },
     ];
 
-    dados.forEach(d => sheet.addRow(d));
+    dados.forEach((d) => sheet.addRow(d));
+
+    // estilo header
+    sheet.getRow(1).font = { bold: true };
 
     res.setHeader(
       "Content-Type",
@@ -76,7 +128,6 @@ const exportRelatorioExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro Excel" });
@@ -98,16 +149,14 @@ const exportRelatorioPDF = async (req, res) => {
     doc.fontSize(18).text("Relatório de Disciplinas", { align: "center" });
     doc.moveDown();
 
-    dados.forEach(d => {
-      doc.fontSize(12).text(`Disciplina: ${d.nome}`);
-      doc.text(`Código: ${d.codigo}`);
-      doc.text(`Cursos: ${d.cursos}`);
-      doc.text(`Professores: ${d.professores}`);
+    dados.forEach((d) => {
+      doc.fontSize(12).text(`${d.codigo} - ${d.disciplina}`);
+      doc.fontSize(11).text(`Curso: ${d.curso || "-"}`);
+      doc.fontSize(11).text(`Professor: ${d.professor || "-"}`);
       doc.moveDown();
     });
 
     doc.end();
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro PDF" });
@@ -116,5 +165,5 @@ const exportRelatorioPDF = async (req, res) => {
 
 module.exports = {
   exportRelatorioExcel,
-  exportRelatorioPDF
+  exportRelatorioPDF,
 };

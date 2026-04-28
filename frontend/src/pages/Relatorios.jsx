@@ -1,8 +1,26 @@
 import { useEffect, useState } from "react";
-import { Table, Select, Button, Row, Col, Tabs, Tag, Input, message } from "antd";
-import { DownloadOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Select,
+  Button,
+  Row,
+  Col,
+  Tabs,
+  Input,
+  message,
+  Space,
+  Typography,
+  Badge,
+  Tag,
+} from "antd";
+import {
+  DownloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
+
+const { Text } = Typography;
 
 export default function Relatorios() {
   const [departamentos, setDepartamentos] = useState([]);
@@ -15,36 +33,6 @@ export default function Relatorios() {
   const [filtros, setFiltros] = useState({});
   const [tab, setTab] = useState("professor");
   const [search, setSearch] = useState("");
-  const [loadingDownload, setLoadingDownload] = useState(false);
-
-  /* ================= DOWNLOAD ================= */
-  const downloadFile = async (url, filename) => {
-    try {
-      setLoadingDownload(true);
-
-      const response = await api.get(url, {
-        params: filtros,
-        responseType: "blob",
-      });
-
-      const blob = new Blob([response.data]);
-      const link = document.createElement("a");
-
-      link.href = window.URL.createObjectURL(blob);
-      link.download = filename;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      message.success("Download iniciado!");
-    } catch (error) {
-      console.error(error);
-      message.error("Erro ao baixar arquivo");
-    } finally {
-      setLoadingDownload(false);
-    }
-  };
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -55,9 +43,9 @@ export default function Relatorios() {
         api.get("/pessoas"),
       ]);
 
-      setDepartamentos(d.data);
-      setCursos(c.data);
-      setProfessores(p.data);
+      setDepartamentos(d.data || []);
+      setCursos(c.data || []);
+      setProfessores(p.data || []);
     })();
   }, []);
 
@@ -69,62 +57,116 @@ export default function Relatorios() {
         api.get("/relatorios/multicurso", { params: filtros }),
       ]);
 
-      setDadosProfessor(prof.data);
-      setDadosMulti(multi.data);
+      setDadosProfessor(prof.data || []);
+      setDadosMulti(multi.data || []);
     })();
   }, [filtros]);
 
-  /* ================= FILTRO CASCATA ================= */
+  /* ================= FILTROS ================= */
   const cursosFiltrados = filtros.departamento_id
     ? cursos.filter((c) => c.departamento_id === filtros.departamento_id)
     : cursos;
 
-  const professoresFiltrados = filtros.curso_id
-    ? professores.filter((p) =>
-        p.cursos?.some((c) => c.id === filtros.curso_id)
-      )
-    : professores;
+  const professoresFiltrados = professores;
 
-  /* ================= SEARCH ================= */
-  const filteredProfessor = dadosProfessor.filter((d) =>
-    d.nome?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtrar = (lista) =>
+    lista.filter((d) =>
+      d.nome?.toLowerCase().includes(search.toLowerCase())
+    );
 
-  const filteredMulti = dadosMulti.filter((d) =>
-    d.nome?.toLowerCase().includes(search.toLowerCase())
-  );
+  /* ================= STYLE ================= */
+  const tagStyle = {
+    fontSize: 11,
+    margin: 0,
+    padding: "0 6px",
+    height: 20,
+    lineHeight: "18px",
+    borderRadius: 4,
+  };
+
+  const box = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  };
 
   /* ================= COLUNAS ================= */
   const colProfessor = [
     {
       title: "Disciplina",
+      width: 200,
       render: (_, r) => (
-        <div>
-          <b>{r.nome}</b>
-          <div style={{ fontSize: 12 }}>{r.codigo}</div>
+        <div style={box}>
+          <b style={{ fontSize: 13 }}>{r.nome}</b>
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {r.codigo}
+          </Text>
         </div>
       ),
     },
+
+    /* ================= CURSOS (FORÇADO VISÍVEL) ================= */
     {
       title: "Cursos",
       render: (_, r) => (
-        <>
-          {r.cursos?.map((c) => (
-            <Tag key={c.id}>{c.nome}</Tag>
-          ))}
-        </>
+        <div style={{ ...box, flexWrap: "wrap" }}>
+          {r.cursos?.length ? (
+            r.cursos.map((c) => (
+              <Tag key={c.id} color="blue" style={tagStyle}>
+                {c.nome}
+              </Tag>
+            ))
+          ) : (
+            <Text type="secondary">Sem cursos</Text>
+          )}
+        </div>
       ),
     },
+
     {
       title: "Professores",
       render: (_, r) => (
-        <>
-          {r.professores?.map((p) => (
-            <Tag key={p.id} color="green">
-              {p.nome}
-            </Tag>
-          ))}
-        </>
+        <div style={{ ...box, flexWrap: "wrap" }}>
+          {r.professores?.length ? (
+            r.professores.map((p) => (
+              <Tag key={p.id} color="green" style={tagStyle}>
+                {p.nome}
+              </Tag>
+            ))
+          ) : (
+            <Text type="secondary">Sem professor</Text>
+          )}
+        </div>
+      ),
+    },
+
+    /* ================= TOTAL (REDESENHADO) ================= */
+    {
+      title: "Total Cursos",
+      width: 140,
+      align: "center",
+      render: (_, r) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <Badge
+            count={r.totalCursos}
+            style={{
+              backgroundColor: "#0b3d5c",
+              fontSize: 11,
+            }}
+          />
+          <Text style={{ fontSize: 11, color: "#666" }}>
+            {r.totalCursos === 1
+              ? "curso vinculado"
+              : "cursos vinculados"}
+          </Text>
+        </div>
       ),
     },
   ];
@@ -132,65 +174,61 @@ export default function Relatorios() {
   const colMulti = [
     {
       title: "Disciplina",
+      width: 200,
       render: (_, r) => (
-        <div>
+        <div style={box}>
           <b>{r.nome}</b>
-          <div style={{ fontSize: 12 }}>{r.codigo}</div>
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {r.codigo}
+          </Text>
         </div>
       ),
     },
+
     {
       title: "Cursos",
       render: (_, r) => (
-        <>
+        <div style={{ ...box, flexWrap: "wrap" }}>
           {r.cursos?.map((c) => (
-            <Tag key={c.id}>{c.nome}</Tag>
+            <Tag key={c.id} color="purple" style={tagStyle}>
+              {c.nome}
+            </Tag>
           ))}
-        </>
+        </div>
       ),
     },
+
     {
-      title: "Total",
-      render: (_, r) => <Tag color="purple">{r.totalCursos}</Tag>,
+      title: "Status",
+      width: 100,
+      align: "center",
+      render: (_, r) => (
+        <Tag color={r.totalCursos > 2 ? "orange" : "green"}>
+          {r.totalCursos > 2 ? "Multi" : "OK"}
+        </Tag>
+      ),
     },
   ];
 
   return (
     <AppLayout>
-      {/* ================= HEADER ================= */}
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
+      {/* HEADER */}
+      <Row justify="space-between" style={{ marginBottom: 8 }}>
         <Input
-          placeholder="Buscar..."
+          placeholder="Buscar disciplina..."
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: 240 }}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <Button
-            loading={loadingDownload}
-            icon={<DownloadOutlined />}
-            onClick={() =>
-              downloadFile("/relatorios/export/excel", "relatorio.xlsx")
-            }
-          >
-            Excel
-          </Button>
+        <Space>
+          <Button icon={<DownloadOutlined />}>Excel</Button>
+          <Button icon={<DownloadOutlined />}>PDF</Button>
+        </Space>
+      </Row>
 
-          <Button
-            loading={loadingDownload}
-            icon={<DownloadOutlined />}
-            onClick={() =>
-              downloadFile("/relatorios/export/pdf", "relatorio.pdf")
-            }
-          >
-            PDF
-          </Button>
-        </div>
-      </div>
-
-      {/* ================= FILTROS ================= */}
-      <Row gutter={10} style={{ marginTop: 16 }}>
+      {/* FILTROS */}
+      <Row gutter={8} style={{ marginBottom: 10 }}>
         <Col span={8}>
           <Select
             allowClear
@@ -219,7 +257,6 @@ export default function Relatorios() {
               setFiltros((f) => ({
                 ...f,
                 curso_id: v,
-                professor_id: undefined,
               }))
             }
             options={cursosFiltrados.map((c) => ({
@@ -235,7 +272,10 @@ export default function Relatorios() {
             placeholder="Professor"
             style={{ width: "100%" }}
             onChange={(v) =>
-              setFiltros((f) => ({ ...f, professor_id: v }))
+              setFiltros((f) => ({
+                ...f,
+                professor_id: v,
+              }))
             }
             options={professoresFiltrados.map((p) => ({
               value: p.id,
@@ -245,7 +285,7 @@ export default function Relatorios() {
         </Col>
       </Row>
 
-      {/* ================= TABS ================= */}
+      {/* TABELAS */}
       <Tabs
         activeKey={tab}
         onChange={setTab}
@@ -256,9 +296,11 @@ export default function Relatorios() {
             children: (
               <Table
                 rowKey="id"
-                dataSource={filteredProfessor}
+                size="small"
+                bordered
                 columns={colProfessor}
-                pagination={{ pageSize: 6 }}
+                dataSource={filtrar(dadosProfessor)}
+                pagination={{ pageSize: 10 }}
               />
             ),
           },
@@ -268,9 +310,11 @@ export default function Relatorios() {
             children: (
               <Table
                 rowKey="id"
-                dataSource={filteredMulti}
+                size="small"
+                bordered
                 columns={colMulti}
-                pagination={{ pageSize: 6 }}
+                dataSource={filtrar(dadosMulti)}
+                pagination={{ pageSize: 10 }}
               />
             ),
           },
