@@ -7,20 +7,26 @@ import {
   Col,
   Tabs,
   Input,
-  message,
   Space,
-  Typography,
-  Badge,
   Tag,
 } from "antd";
+
 import {
   DownloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
-const { Text } = Typography;
+/* 🎨 HEADER */
+const headerCellStyle = {
+  backgroundColor: "#093e5e",
+  color: "#fff",
+  fontWeight: 600,
+  fontSize: 16,
+  textAlign: "center",
+};
 
 export default function Relatorios() {
   const [departamentos, setDepartamentos] = useState([]);
@@ -67,144 +73,115 @@ export default function Relatorios() {
     ? cursos.filter((c) => c.departamento_id === filtros.departamento_id)
     : cursos;
 
-  const professoresFiltrados = professores;
-
   const filtrar = (lista) =>
     lista.filter((d) =>
       d.nome?.toLowerCase().includes(search.toLowerCase())
     );
 
-  /* ================= STYLE ================= */
-  const tagStyle = {
-    fontSize: 11,
-    margin: 0,
-    padding: "0 6px",
-    height: 20,
-    lineHeight: "18px",
-    borderRadius: 4,
-  };
+  /* ================= TAGS ================= */
+  const renderTags = (items, color) => {
+    if (!items?.length) return <span style={{ color: "#aaa" }}>—</span>;
 
-  const box = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
+    return (
+      <Space size={[6, 6]} wrap>
+        {items.map((item, i) => (
+          <Tag key={i} color={color}>
+            {item}
+          </Tag>
+        ))}
+      </Space>
+    );
   };
 
   /* ================= COLUNAS ================= */
   const colProfessor = [
     {
       title: "Disciplina",
-      width: 200,
+      width: "40%",
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <div style={box}>
-          <b style={{ fontSize: 13 }}>{r.nome}</b>
-          <Text type="secondary" style={{ fontSize: 11 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>
+            {r.nome}
+          </div>
+          <div style={{ fontSize: 13, color: "#888" }}>
             {r.codigo}
-          </Text>
+          </div>
         </div>
       ),
     },
-
-    /* ================= CURSOS (FORÇADO VISÍVEL) ================= */
     {
       title: "Cursos",
+      width: "30%",
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <div style={{ ...box, flexWrap: "wrap" }}>
-          {r.cursos?.length ? (
-            r.cursos.map((c) => (
-              <Tag key={c.id} color="blue" style={tagStyle}>
-                {c.nome}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">Sem cursos</Text>
-          )}
+        <div>
+          {/* 🔥 contador discreto */}
+          <div style={{
+            textAlign: "right",
+            fontSize: 12,
+            color: "#999",
+            marginBottom: 4
+          }}>
+            {r.totalCursos} curso(s)
+          </div>
+
+          {renderTags(r.cursos, "blue")}
         </div>
       ),
     },
-
     {
       title: "Professores",
-      render: (_, r) => (
-        <div style={{ ...box, flexWrap: "wrap" }}>
-          {r.professores?.length ? (
-            r.professores.map((p) => (
-              <Tag key={p.id} color="green" style={tagStyle}>
-                {p.nome}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">Sem professor</Text>
-          )}
-        </div>
-      ),
-    },
-
-    /* ================= TOTAL (REDESENHADO) ================= */
-    {
-      title: "Total Cursos",
-      width: 140,
-      align: "center",
-      render: (_, r) => (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
-          <Badge
-            count={r.totalCursos}
-            style={{
-              backgroundColor: "#0b3d5c",
-              fontSize: 11,
-            }}
-          />
-          <Text style={{ fontSize: 11, color: "#666" }}>
-            {r.totalCursos === 1
-              ? "curso vinculado"
-              : "cursos vinculados"}
-          </Text>
-        </div>
-      ),
+      width: "30%",
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (_, r) => renderTags(r.professores, "green"),
     },
   ];
 
   const colMulti = [
     {
       title: "Disciplina",
-      width: 200,
+      width: "40%",
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <div style={box}>
-          <b>{r.nome}</b>
-          <Text type="secondary" style={{ fontSize: 11 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>
+            {r.nome}
+          </div>
+          <div style={{ fontSize: 13, color: "#888" }}>
             {r.codigo}
-          </Text>
+          </div>
         </div>
       ),
     },
-
     {
       title: "Cursos",
+      width: "40%",
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
-        <div style={{ ...box, flexWrap: "wrap" }}>
-          {r.cursos?.map((c) => (
-            <Tag key={c.id} color="purple" style={tagStyle}>
-              {c.nome}
-            </Tag>
-          ))}
+        <div>
+          {/* 🔥 contador discreto */}
+          <div style={{
+            textAlign: "right",
+            fontSize: 12,
+            color: "#999",
+            marginBottom: 4
+          }}>
+            {r.totalCursos} curso(s)
+          </div>
+
+          {renderTags(r.cursos, "purple")}
         </div>
       ),
     },
-
     {
       title: "Status",
-      width: 100,
+      width: "20%",
       align: "center",
+      onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, r) => (
         <Tag color={r.totalCursos > 2 ? "orange" : "green"}>
-          {r.totalCursos > 2 ? "Multi" : "OK"}
+          {r.totalCursos > 2 ? "Multicurso" : "OK"}
         </Tag>
       ),
     },
@@ -212,12 +189,19 @@ export default function Relatorios() {
 
   return (
     <AppLayout>
-      {/* HEADER */}
-      <Row justify="space-between" style={{ marginBottom: 8 }}>
+      {/* TOPO */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
         <Input
           placeholder="Buscar disciplina..."
           prefix={<SearchOutlined />}
-          style={{ width: 240 }}
+          allowClear
+          style={{ width: 260 }}
           onChange={(e) => setSearch(e.target.value)}
         />
 
@@ -225,10 +209,10 @@ export default function Relatorios() {
           <Button icon={<DownloadOutlined />}>Excel</Button>
           <Button icon={<DownloadOutlined />}>PDF</Button>
         </Space>
-      </Row>
+      </div>
 
       {/* FILTROS */}
-      <Row gutter={8} style={{ marginBottom: 10 }}>
+      <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Select
             allowClear
@@ -277,7 +261,7 @@ export default function Relatorios() {
                 professor_id: v,
               }))
             }
-            options={professoresFiltrados.map((p) => ({
+            options={professores.map((p) => ({
               value: p.id,
               label: p.nome,
             }))}
@@ -285,7 +269,7 @@ export default function Relatorios() {
         </Col>
       </Row>
 
-      {/* TABELAS */}
+      {/* TABELA */}
       <Tabs
         activeKey={tab}
         onChange={setTab}
@@ -296,11 +280,11 @@ export default function Relatorios() {
             children: (
               <Table
                 rowKey="id"
-                size="small"
-                bordered
-                columns={colProfessor}
                 dataSource={filtrar(dadosProfessor)}
-                pagination={{ pageSize: 10 }}
+                columns={colProfessor}
+                pagination={{ pageSize: 6 }}
+                bordered
+                size="large"
               />
             ),
           },
@@ -310,11 +294,11 @@ export default function Relatorios() {
             children: (
               <Table
                 rowKey="id"
-                size="small"
-                bordered
-                columns={colMulti}
                 dataSource={filtrar(dadosMulti)}
-                pagination={{ pageSize: 10 }}
+                columns={colMulti}
+                pagination={{ pageSize: 6 }}
+                bordered
+                size="large"
               />
             ),
           },

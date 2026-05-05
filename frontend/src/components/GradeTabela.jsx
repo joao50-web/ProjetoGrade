@@ -169,28 +169,39 @@ export default function GradeTabela() {
     }
   };
 
-  const handlePDF = () => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) {
-      message.warning("Selecione os filtros.");
-      return;
-    }
+const handlePDF = async () => {
+  if (!cursoId || !anoId || !semestreId || !curriculoId) {
+    message.warning("Selecione os filtros.");
+    return;
+  }
 
-    const params = new URLSearchParams({
-      curso_id: cursoId,
-      ano_id: anoId,
-      semestre_id: semestreId,
-      curriculo_id: curriculoId,
-      todos: "false",
+  try {
+    const response = await api.get("/api/relatorio-grade/pdf", {
+      params: {
+        curso_id: cursoId,
+        ano_id: anoId,
+        semestre_id: semestreId,
+        curriculo_id: curriculoId,
+        todos: false,
+        ...(coordenadorId && { coordenador_id: coordenadorId })
+      },
+      responseType: "blob" // 👈 ESSENCIAL
     });
 
-    if (coordenadorId) params.append("coordenador_id", coordenadorId);
+    // cria arquivo blob
+    const file = new Blob([response.data], { type: "application/pdf" });
 
-    window.open(
-      `http://localhost:3001/api/relatorio-grade/pdf?${params.toString()}`,
-      "_blank",
-    );
-  };
+    // cria URL temporária
+    const fileURL = URL.createObjectURL(file);
 
+    // abre PDF
+    window.open(fileURL);
+
+  } catch (err) {
+    console.error(err);
+    message.error("Erro ao gerar PDF");
+  }
+};
   const columns = [
     {
       title: "HORÁRIO",

@@ -3,20 +3,17 @@ import {
   Table,
   Button,
   Modal,
-  Form,
   Input,
-  Select,
   message,
   Popconfirm,
   Space,
-  Tag,
-  Tooltip,
   Typography
 } from 'antd';
 
 import {
   SearchOutlined,
-  EyeOutlined
+  EyeOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
@@ -25,6 +22,7 @@ import moment from 'moment';
 
 const { Text } = Typography;
 
+/* ================= ESTILO PADRÃO ================= */
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
@@ -41,13 +39,14 @@ export default function Logs() {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [currentDetails, setCurrentDetails] = useState(null);
 
+  /* ================= LOAD ================= */
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/logs');
+      // 🔥 LIMITA PRA NÃO TRAVAR
+      const response = await api.get('/logs?limit=50');
       setLogs(response.data);
-    // eslint-disable-next-line no-unused-vars
-    } catch (err) {
+    } catch {
       message.error('Erro ao carregar logs');
     } finally {
       setLoading(false);
@@ -58,6 +57,7 @@ export default function Logs() {
     loadLogs();
   }, []);
 
+  /* ================= MODAL ================= */
   const showDetails = (details) => {
     setCurrentDetails(details);
     setDetailsModalVisible(true);
@@ -68,43 +68,69 @@ export default function Logs() {
     setCurrentDetails(null);
   };
 
+  /* ================= FILTRO ================= */
   const filteredLogs = logs.filter(log =>
     [log.acao, log.entidade, log.usuario?.login, log.usuario?.pessoa?.nome]
       .some(v => v && v.toLowerCase().includes(search.toLowerCase()))
   );
 
+  /* ================= RENDER ================= */
   const renderText = (text, strong = false) => (
     <div style={{ padding: '8px 20px' }}>
       <span style={{
         fontSize: strong ? 17 : 16,
         fontWeight: strong ? 500 : 400
       }}>
-        {text}
+        {text || 'N/A'}
       </span>
     </div>
   );
 
+  /* ================= AÇÕES ================= */
+  const limparAntigos = async () => {
+    try {
+      await api.delete('/logs/old?dias=30');
+      message.success('Logs antigos removidos');
+      loadLogs();
+    } catch {
+      message.error('Erro ao limpar logs');
+    }
+  };
+
+  const limparTudo = async () => {
+    try {
+      await api.delete('/logs/all');
+      message.success('Todos os logs removidos');
+      loadLogs();
+    } catch {
+      message.error('Erro ao limpar logs');
+    }
+  };
+
+  /* ================= COLUNAS ================= */
   const columns = [
     {
       title: 'Data/Hora',
       dataIndex: 'data_hora',
-      key: 'data_hora',
       align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(moment(text).format('DD/MM/YYYY HH:mm:ss'))
+      render: (text) =>
+        renderText(moment(text).format('DD/MM/YYYY HH:mm:ss'))
     },
     {
       title: 'Usuário',
-      dataIndex: ['usuario', 'pessoa', 'nome'],
-      key: 'usuario_nome',
       align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text, record) => renderText(text || record.usuario?.login || 'N/A', true)
+      render: (_, record) =>
+        renderText(
+          record.usuario?.pessoa?.nome ||
+          record.usuario?.login,
+          true
+        )
     },
     {
       title: 'Ação',
       dataIndex: 'acao',
-      key: 'acao',
       align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: renderText
@@ -112,22 +138,19 @@ export default function Logs() {
     {
       title: 'Entidade',
       dataIndex: 'entidade',
-      key: 'entidade',
       align: 'left',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: renderText
     },
     {
-      title: 'ID da Entidade',
+      title: 'ID',
       dataIndex: 'entidade_id',
-      key: 'entidade_id',
       align: 'center',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => renderText(text || 'N/A')
+      render: (text) => renderText(text)
     },
     {
       title: 'Detalhes',
-      key: 'detalhes',
       align: 'center',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
@@ -136,12 +159,11 @@ export default function Logs() {
           onClick={() => showDetails(record.detalhes)}
           style={{
             fontSize: 16,
-            color: '#333333',
             borderColor: '#cccccc',
             backgroundColor: '#f9f9f9'
           }}
         >
-          Ver Detalhes
+          Ver
         </Button>
       )
     }
@@ -149,7 +171,13 @@ export default function Logs() {
 
   return (
     <AppLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+
+      {/* ================= TOPO ================= */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 20
+      }}>
         <Input
           placeholder="Buscar log..."
           prefix={<SearchOutlined />}
@@ -157,8 +185,29 @@ export default function Logs() {
           style={{ width: 280, fontSize: 16 }}
           onChange={e => setSearch(e.target.value)}
         />
+
+        <Space>
+          <Popconfirm
+            title="Remover logs antigos (30 dias)?"
+            onConfirm={limparAntigos}
+          >
+            <Button danger icon={<DeleteOutlined />}>
+              Limpar antigos
+            </Button>
+          </Popconfirm>
+
+          <Popconfirm
+            title="Excluir TODOS os logs?"
+            onConfirm={limparTudo}
+          >
+            <Button danger type="primary">
+              Limpar tudo
+            </Button>
+          </Popconfirm>
+        </Space>
       </div>
 
+      {/* ================= TABELA ================= */}
       <Table
         rowKey="id"
         dataSource={filteredLogs}
@@ -170,18 +219,23 @@ export default function Logs() {
         scroll={{ x: 'max-content' }}
       />
 
+      {/* ================= MODAL ================= */}
       <Modal
         title="Detalhes do Log"
         open={detailsModalVisible}
         onCancel={closeModal}
         footer={null}
         width={800}
-        bodyStyle={{ fontSize: 16 }}
       >
-        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+        <pre style={{
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          fontSize: 14
+        }}>
           {JSON.stringify(currentDetails, null, 2)}
         </pre>
       </Modal>
+
     </AppLayout>
   );
 }

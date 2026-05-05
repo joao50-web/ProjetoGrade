@@ -4,12 +4,28 @@ const sequelize = require("../config/database");
 const Pessoa = sequelize.define(
   "Pessoa",
   {
-    nome: DataTypes.STRING,
+    nome: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+
     email: {
       type: DataTypes.STRING,
-      unique: "uk_pessoa_email",
+      allowNull: true, // ✅ AGORA É OPCIONAL
+      unique: true,
+      validate: {
+        isEmailOrNull(value) {
+          if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+            throw new Error("Email inválido");
+          }
+        },
+      },
     },
-    matricula: DataTypes.STRING,
+
+    matricula: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "tb_pessoa",
@@ -18,5 +34,4 @@ const Pessoa = sequelize.define(
   }
 );
 
-// 👇 TEM QUE SER A ÚLTIMA LINHA DO ARQUIVO
 module.exports = Pessoa;

@@ -25,7 +25,6 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-// Azul institucional fraco para cargos
 const cargoColors = {
   Administrador: { bg: '#f5f4f0', color: '#093e5e' },
   'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
@@ -72,12 +71,20 @@ export default function Pessoas() {
   const save = async () => {
     try {
       const values = await form.validateFields();
+
+      // ✅ CORREÇÃO PRINCIPAL
+      if (!values.email || values.email.trim() === "") {
+        values.email = null;
+      }
+
       setLoading(true);
 
       if (editing) {
         await api.put(`/pessoas/${editing.id}`, values);
+        message.success("Pessoa atualizada");
       } else {
         await api.post('/pessoas', values);
+        message.success("Pessoa criada");
       }
 
       closeModal();
@@ -93,6 +100,7 @@ export default function Pessoas() {
   const remove = async (id) => {
     try {
       await api.delete(`/pessoas/${id}`);
+      message.success("Pessoa removida");
       load();
     } catch (err) {
       message.error(err.response?.data?.error);
@@ -104,7 +112,7 @@ export default function Pessoas() {
 
     form.setFieldsValue({
       nome: pessoa.nome,
-      email: pessoa.email,
+      email: pessoa.email || undefined, // evita null no input
       cargo_id: pessoa.cargo?.id
     });
 
@@ -126,9 +134,10 @@ export default function Pessoas() {
     <div style={{ padding: '8px 20px' }}>
       <span style={{
         fontSize: strong ? 17 : 16,
-        fontWeight: strong ? 500 : 400
+        fontWeight: strong ? 500 : 400,
+        color: text ? "#000" : "#999"
       }}>
-        {text}
+        {text || "—"}
       </span>
     </div>
   );
@@ -161,7 +170,13 @@ export default function Pessoas() {
           style={{ width: 280, fontSize: 16 }}
           onChange={e => setSearch(e.target.value)}
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)} style={{ fontSize: 16 }}>
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setOpen(true)}
+          style={{ fontSize: 16 }}
+        >
           Nova Pessoa
         </Button>
       </div>
@@ -197,15 +212,14 @@ export default function Pessoas() {
             title: 'Usuário',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
-            render: (_, r) => {
-              return r.usuario?.id
+            render: (_, r) =>
+              r.usuario?.id
                 ? <CheckCircleTwoTone twoToneColor="#52c41a" />
                 : (
                   <Tooltip title="Não possui usuário vinculado">
                     <CloseCircleTwoTone twoToneColor="#ff4d4f" />
                   </Tooltip>
-                );
-            }
+                )
           },
           {
             title: 'Ações',
@@ -217,27 +231,19 @@ export default function Pessoas() {
               return (
                 <Space size={20}>
                   <Button
-                    type="default"
                     icon={<EditOutlined />}
                     onClick={() => edit(r)}
-                    style={{
-                      fontSize: 16,
-                      color: '#333333',
-                      borderColor: '#cccccc',
-                      backgroundColor: '#f9f9f9'
-                    }}
                   />
-                  <Tooltip
-                    title={possuiUsuario ? 'Não é possível excluir: possui usuário vinculado' : ''}
-                  >
+
+                  <Tooltip title={possuiUsuario ? 'Não pode excluir' : ''}>
                     {possuiUsuario ? (
-                      <Button type="text" danger disabled icon={<DeleteOutlined />} />
+                      <Button danger disabled icon={<DeleteOutlined />} />
                     ) : (
                       <Popconfirm
                         title="Excluir esta pessoa?"
                         onConfirm={() => remove(r.id)}
                       >
-                        <Button type="text" danger icon={<DeleteOutlined />} />
+                        <Button danger icon={<DeleteOutlined />} />
                       </Popconfirm>
                     )}
                   </Tooltip>
@@ -246,8 +252,6 @@ export default function Pessoas() {
             }
           }
         ]}
-        style={{ fontSize: 16 }}
-        scroll={{ x: 'max-content' }}
       />
 
       <Modal
@@ -256,19 +260,36 @@ export default function Pessoas() {
         onCancel={closeModal}
         onOk={save}
         confirmLoading={loading}
-        okText="Salvar"
-        cancelText="Cancelar"
-        bodyStyle={{ fontSize: 16 }}
       >
-        <Form layout="vertical" form={form} style={{ fontSize: 16 }}>
-          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
-            <Input style={{ fontSize: 16 }} />
+        <Form layout="vertical" form={form}>
+          <Form.Item
+            name="nome"
+            label="Nome"
+            rules={[{ required: true, message: "Informe o nome" }]}
+          >
+            <Input />
           </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
-            <Input style={{ fontSize: 16 }} />
+
+          {/* ✅ EMAIL AGORA OPCIONAL */}
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              {
+                type: "email",
+                message: "Email inválido",
+              },
+            ]}
+          >
+            <Input placeholder="Opcional" />
           </Form.Item>
-          <Form.Item name="cargo_id" label="Cargo" rules={[{ required: true }]}>
-            <Select style={{ fontSize: 16 }}>
+
+          <Form.Item
+            name="cargo_id"
+            label="Cargo"
+            rules={[{ required: true, message: "Selecione o cargo" }]}
+          >
+            <Select>
               {cargos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.descricao}

@@ -250,7 +250,6 @@ exports.saveSlot = async (req, res) => {
       dia_semana_id,
       disciplina_id: disciplina_id ?? null,
     });
-z
     return res.json(registro);
   } catch (err) {
     console.error(err);

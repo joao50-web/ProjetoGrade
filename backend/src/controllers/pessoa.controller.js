@@ -1,10 +1,21 @@
 const { Pessoa, Cargo, Usuario } = require("../models");
 const { Op } = require("sequelize");
 
+/* ================= HELPER ================= */
+const tratarEmail = (email) => {
+  if (!email || email.trim() === "") return null;
+  return email.trim();
+};
+
 /* ================= CRIAR PESSOA ================= */
 exports.create = async (req, res) => {
   try {
-    const pessoa = await Pessoa.create(req.body);
+    const data = {
+      ...req.body,
+      email: tratarEmail(req.body.email), // ✅ CORREÇÃO
+    };
+
+    const pessoa = await Pessoa.create(data);
     return res.status(201).json(pessoa);
   } catch (error) {
     console.error(error);
@@ -22,9 +33,7 @@ exports.findProfessores = async (req, res) => {
           as: "cargo",
           attributes: [],
           where: {
-            descricao: {
-              [Op.like]: "%Professor%",
-            },
+            descricao: { [Op.like]: "%Professor%" },
           },
         },
       ],
@@ -34,26 +43,18 @@ exports.findProfessores = async (req, res) => {
 
     return res.json(professores);
   } catch (error) {
-    console.error("Erro ao buscar professores:", error);
+    console.error(error);
     return res.status(500).json({ error: "Erro ao buscar professores" });
   }
 };
 
-/* ================= LISTAR PESSOAS ================= */
+/* ================= LISTAR ================= */
 exports.findAll = async (req, res) => {
   try {
     const pessoas = await Pessoa.findAll({
       include: [
-        {
-          model: Cargo,
-          as: "cargo",
-          attributes: ["id", "descricao"],
-        },
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "login"],
-        },
+        { model: Cargo, as: "cargo", attributes: ["id", "descricao"] },
+        { model: Usuario, as: "usuario", attributes: ["id", "login"] },
       ],
       order: [["nome", "ASC"]],
     });
@@ -65,21 +66,13 @@ exports.findAll = async (req, res) => {
   }
 };
 
-/* ================= BUSCAR POR ID ================= */
+/* ================= BUSCAR ================= */
 exports.findById = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id, {
       include: [
-        {
-          model: Cargo,
-          as: "cargo",
-          attributes: ["id", "descricao"],
-        },
-        {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id", "login"],
-        },
+        { model: Cargo, as: "cargo", attributes: ["id", "descricao"] },
+        { model: Usuario, as: "usuario", attributes: ["id", "login"] },
       ],
     });
 
@@ -94,7 +87,7 @@ exports.findById = async (req, res) => {
   }
 };
 
-/* ================= ATUALIZAR PESSOA ================= */
+/* ================= ATUALIZAR ================= */
 exports.update = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id);
@@ -103,7 +96,12 @@ exports.update = async (req, res) => {
       return res.status(404).json({ error: "Pessoa não encontrada" });
     }
 
-    await pessoa.update(req.body);
+    const data = {
+      ...req.body,
+      email: tratarEmail(req.body.email), // ✅ CORREÇÃO
+    };
+
+    await pessoa.update(data);
     return res.json(pessoa);
   } catch (error) {
     console.error(error);
@@ -121,9 +119,7 @@ exports.findCoordenadores = async (req, res) => {
           as: "cargo",
           attributes: ["id", "descricao"],
           where: {
-            descricao: {
-              [Op.like]: "%Coordenador%",
-            },
+            descricao: { [Op.like]: "%Coordenador%" },
           },
         },
       ],
@@ -133,21 +129,16 @@ exports.findCoordenadores = async (req, res) => {
 
     return res.json(coordenadores);
   } catch (error) {
-    console.error("Erro ao buscar coordenadores:", error);
+    console.error(error);
     return res.status(500).json({ error: "Erro ao buscar coordenadores" });
   }
 };
 
-/* ================= REMOVER PESSOA ================= */
+/* ================= REMOVER ================= */
 exports.remove = async (req, res) => {
   try {
     const pessoa = await Pessoa.findByPk(req.params.id, {
-      include: [
-        {
-          model: Usuario,
-          as: "usuario",
-        },
-      ],
+      include: [{ model: Usuario, as: "usuario" }],
     });
 
     if (!pessoa) {
