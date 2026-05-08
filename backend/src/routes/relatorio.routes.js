@@ -1,12 +1,33 @@
-const router = require("express").Router();
+const router =
+  require("express").Router();
 
-const relatorioController = require("../controllers/relatorio.controller");
-const relatorioExportController = require("../controllers/relatorioExportController");
+const relatorioController =
+  require("../controllers/relatorio.controller");
 
-router.get("/professor", relatorioController.relatorioProfessor);
-router.get("/multicurso", relatorioController.relatorioMulticurso);
+const relatorioExportController =
+  require("../controllers/relatorioExportController");
 
-router.get("/export/excel", relatorioExportController.exportRelatorioExcel);
-router.get("/export/pdf", relatorioExportController.exportRelatorioPDF);
+/* ==========================================
+   RELATÓRIO
+========================================== */
+
+router.get(
+  "/professor",
+  relatorioController.relatorioProfessor
+);
+
+/* ==========================================
+   EXPORTAÇÕES
+========================================== */
+
+router.get(
+  "/export/excel",
+  relatorioExportController.exportRelatorioExcel
+);
+
+router.get(
+  "/export/pdf",
+  relatorioExportController.exportRelatorioPDF
+);
 
 module.exports = router;

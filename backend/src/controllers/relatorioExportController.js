@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
+
 const {
   Disciplina,
   Curso,
@@ -7,114 +8,314 @@ const {
   Pessoa,
 } = require("../models");
 
-/* ================= BASE DE DADOS ================= */
+/* =======================================================
+   BUSCAR DADOS
+======================================================= */
+
 const buscarDados = async (query) => {
-  const { departamento_id, curso_id, professor_id } = query;
+  const {
+    departamento_id,
+    curso_id,
+    professor_id,
+    tipoRelatorio,
+  } = query;
 
   const disciplinas = await Disciplina.findAll({
     attributes: ["id", "nome", "codigo"],
+
     include: [
+      /* ==========================================
+         PROFESSORES
+      ========================================== */
+
       {
         model: Pessoa,
         as: "professores",
+
         attributes: ["id", "nome"],
-        through: { attributes: [] },
-        required: !!professor_id,
-        where: professor_id ? { id: professor_id } : undefined,
+
+        through: {
+          attributes: [],
+        },
+
+        required: false,
+
+        where: professor_id
+          ? { id: professor_id }
+          : undefined,
       },
+
+      /* ==========================================
+         CURSOS
+      ========================================== */
+
       {
         model: Curso,
         as: "cursos",
+
         attributes: ["id", "nome"],
-        through: { attributes: [] },
-        required: !!curso_id || !!departamento_id,
-        where: curso_id ? { id: curso_id } : undefined,
+
+        through: {
+          attributes: [],
+        },
+
+        required:
+          !!curso_id || !!departamento_id,
+
+        where: curso_id
+          ? { id: curso_id }
+          : undefined,
+
         include: [
           {
             model: Departamento,
             as: "departamento",
-            attributes: ["id", "nome"],
-            required: !!departamento_id,
-            where: departamento_id ? { id: departamento_id } : undefined,
+
+            attributes: [
+              "id",
+              "nome",
+            ],
+
+            required:
+              !!departamento_id,
+
+            where: departamento_id
+              ? {
+                  id: departamento_id,
+                }
+              : undefined,
           },
         ],
       },
     ],
   });
 
-  const resultado = [];
+  /* ==========================================
+     FORMATAR RESULTADO
+  ========================================== */
 
-  disciplinas.forEach((d) => {
-    const cursos = d.cursos || [];
-    const professores = d.professores || [];
+  let resultado = disciplinas.map(
+    (d) => {
+      const agora = new Date();
 
-    // garante pelo menos 1 linha mesmo se vazio
-    if (cursos.length === 0 && professores.length === 0) {
-      resultado.push({
+      return {
+        id: d.id,
+
         codigo: d.codigo,
+
         disciplina: d.nome,
-        curso: "",
-        professor: "",
-      });
-      return;
+
+        cursos: (d.cursos || [])
+          .map((c) => c.nome),
+
+        professores:
+          d.professores &&
+          d.professores.length > 0
+            ? d.professores.map(
+                (p) => p.nome
+              )
+            : [],
+
+        departamento:
+          d.cursos?.[0]
+            ?.departamento?.nome ||
+          "-",
+
+        data:
+          agora.toLocaleDateString(
+            "pt-BR"
+          ),
+
+        ano:
+          agora.getFullYear(),
+
+        totalCursos:
+          (d.cursos || []).length,
+      };
     }
+  );
 
-    cursos.forEach((c) => {
-      professores.forEach((p) => {
-        resultado.push({
-          codigo: d.codigo,
-          disciplina: d.nome,
-          curso: c?.nome || "",
-          professor: p?.nome || "",
-        });
-      });
+  /* ==========================================
+     RELATÓRIO MULTICURSO
+  ========================================== */
 
-      // caso tenha curso mas não professor
-      if (professores.length === 0) {
-        resultado.push({
-          codigo: d.codigo,
-          disciplina: d.nome,
-          curso: c?.nome || "",
-          professor: "",
-        });
-      }
-    });
-
-    // caso tenha professor mas não curso
-    if (cursos.length === 0 && professores.length > 0) {
-      professores.forEach((p) => {
-        resultado.push({
-          codigo: d.codigo,
-          disciplina: d.nome,
-          curso: "",
-          professor: p?.nome || "",
-        });
-      });
-    }
-  });
+  if (tipoRelatorio === "multi") {
+    resultado = resultado.filter(
+      (d) => d.totalCursos > 1
+    );
+  }
 
   return resultado;
 };
 
-/* ================= EXCEL ================= */
-const exportRelatorioExcel = async (req, res) => {
-  try {
-    const dados = await buscarDados(req.query);
+/* =======================================================
+   EXCEL
+======================================================= */
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Relatório");
+const exportRelatorioExcel = async (
+  req,
+  res
+) => {
+  try {
+    const dados =
+      await buscarDados(req.query);
+
+    const tipoRelatorio =
+      req.query.tipoRelatorio ||
+      "professor";
+
+    const workbook =
+      new ExcelJS.Workbook();
+
+    const sheet =
+      workbook.addWorksheet(
+        tipoRelatorio === "multi"
+          ? "Multicurso"
+          : "Estrutura Acadêmica"
+      );
+
+    /* ==========================================
+       COLUNAS
+    ========================================== */
 
     sheet.columns = [
-      { header: "Código", key: "codigo", width: 15 },
-      { header: "Disciplina", key: "disciplina", width: 35 },
-      { header: "Curso", key: "curso", width: 35 },
-      { header: "Professor", key: "professor", width: 35 },
+      {
+        header: "Código",
+        key: "codigo",
+        width: 18,
+      },
+
+      {
+        header: "Disciplina",
+        key: "disciplina",
+        width: 40,
+      },
+
+      {
+        header: "Cursos",
+        key: "cursos",
+        width: 40,
+      },
+
+      {
+        header: "Professores",
+        key: "professores",
+        width: 35,
+      },
+
+      {
+        header: "Departamento",
+        key: "departamento",
+        width: 30,
+      },
+
+      {
+        header: "Data",
+        key: "data",
+        width: 15,
+      },
+
+      {
+        header: "Ano",
+        key: "ano",
+        width: 12,
+      },
     ];
 
-    dados.forEach((d) => sheet.addRow(d));
+    /* ==========================================
+       HEADER
+    ========================================== */
 
-    // estilo header
-    sheet.getRow(1).font = { bold: true };
+    const headerRow =
+      sheet.getRow(1);
+
+    headerRow.font = {
+      bold: true,
+      color: {
+        argb: "FFFFFF",
+      },
+    };
+
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+
+      fgColor: {
+        argb: "093E5E",
+      },
+    };
+
+    headerRow.alignment = {
+      vertical: "middle",
+      horizontal: "center",
+    };
+
+    headerRow.height = 25;
+
+    /* ==========================================
+       DADOS
+    ========================================== */
+
+    dados.forEach((d) => {
+      const row = sheet.addRow({
+        codigo: d.codigo,
+
+        disciplina:
+          d.disciplina,
+
+        cursos:
+          d.cursos.length > 0
+            ? d.cursos.join(", ")
+            : "-",
+
+        professores:
+          d.professores.length >
+          0
+            ? d.professores.join(
+                ", "
+              )
+            : "-",
+
+        departamento:
+          d.departamento,
+
+        data: d.data,
+
+        ano: d.ano,
+      });
+
+      row.alignment = {
+        vertical: "middle",
+        horizontal: "left",
+        wrapText: true,
+      };
+
+      row.height = 28;
+
+      row.eachCell((cell) => {
+        cell.border = {
+          top: {
+            style: "thin",
+          },
+
+          left: {
+            style: "thin",
+          },
+
+          bottom: {
+            style: "thin",
+          },
+
+          right: {
+            style: "thin",
+          },
+        };
+      });
+    });
+
+    /* ==========================================
+       DOWNLOAD
+    ========================================== */
 
     res.setHeader(
       "Content-Type",
@@ -123,43 +324,154 @@ const exportRelatorioExcel = async (req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=relatorio.xlsx"
+      `attachment; filename="${tipoRelatorio}.xlsx"`
     );
 
-    await workbook.xlsx.write(res);
+    await workbook.xlsx.write(
+      res
+    );
+
     res.end();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro Excel" });
+
+    res.status(500).json({
+      error:
+        "Erro ao exportar Excel",
+    });
   }
 };
 
-/* ================= PDF ================= */
-const exportRelatorioPDF = async (req, res) => {
+/* =======================================================
+   PDF
+======================================================= */
+
+const exportRelatorioPDF = async (
+  req,
+  res
+) => {
   try {
-    const dados = await buscarDados(req.query);
+    const dados =
+      await buscarDados(req.query);
 
-    const doc = new PDFDocument({ margin: 30 });
+    const tipoRelatorio =
+      req.query.tipoRelatorio ||
+      "professor";
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=relatorio.pdf");
+    const titulo =
+      tipoRelatorio === "multi"
+        ? "RELATÓRIO MULTICURSO"
+        : "RELATÓRIO ACADÊMICO";
+
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/pdf"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${tipoRelatorio}.pdf"`
+    );
 
     doc.pipe(res);
 
-    doc.fontSize(18).text("Relatório de Disciplinas", { align: "center" });
-    doc.moveDown();
+    /* ==========================================
+       TÍTULO
+    ========================================== */
+
+    doc
+      .fontSize(18)
+      .text(titulo, {
+        align: "center",
+      });
+
+    doc.moveDown(2);
+
+    /* ==========================================
+       DADOS
+    ========================================== */
 
     dados.forEach((d) => {
-      doc.fontSize(12).text(`${d.codigo} - ${d.disciplina}`);
-      doc.fontSize(11).text(`Curso: ${d.curso || "-"}`);
-      doc.fontSize(11).text(`Professor: ${d.professor || "-"}`);
+      doc
+        .fontSize(11)
+        .text(
+          `Código: ${d.codigo}`
+        );
+
+      doc.text(
+        `Disciplina: ${d.disciplina}`
+      );
+
+      doc.text(
+        `Cursos: ${
+          d.cursos.length > 0
+            ? d.cursos.join(
+                ", "
+              )
+            : "-"
+        }`
+      );
+
+      doc.text(
+        `Professores: ${
+          d.professores.length >
+          0
+            ? d.professores.join(
+                ", "
+              )
+            : "-"
+        }`
+      );
+
+      doc.text(
+        `Departamento: ${d.departamento}`
+      );
+
+      doc.text(
+        `Data: ${d.data}`
+      );
+
+      doc.text(
+        `Ano: ${d.ano}`
+      );
+
+      /* ======================================
+         STATUS MULTICURSO
+      ====================================== */
+
+      if (
+        tipoRelatorio ===
+        "multi"
+      ) {
+        doc.text(
+          `Quantidade de Cursos: ${d.totalCursos}`
+        );
+      }
+
+      doc.moveDown();
+
+      doc
+        .moveTo(30, doc.y)
+        .lineTo(560, doc.y)
+        .strokeColor("#cccccc")
+        .stroke();
+
       doc.moveDown();
     });
 
     doc.end();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro PDF" });
+
+    res.status(500).json({
+      error:
+        "Erro ao exportar PDF",
+    });
   }
 };
 
