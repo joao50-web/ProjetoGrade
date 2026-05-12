@@ -7,8 +7,6 @@ import {
   Input,
   Popconfirm,
   message,
-  Select,
-  Tag,
 } from "antd";
 
 import {
@@ -17,7 +15,6 @@ import {
   BookOutlined,
   PlusOutlined,
   SearchOutlined,
-  ApartmentOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate } from "react-router-dom";
@@ -35,75 +32,131 @@ const headerCellStyle = {
 
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
-  const [departamentos, setDepartamentos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState("");
   const [form] = Form.useForm();
+
   const navigate = useNavigate();
+
+  /* ======================================================
+     LOAD
+  ====================================================== */
 
   const load = async () => {
     try {
-      const [resCursos, resDeptos] = await Promise.all([
-        api.get("/cursos"),
-        api.get("/departamentos"),
-      ]);
 
-      setCursos(resCursos.data);
-      setDepartamentos(resDeptos.data);
+      const resCursos = await api.get("/cursos");
+
+      setCursos(resCursos.data || []);
+
     } catch {
+
       message.error("Erro ao carregar cursos");
     }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
+  /* ======================================================
+     SALVAR
+  ====================================================== */
+
   const submit = async (values) => {
     try {
+
       if (editing) {
-        await api.put(`/cursos/${editing.id}`, values);
+
+        await api.put(
+          `/cursos/${editing.id}`,
+          values
+        );
+
         message.success("Curso atualizado");
+
       } else {
-        await api.post("/cursos", values);
+
+        await api.post(
+          "/cursos",
+          values
+        );
+
         message.success("Curso criado");
       }
+
       closeModal();
+
       load();
+
     } catch {
+
       message.error("Erro ao salvar curso");
     }
   };
 
+  /* ======================================================
+     REMOVER
+  ====================================================== */
+
   const remove = async (id) => {
     try {
+
       await api.delete(`/cursos/${id}`);
+
       message.success("Curso removido");
+
       load();
+
     } catch {
+
       message.error("Erro ao excluir curso");
     }
   };
 
+  /* ======================================================
+     EDITAR
+  ====================================================== */
+
   const edit = (curso) => {
+
     setEditing(curso);
+
     form.setFieldsValue({
       nome: curso.nome,
-      departamento_id: curso.departamento_id,
     });
+
     setOpen(true);
   };
 
+  /* ======================================================
+     FECHAR MODAL
+  ====================================================== */
+
   const closeModal = () => {
+
     setOpen(false);
+
     setEditing(null);
+
     form.resetFields();
   };
 
+  /* ======================================================
+     FILTRO
+  ====================================================== */
+
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase()),
+    c.nome
+      ?.toLowerCase()
+      .includes(search.toLowerCase())
   );
+
+  /* ======================================================
+     BOTÕES
+  ====================================================== */
 
   const buttonStyle = {
     height: 36,
@@ -112,51 +165,77 @@ export default function Cursos() {
     gap: 12,
   };
 
+  /* ======================================================
+     COLUNAS
+  ====================================================== */
+
   const columns = [
     {
       title: "Curso",
+
       dataIndex: "nome",
-      width: 220,
+
+      width: 260,
+
       ellipsis: true,
-      onHeaderCell: () => ({ style: headerCellStyle }),
+
+      onHeaderCell: () => ({
+        style: headerCellStyle,
+      }),
+
       render: (text) => (
         <div style={{ padding: "10px 54px" }}>
-          <p style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{text}</p>
-        </div>
-      ),
-    },
-    {
-      title: "Departamento",
-      dataIndex: ["departamento", "nome"],
-      width: 180,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) =>
-        text ? (
-          <Tag color="blue" style={{ fontSize: 14 }}>
+          <p
+            style={{
+              fontSize: 20,
+              fontWeight: 600,
+              margin: 0,
+            }}
+          >
             {text}
-          </Tag>
-        ) : (
-          <span style={{ color: "#999" }}>Não definido</span>
-        ),
-    },
-    {
-      title: "Disciplinas",
-      dataIndex: "disciplinas",
-      width: 140,
-      onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = []) => (
-        <div style={{ padding: "10px 14px" }}>
-          <p style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
-            {disciplinas.length} disciplina
-            {disciplinas.length !== 1 ? "s" : ""}
           </p>
         </div>
       ),
     },
+
+    {
+      title: "Disciplinas",
+
+      dataIndex: "disciplinas",
+
+      width: 160,
+
+      onHeaderCell: () => ({
+        style: headerCellStyle,
+      }),
+
+      render: (disciplinas = []) => (
+        <div style={{ padding: "10px 14px" }}>
+          <p
+            style={{
+              fontSize: 16,
+              fontWeight: 500,
+              margin: 0,
+            }}
+          >
+            {disciplinas.length} disciplina
+            {disciplinas.length !== 1
+              ? "s"
+              : ""}
+          </p>
+        </div>
+      ),
+    },
+
     {
       title: "Editar",
-      width: 260,
-      onHeaderCell: () => ({ style: headerCellStyle }),
+
+      width: 280,
+
+      onHeaderCell: () => ({
+        style: headerCellStyle,
+      }),
+
       render: (_, record) => (
         <div
           style={{
@@ -170,7 +249,9 @@ export default function Cursos() {
             size="middle"
             icon={<BookOutlined />}
             onClick={() =>
-              navigate(`/academico/cursos/${record.id}/disciplinas`)
+              navigate(
+                `/academico/cursos/${record.id}/disciplinas`
+              )
             }
             style={buttonStyle}
           >
@@ -188,26 +269,44 @@ export default function Cursos() {
         </div>
       ),
     },
+
     {
       title: "Excluir",
-      width: 80,
-      onHeaderCell: () => ({ style: headerCellStyle }),
+
+      width: 90,
+
+      onHeaderCell: () => ({
+        style: headerCellStyle,
+      }),
+
       render: (_, record) => (
         <div style={{ textAlign: "center" }}>
           <Popconfirm
             title="Deseja excluir este curso?"
-            onConfirm={() => remove(record.id)}
+            onConfirm={() =>
+              remove(record.id)
+            }
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+            />
           </Popconfirm>
         </div>
       ),
     },
   ];
 
+  /* ======================================================
+     RENDER
+  ====================================================== */
+
   return (
     <AppLayout>
+
       {/* TOPO */}
+
       <div
         style={{
           display: "flex",
@@ -220,21 +319,30 @@ export default function Cursos() {
           placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280, height: 38 }}
-          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: 280,
+            height: 38,
+          }}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
         />
 
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ height: 38, padding: "0 18px" }}
+          style={{
+            height: 38,
+            padding: "0 18px",
+          }}
         >
           Novo Curso
         </Button>
       </div>
 
       {/* TABELA */}
+
       <Table
         rowKey="id"
         dataSource={filtered}
@@ -245,40 +353,38 @@ export default function Cursos() {
       />
 
       {/* MODAL */}
+
       <Modal
-        title={editing ? "Editar Curso" : "Novo Curso"}
+        title={
+          editing
+            ? "Editar Curso"
+            : "Novo Curso"
+        }
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
       >
-        <Form layout="vertical" form={form} onFinish={submit}>
+        <Form
+          layout="vertical"
+          form={form}
+          onFinish={submit}
+        >
           <Form.Item
             name="nome"
             label="Nome do Curso"
-            rules={[{ required: true }]}
+            rules={[
+              {
+                required: true,
+                message:
+                  "Digite o nome do curso",
+              },
+            ]}
           >
             <Input placeholder="Digite o nome do curso" />
           </Form.Item>
-
-          {/* ✅ DEPARTAMENTO */}
-          <Form.Item
-            name="departamento_id"
-            label="Departamento"
-            rules={[{ required: true, message: "Selecione o departamento" }]}
-          >
-            <Select
-              placeholder="Selecione o departamento"
-              suffixIcon={<ApartmentOutlined />}
-            >
-              {departamentos.map((d) => (
-                <Select.Option key={d.id} value={d.id}>
-                  {d.nome} ({d.sigla})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
         </Form>
       </Modal>
+
     </AppLayout>
   );
 }

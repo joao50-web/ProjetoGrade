@@ -6,6 +6,7 @@ module.exports = function renderGradeHTML({
   anoLetivo,
   semestres,
 }) {
+
   const HORARIOS = [
     "08:00-08:50","08:50-09:40","09:40-10:30","10:30-11:20",
     "11:20-12:10","13:20-14:10","14:10-15:00","15:00-15:50",
@@ -16,179 +17,289 @@ module.exports = function renderGradeHTML({
   return `
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
 <meta charset="utf-8" />
+
 <style>
-  @page { size: A4 landscape; margin: 4mm 3mm; }
 
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 9px;
-    color: #1f2d3d;
-  }
+@page {
+  size: A4 landscape;
+  margin: 2.5mm;
+}
 
-  .header {
-    text-align: center;
-    margin-bottom: 8px;
-  }
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8.5px;
+  color: #1f2d3d;
+  margin: 0;
+  padding: 0;
+}
 
-  .header h1 {
-    margin: 0;
-    font-size: 12px;
-    color: #093e5e;
-  }
+/* ======================================================
+   HEADER
+====================================================== */
 
-  .header h2 {
-    margin: 0;
-    font-size: 10px;
-  }
+.header {
+  text-align: center;
+  margin-bottom: 4px;
+}
 
-  .info {
-    border: 1px solid #bbb;
-    padding: 5px 8px;
-    margin-bottom: 6px;
-  }
+.header h1 {
+  margin: 0;
+  font-size: 11px;
+  color: #093e5e;
+}
 
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px 10px;
-  }
+.header h2 {
+  margin: 1px 0 0 0;
+  font-size: 9px;
+}
 
-  .semester {
-    margin-bottom: 6px;
-    page-break-inside: avoid;
-  }
+/* ======================================================
+   INFO
+====================================================== */
 
-  .semester-title {
-    font-weight: bold;
-    margin-bottom: 3px;
-    font-size: 9px;
-    color: #093e5e;
-  }
+.info {
+  border: 1px solid #bbb;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1px solid #000;
-  }
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px 6px;
+  font-size: 7.5px;
+}
 
-  th, td {
-    border: 1px solid #444;
-    padding: 3px;
-    text-align: center;
-    font-size: 7.5px;
-  }
+/* ======================================================
+   SEMESTRE
+====================================================== */
 
-  thead th {
-    background: #093e5e;
-    color: #fff;
-    font-size: 7.5px;
-    padding: 3px;
-  }
+.semester {
+  margin-bottom: 4px;
+  page-break-inside: avoid;
+}
 
-  th.horario, td.horario {
-    width: 75px;
-    background: #093e5e;
-    color: #fff;
-    font-weight: bold;
-    font-size: 7px;
-  }
+.semester-title {
+  font-weight: bold;
+  margin-bottom: 2px;
+  font-size: 8px;
+  color: #093e5e;
+}
 
-  td.disciplina {
-    height: 18px;
-    line-height: 1.1;
-  }
+/* ======================================================
+   TABELA
+====================================================== */
 
-  .linha1 {
-    font-weight: bold;
-  }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1px solid #000;
+}
 
-  .linha2 {
-    font-size: 7px;
-    color: #444;
-  }
+th,
+td {
+  border: 1px solid #444;
+  text-align: center;
+  padding: 1px;
+  overflow: hidden;
+}
 
-  footer {
-    margin-top: 4px;
-    text-align: center;
-    font-size: 6.5px;
-  }
+thead th {
+  background: #093e5e;
+  color: #fff;
+  font-size: 7.8px;
+  padding: 3px 1px;
+}
+
+/* ======================================================
+   HORÁRIO
+====================================================== */
+
+th.horario,
+td.horario {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+
+  background: #093e5e;
+  color: #fff;
+
+  font-weight: bold;
+  font-size: 7px;
+}
+
+/* ======================================================
+   DISCIPLINA
+====================================================== */
+
+td.disciplina {
+  height: 30px;
+  min-height: 30px;
+  max-height: 30px;
+
+  vertical-align: top;
+
+  line-height: 1.1;
+
+  word-break: break-word;
+  overflow-wrap: break-word;
+
+  padding: 2px;
+}
+
+/* ======================================================
+   TEXTO
+====================================================== */
+
+.linha1 {
+  font-weight: bold;
+  font-size: 7.8px;
+  color: #000;
+  margin-bottom: 2px;
+}
+
+.linha2 {
+  font-size: 7.8px;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.linha3 {
+  font-size: 7px;
+  color: #4b5563;
+  font-weight: bold;
+}
+
+/* ======================================================
+   FOOTER
+====================================================== */
+
+footer {
+  margin-top: 2px;
+  text-align: center;
+  font-size: 6px;
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <h1>${universidade}</h1>
+  <h1>${universidade || "-"}</h1>
   <h2>Grade Horária</h2>
 </div>
 
 <div class="info">
   <div class="info-grid">
-    <div><strong>Curso:</strong> ${curso}</div>
-    <div><strong>Currículo:</strong> ${curriculo}</div>
-    <div><strong>Ano:</strong> ${anoLetivo}</div>
-    <div><strong>Coord:</strong> ${coordenador}</div>
-    <div><strong>Sem:</strong> ${semestres.map(s => s.descricao).join(" / ")}</div>
+    <div><strong>Curso:</strong> ${curso || "-"}</div>
+    <div><strong>Currículo:</strong> ${curriculo || "-"}</div>
+    <div><strong>Ano:</strong> ${anoLetivo || "-"}</div>
+    <div><strong>Coord:</strong> ${coordenador || "-"}</div>
+
+    <div>
+      <strong>Sem:</strong>
+      ${Array.isArray(semestres)
+        ? semestres.map(s => s.descricao).join(" / ")
+        : "-"
+      }
+    </div>
   </div>
 </div>
 
-${semestres.map(semestre => `
+${(semestres || []).map(semestre => `
 <div class="semester">
-  <div class="semester-title">${semestre.descricao}</div>
 
-  <table>
-    <thead>
-      <tr>
-        <th class="horario">Horário</th>
-        ${semestre.dias.map(d => `<th>${d}</th>`).join("")}
-      </tr>
-    </thead>
+<div class="semester-title">
+  ${semestre.descricao || "-"}
+</div>
 
-    <tbody>
-      ${HORARIOS.map(horario => {
-        const linha = semestre.linhas.find(l => l.horario === horario);
+<table>
 
-        return `
-        <tr>
-          <td class="horario">${horario}</td>
+<thead>
+<tr>
 
-          ${semestre.dias.map((_, colIndex) => {
-            const celula = linha?.celulas?.[colIndex] || "";
+<th class="horario">
+  Horário
+</th>
 
-            let linha1 = "";
-            let linha2 = "";
+${(semestre.dias || [])
+  .map(d => `<th>${d}</th>`)
+  .join("")}
 
-            if (celula) {
-              const match = celula.match(/^([A-Z0-9]+)\s*-\s*(.*?)\s*\((.*?)\)$/);
+</tr>
+</thead>
 
-              if (match) {
-                linha1 = match[1] + " - " + match[2];
-                linha2 = match[3];
-              } else {
-                linha1 = celula;
-              }
-            }
+<tbody>
 
-            return `
-              <td class="disciplina">
-                ${linha1 ? `<div class="linha1">${linha1}</div>` : ""}
-                ${linha2 ? `<div class="linha2">${linha2}</div>` : ""}
-              </td>
-            `;
-          }).join("")}
-        </tr>
-        `;
-      }).join("")}
-    </tbody>
-  </table>
+${HORARIOS.map(horario => {
+
+  const linha = (semestre.linhas || []).find(
+    l => l.horario === horario
+  );
+
+  return `
+  <tr>
+
+  <td class="horario">
+    ${horario}
+  </td>
+
+  ${(semestre.dias || []).map((_, colIndex) => {
+
+    const celula =
+      linha?.celulas?.[colIndex] || {};
+
+    return `
+    <td class="disciplina">
+
+      ${
+        celula.codigo || celula.departamento
+          ? `<div class="linha1">
+              ${celula.departamento || ""}
+              ${celula.codigo ? ` (${celula.codigo})` : ""}
+            </div>`
+          : ""
+      }
+
+      ${
+        celula.nome
+          ? `<div class="linha2">
+              ${celula.nome}
+            </div>`
+          : ""
+      }
+
+      ${
+        celula.professor
+          ? `<div class="linha3">
+              ${celula.professor}
+            </div>`
+          : ""
+      }
+
+    </td>
+    `;
+  }).join("")}
+
+  </tr>
+  `;
+}).join("")}
+
+</tbody>
+</table>
 </div>
 `).join("")}
 
-<footer>Universidade Federal de Ciências da Saúde de Porto Alegre</footer>
+<footer>
+Universidade Federal de Ciências da Saúde de Porto Alegre
+</footer>
 
 </body>
 </html>
-  `;
+`;
 };

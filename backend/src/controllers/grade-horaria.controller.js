@@ -8,6 +8,9 @@ const {
   Horario,
   DiaSemana,
   Departamento,
+  Ano,
+  Curriculo,
+  Semestre,
   sequelize,
 } = require("../models");
 
@@ -17,8 +20,7 @@ const {
 
 exports.findByContext = async (req, res) => {
   try {
-
-    let {
+    const {
       curso_id,
       ano_id,
       semestre_id,
@@ -29,7 +31,7 @@ exports.findByContext = async (req, res) => {
     const where = {};
 
     /* =========================================
-       FILTROS OPCIONAIS
+       FILTROS
     ========================================= */
 
     if (curso_id)
@@ -39,22 +41,18 @@ exports.findByContext = async (req, res) => {
       where.ano_id = ano_id;
 
     if (semestre_id)
-      where.semestre_id =
-        semestre_id;
+      where.semestre_id = semestre_id;
 
     if (curriculo_id)
-      where.curriculo_id =
-        curriculo_id;
+      where.curriculo_id = curriculo_id;
 
     if (
-      coordenador_id !== undefined &&
-      coordenador_id !== ""
+      coordenador_id &&
+      coordenador_id !== "null" &&
+      coordenador_id !== "undefined"
     ) {
       where.coordenador_id =
-        coordenador_id === "null" ||
-        coordenador_id === "undefined"
-          ? null
-          : coordenador_id;
+        coordenador_id;
     }
 
     const registros =
@@ -69,15 +67,15 @@ exports.findByContext = async (req, res) => {
           },
 
           {
+            model: Departamento,
+            as: "departamento",
+            required: false,
+          },
+
+          {
             model: Curso,
             as: "curso",
-
-            include: [
-              {
-                model: Departamento,
-                as: "departamento",
-              },
-            ],
+            required: false,
           },
 
           {
@@ -95,11 +93,31 @@ exports.findByContext = async (req, res) => {
           {
             model: Horario,
             as: "horario",
+            required: false,
           },
 
           {
             model: DiaSemana,
             as: "diaSemana",
+            required: false,
+          },
+
+          {
+            model: Ano,
+            as: "ano",
+            required: false,
+          },
+
+          {
+            model: Curriculo,
+            as: "curriculo",
+            required: false,
+          },
+
+          {
+            model: Semestre,
+            as: "semestre",
+            required: false,
           },
         ],
 
@@ -124,6 +142,10 @@ exports.findByContext = async (req, res) => {
         ],
       });
 
+    /* =========================================
+       FORMATAR RETORNO
+    ========================================= */
+
     const resultado =
       registros.map((r) => {
 
@@ -131,25 +153,82 @@ exports.findByContext = async (req, res) => {
           registros.filter(
             (x) =>
               x.disciplina_id ===
-              r.disciplina_id
+                r.disciplina_id &&
+              x.curso_id ===
+                r.curso_id &&
+              x.ano_id ===
+                r.ano_id &&
+              x.semestre_id ===
+                r.semestre_id &&
+              x.curriculo_id ===
+                r.curriculo_id
           ).length > 1;
 
         return {
           id: r.id,
 
+          /* IDs */
+
           curso_id:
             r.curso_id,
 
-          departamento:
-            r.curso
-              ?.departamento
-              ?.nome || "-",
+          ano_id:
+            r.ano_id,
+
+          semestre_id:
+            r.semestre_id,
+
+          curriculo_id:
+            r.curriculo_id,
+
+          coordenador_id:
+            r.coordenador_id,
+
+          professor_id:
+            r.professor_id,
+
+          departamento_id:
+            r.departamento_id,
+
+          disciplina_id:
+            r.disciplina_id,
+
+          horario_id:
+            r.horario_id,
+
+          dia_semana_id:
+            r.dia_semana_id,
+
+          /* TEXTO FORMATADO */
 
           curso:
             r.curso?.nome || "-",
 
-          disciplina_id:
-            r.disciplina_id,
+          ano:
+            r.ano?.descricao ||
+            r.ano?.ano ||
+            "-",
+
+          semestre:
+            r.semestre?.descricao ||
+            r.semestre?.nome ||
+            "-",
+
+          curriculo:
+            r.curriculo?.descricao ||
+            r.curriculo?.nome ||
+            "-",
+
+          horario:
+            r.horario?.descricao ||
+            "-",
+
+          diaSemana:
+            r.diaSemana?.nome ||
+            r.diaSemana?.descricao ||
+            "-",
+
+          /* OBJETOS */
 
           disciplina:
             r.disciplina
@@ -164,9 +243,6 @@ exports.findByContext = async (req, res) => {
                     r.disciplina.codigo,
                 }
               : null,
-
-          professor_id:
-            r.professor_id,
 
           professor:
             r.professor
@@ -190,13 +266,19 @@ exports.findByContext = async (req, res) => {
                 }
               : null,
 
-          horario:
-            r.horario
-              ?.descricao || "-",
+          departamento:
+            r.departamento
+              ? {
+                  id:
+                    r.departamento.id,
 
-          diaSemana:
-            r.diaSemana
-              ?.nome || "-",
+                  nome:
+                    r.departamento.nome,
+
+                  sigla:
+                    r.departamento.sigla,
+                }
+              : null,
 
           multicurso,
         };
@@ -206,7 +288,10 @@ exports.findByContext = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    console.error(
+      "Erro ao buscar grade:",
+      err
+    );
 
     return res.status(500).json({
       error:
@@ -229,6 +314,10 @@ exports.saveGrade = async (
     slots,
   } = req.body;
 
+  /* =========================================
+     VALIDAÇÃO
+  ========================================= */
+
   if (
     !contexto ||
     !Array.isArray(slots)
@@ -247,35 +336,15 @@ exports.saveGrade = async (
     coordenador_id,
   } = contexto;
 
-  /* =========================================
-     VALIDAÇÕES
-  ========================================= */
-
-  if (!curso_id) {
+  if (
+    !curso_id ||
+    !ano_id ||
+    !semestre_id ||
+    !curriculo_id
+  ) {
     return res.status(400).json({
       error:
-        "curso_id obrigatório",
-    });
-  }
-
-  if (!ano_id) {
-    return res.status(400).json({
-      error:
-        "ano_id obrigatório",
-    });
-  }
-
-  if (!semestre_id) {
-    return res.status(400).json({
-      error:
-        "semestre_id obrigatório",
-    });
-  }
-
-  if (!curriculo_id) {
-    return res.status(400).json({
-      error:
-        "curriculo_id obrigatório",
+        "Preencha todos os filtros",
     });
   }
 
@@ -283,7 +352,7 @@ exports.saveGrade = async (
      REMOVE DUPLICADOS
   ========================================= */
 
-  const mapaSlots =
+  const mapa =
     new Map();
 
   slots.forEach((slot) => {
@@ -297,7 +366,7 @@ exports.saveGrade = async (
       const chave =
         `${slot.horario_id}-${slot.dia_semana_id}`;
 
-      mapaSlots.set(
+      mapa.set(
         chave,
         slot
       );
@@ -306,7 +375,7 @@ exports.saveGrade = async (
 
   const slotsValidos =
     Array.from(
-      mapaSlots.values()
+      mapa.values()
     );
 
   if (
@@ -314,7 +383,7 @@ exports.saveGrade = async (
   ) {
     return res.status(400).json({
       error:
-        "Nenhuma disciplina atribuída para salvar",
+        "Nenhuma disciplina selecionada",
     });
   }
 
@@ -334,6 +403,7 @@ exports.saveGrade = async (
         semestre_id,
         curriculo_id,
       },
+
       transaction,
     });
 
@@ -341,7 +411,7 @@ exports.saveGrade = async (
        NOVOS REGISTROS
     ========================================= */
 
-    const novosRegistros =
+    const registros =
       slotsValidos.map(
         (slot) => ({
           curso_id,
@@ -353,11 +423,15 @@ exports.saveGrade = async (
           curriculo_id,
 
           coordenador_id:
-            coordenador_id ??
+            coordenador_id ||
             null,
 
           professor_id:
-            slot.professor_id ??
+            slot.professor_id ||
+            null,
+
+          departamento_id:
+            slot.departamento_id ||
             null,
 
           horario_id:
@@ -372,22 +446,10 @@ exports.saveGrade = async (
       );
 
     /* =========================================
-       CONFLITO PROFESSOR
+       VALIDA CONFLITO PROFESSOR
     ========================================= */
 
-    for (const registro of novosRegistros) {
-
-      if (
-        !registro.dia_semana_id ||
-        !registro.horario_id
-      ) {
-        await transaction.rollback();
-
-        return res.status(400).json({
-          error:
-            "dia_semana_id e horario_id são obrigatórios",
-        });
-      }
+    for (const registro of registros) {
 
       if (
         registro.professor_id
@@ -396,14 +458,14 @@ exports.saveGrade = async (
         const conflito =
           await GradeHoraria.findOne({
             where: {
-              dia_semana_id:
-                registro.dia_semana_id,
+              professor_id:
+                registro.professor_id,
 
               horario_id:
                 registro.horario_id,
 
-              professor_id:
-                registro.professor_id,
+              dia_semana_id:
+                registro.dia_semana_id,
 
               [Op.not]: {
                 curso_id,
@@ -422,18 +484,18 @@ exports.saveGrade = async (
 
           return res.status(409).json({
             error:
-              "Conflito: professor já possui aula nesse horário",
+              "Professor já possui aula nesse horário",
           });
         }
       }
     }
 
     /* =========================================
-       INSERE NOVA GRADE
+       SALVAR
     ========================================= */
 
     await GradeHoraria.bulkCreate(
-      novosRegistros,
+      registros,
       {
         transaction,
       }
@@ -446,7 +508,7 @@ exports.saveGrade = async (
         "Grade salva com sucesso",
 
       inseridos:
-        novosRegistros.length,
+        registros.length,
     });
 
   } catch (err) {
@@ -460,8 +522,7 @@ exports.saveGrade = async (
 
     return res.status(500).json({
       error:
-        "Erro ao salvar grade: " +
-        err.message,
+        "Erro ao salvar grade",
     });
   }
 };
@@ -481,6 +542,7 @@ exports.saveSlot = async (
       curso_id,
       coordenador_id,
       professor_id,
+      departamento_id,
       ano_id,
       semestre_id,
       curriculo_id,
@@ -516,9 +578,9 @@ exports.saveSlot = async (
       const conflito =
         await GradeHoraria.findOne({
           where: {
-            dia_semana_id,
-            horario_id,
             professor_id,
+            horario_id,
+            dia_semana_id,
           },
         });
 
@@ -531,19 +593,23 @@ exports.saveSlot = async (
     }
 
     /* =========================================
-       UPSERT
+       CREATE
     ========================================= */
 
-    const [registro] =
-      await GradeHoraria.upsert({
+    const registro =
+      await GradeHoraria.create({
         curso_id,
 
         coordenador_id:
-          coordenador_id ??
+          coordenador_id ||
           null,
 
         professor_id:
-          professor_id ??
+          professor_id ||
+          null,
+
+        departamento_id:
+          departamento_id ||
           null,
 
         ano_id,
@@ -557,17 +623,18 @@ exports.saveSlot = async (
         dia_semana_id,
 
         disciplina_id:
-          disciplina_id ??
+          disciplina_id ||
           null,
       });
 
-    return res.json(
-      registro
-    );
+    return res.json(registro);
 
   } catch (err) {
 
-    console.error(err);
+    console.error(
+      "Erro ao salvar slot:",
+      err
+    );
 
     return res.status(500).json({
       error:

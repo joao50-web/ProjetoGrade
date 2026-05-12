@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
-import { Table, Select, Button, message, Tooltip, ConfigProvider } from "antd";
+import {
+  Table,
+  Select,
+  Button,
+  message,
+  ConfigProvider,
+} from "antd";
+
 import {
   SaveOutlined,
   FilePdfOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
+
 import { api } from "../services/api";
 
 const THEME = {
   primary: "#0b3d5c",
-  border: "#e5e7eb",
+  border: "#d9e2ec",
   bgHeader: "#0b3d5c",
   textWhite: "#ffffff",
 };
@@ -23,7 +31,6 @@ const labelStyle = {
 
 const selectStyle = {
   width: 220,
-  borderRadius: 6,
 };
 
 const headerStyle = {
@@ -36,8 +43,6 @@ const headerStyle = {
 };
 
 export default function GradeTabela() {
-  const [departamentos, setDepartamentos] = useState([]);
-  const [todosCursos, setTodosCursos] = useState([]);
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
   const [semestres, setSemestres] = useState([]);
@@ -46,10 +51,11 @@ export default function GradeTabela() {
   const [disciplinas, setDisciplinas] = useState([]);
   const [professores, setProfessores] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
+
   const [grade, setGrade] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const [deptoId, setDeptoId] = useState(null);
   const [cursoId, setCursoId] = useState(null);
   const [anoId, setAnoId] = useState(null);
   const [semestreId, setSemestreId] = useState(null);
@@ -64,11 +70,23 @@ export default function GradeTabela() {
     { id: 5, nome: "SEXTA" },
   ];
 
+  /* =========================================================
+     LOAD INICIAL
+  ========================================================= */
+
   useEffect(() => {
     const load = async () => {
       try {
-        const [d, c, a, s, cur, h, prof, coord] = await Promise.all([
-          api.get("/departamentos"),
+        const [
+          cursosRes,
+          anosRes,
+          semestresRes,
+          curriculosRes,
+          horariosRes,
+          professoresRes,
+          coordenadoresRes,
+          departamentosRes,
+        ] = await Promise.all([
           api.get("/cursos"),
           api.get("/anos"),
           api.get("/semestres"),
@@ -76,132 +94,311 @@ export default function GradeTabela() {
           api.get("/horarios"),
           api.get("/pessoas/professores"),
           api.get("/pessoas/coordenadores"),
+          api.get("/departamentos"),
         ]);
 
-        setDepartamentos(d.data || []);
-        setTodosCursos(c.data || []);
-        setCursos(c.data || []);
-        setAnos(a.data || []);
-        setSemestres(s.data || []);
-        setCurriculos(cur.data || []);
-        setHorarios(
-          (h.data || []).sort((a, b) => {
-            const getHora = (str) => str.split("-")[0];
-            return getHora(a.descricao).localeCompare(getHora(b.descricao));
-          }),
+        setCursos(cursosRes.data || []);
+
+        setAnos(anosRes.data || []);
+
+        setSemestres(
+          semestresRes.data || [],
         );
-        setProfessores(prof.data || []);
-        setCoordenadores(coord.data || []);
-      } catch {
-        message.error("Erro ao carregar dados");
+
+        setCurriculos(
+          curriculosRes.data || [],
+        );
+
+        setProfessores(
+          professoresRes.data || [],
+        );
+
+        setCoordenadores(
+          coordenadoresRes.data || [],
+        );
+
+        setDepartamentos(
+          departamentosRes.data || [],
+        );
+
+        setHorarios(
+          (horariosRes.data || []).sort(
+            (a, b) => {
+              const horaA =
+                a.descricao.split("-")[0];
+
+              const horaB =
+                b.descricao.split("-")[0];
+
+              return horaA.localeCompare(
+                horaB,
+              );
+            },
+          ),
+        );
+      } catch (err) {
+        console.error(err);
+
+        message.error(
+          "Erro ao carregar dados",
+        );
       }
     };
+
     load();
   }, []);
 
-  const handleDeptoChange = (id) => {
-    setDeptoId(id);
-    setCursoId(null);
-    setGrade([]);
-    setDisciplinas([]);
-
-    if (!id) return setCursos(todosCursos);
-
-    setCursos(
-      todosCursos.filter(
-        (c) => c.departamento_id === id || c.departamento?.id === id,
-      ),
-    );
-  };
+  /* =========================================================
+     DISCIPLINAS DO CURSO
+  ========================================================= */
 
   useEffect(() => {
-    if (!cursoId) return;
-    api
-      .get(`/cursos/${cursoId}/disciplinas`)
-      .then((res) => setDisciplinas(res.data || []))
-      .catch(() => setDisciplinas([]));
-  }, [cursoId]);
-
-  useEffect(() => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) return;
-
-    api
-      .get("/grade-horaria", {
-        params: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-          coordenador_id: coordenadorId ?? "null",
-        },
-      })
-      .then((res) => setGrade(res.data || []))
-      .catch(() => setGrade([]));
-  }, [cursoId, anoId, semestreId, curriculoId, coordenadorId]);
-
-  const handleSave = async () => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) {
-      message.warning("Selecione os filtros.");
+    if (!cursoId) {
+      setDisciplinas([]);
       return;
     }
 
-    const slots = grade.filter((g) => g.disciplina_id);
-    if (!slots.length) return message.warning("Nenhuma disciplina.");
+    api
+      .get(
+        `/cursos/${cursoId}/disciplinas`,
+      )
+      .then((res) => {
+        setDisciplinas(
+          res.data || [],
+        );
+      })
+      .catch(() => {
+        setDisciplinas([]);
+      });
+  }, [cursoId]);
+
+  /* =========================================================
+     BUSCAR GRADE
+  ========================================================= */
+
+  useEffect(() => {
+    if (
+      !cursoId ||
+      !anoId ||
+      !semestreId ||
+      !curriculoId
+    ) {
+      setGrade([]);
+      return;
+    }
+
+    loadGrade();
+  }, [
+    cursoId,
+    anoId,
+    semestreId,
+    curriculoId,
+  ]);
+
+  const loadGrade = async () => {
+    try {
+      const response = await api.get(
+        "/grade-horaria",
+        {
+          params: {
+            curso_id: cursoId,
+            ano_id: anoId,
+            semestre_id: semestreId,
+            curriculo_id:
+              curriculoId,
+          },
+        },
+      );
+
+      setGrade(response.data || []);
+
+      /* ======================================
+         AJUSTA COORDENADOR AUTOMATICAMENTE
+      ====================================== */
+
+      if (
+        response.data &&
+        response.data.length > 0
+      ) {
+        const primeiro =
+          response.data[0];
+
+        if (
+          primeiro.coordenador_id
+        ) {
+          setCoordenadorId(
+            primeiro.coordenador_id,
+          );
+        }
+      }
+    } catch (err) {
+      console.error(err);
+
+      setGrade([]);
+
+      message.error(
+        "Erro ao carregar grade",
+      );
+    }
+  };
+
+  /* =========================================================
+     UPDATE SLOT
+  ========================================================= */
+
+  const updateSlot = (
+    horarioId,
+    diaId,
+    field,
+    value,
+  ) => {
+    setGrade((prev) => {
+      const exists = prev.find(
+        (g) =>
+          g.horario_id ===
+            horarioId &&
+          g.dia_semana_id === diaId,
+      );
+
+      if (!exists) {
+        return [
+          ...prev,
+          {
+            horario_id: horarioId,
+            dia_semana_id: diaId,
+            disciplina_id: null,
+            professor_id: null,
+            departamento_id: null,
+            [field]: value,
+          },
+        ];
+      }
+
+      return prev.map((g) =>
+        g.horario_id ===
+          horarioId &&
+        g.dia_semana_id === diaId
+          ? {
+              ...g,
+              [field]: value,
+            }
+          : g,
+      );
+    });
+  };
+
+  /* =========================================================
+     SAVE
+  ========================================================= */
+
+  const handleSave = async () => {
+    if (
+      !cursoId ||
+      !anoId ||
+      !semestreId ||
+      !curriculoId
+    ) {
+      return message.warning(
+        "Selecione os filtros",
+      );
+    }
+
+    const slots = grade.filter(
+      (g) => g.disciplina_id,
+    );
+
+    if (!slots.length) {
+      return message.warning(
+        "Nenhuma disciplina selecionada",
+      );
+    }
 
     setSaving(true);
-    try {
-      await api.post("/grade-horaria/save", {
-        contexto: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-          coordenador_id: coordenadorId ?? null,
-        },
-        slots,
-      });
 
-      message.success("Grade salva com sucesso!");
-    } catch {
-      message.error("Erro ao salvar");
+    try {
+      await api.post(
+        "/grade-horaria/save",
+        {
+          contexto: {
+            curso_id: cursoId,
+            ano_id: anoId,
+            semestre_id:
+              semestreId,
+            curriculo_id:
+              curriculoId,
+            coordenador_id:
+              coordenadorId ??
+              null,
+          },
+
+          slots,
+        },
+      );
+
+      message.success(
+        "Grade salva com sucesso",
+      );
+
+      loadGrade();
+    } catch (err) {
+      console.error(err);
+
+      message.error(
+        err?.response?.data
+          ?.error ||
+          "Erro ao salvar",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-const handlePDF = async () => {
-  if (!cursoId || !anoId || !semestreId || !curriculoId) {
-    message.warning("Selecione os filtros.");
-    return;
-  }
+  /* =========================================================
+     PDF
+  ========================================================= */
 
-  try {
-    const response = await api.get("/api/relatorio-grade/pdf", {
-      params: {
-        curso_id: cursoId,
-        ano_id: anoId,
-        semestre_id: semestreId,
-        curriculo_id: curriculoId,
-        todos: false,
-        ...(coordenadorId && { coordenador_id: coordenadorId })
-      },
-      responseType: "blob" // 👈 ESSENCIAL
-    });
+  const handlePDF = async () => {
+    try {
+      const response = await api.get(
+        "/api/relatorio-grade/pdf",
+        {
+          params: {
+            curso_id: cursoId,
+            ano_id: anoId,
+            semestre_id:
+              semestreId,
+            curriculo_id:
+              curriculoId,
+          },
 
-    // cria arquivo blob
-    const file = new Blob([response.data], { type: "application/pdf" });
+          responseType: "blob",
+        },
+      );
 
-    // cria URL temporária
-    const fileURL = URL.createObjectURL(file);
+      const file = new Blob(
+        [response.data],
+        {
+          type: "application/pdf",
+        },
+      );
 
-    // abre PDF
-    window.open(fileURL);
+      const fileURL =
+        URL.createObjectURL(file);
 
-  } catch (err) {
-    console.error(err);
-    message.error("Erro ao gerar PDF");
-  }
-};
+      window.open(fileURL);
+    } catch (err) {
+      console.error(err);
+
+      message.error(
+        "Erro ao gerar PDF",
+      );
+    }
+  };
+
+  /* =========================================================
+     COLUMNS
+  ========================================================= */
+
   const columns = [
     {
       title: "HORÁRIO",
@@ -209,104 +406,161 @@ const handlePDF = async () => {
       width: 100,
       fixed: "left",
       align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
+
+      onHeaderCell: () => ({
+        style: headerStyle,
+      }),
+
+      render: (text) => (
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: 12,
+          }}
+        >
+          {text}
+        </div>
+      ),
     },
+
     ...diasFixos.map((dia) => ({
       title: dia.nome,
-      width: 260,
+
+      width: 320,
+
       align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
+
+      onHeaderCell: () => ({
+        style: headerStyle,
+      }),
+
       render: (_, record) => {
-        const item = grade.find(
-          (g) => g.horario_id === record.id && g.dia_semana_id === dia.id,
-        ) || {
-          horario_id: record.id,
-          dia_semana_id: dia.id,
-          disciplina_id: null,
-          professor_id: null,
-        };
+        const item =
+          grade.find(
+            (g) =>
+              g.horario_id ===
+                record.id &&
+              g.dia_semana_id ===
+                dia.id,
+          ) || {
+            horario_id: record.id,
+            dia_semana_id: dia.id,
+            disciplina_id: null,
+            professor_id: null,
+            departamento_id: null,
+          };
 
         return (
           <div
             style={{
-              padding: "6px",
+              padding: 6,
               display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-              minHeight: "90px",
+              flexDirection:
+                "column",
+              gap: 6,
+              minHeight: 130,
             }}
           >
+            {/* DISCIPLINA */}
             <Select
               allowClear
               showSearch
               size="small"
               placeholder="Disciplina"
-              value={item?.disciplina_id}
-              dropdownMatchSelectWidth={false}
-              style={{ width: "100%", fontSize: "11px" }}
-              onChange={(val) =>
-                setGrade((prev) => {
-                  const filtered = prev.filter(
-                    (g) =>
-                      !(
-                        g.horario_id === record.id && g.dia_semana_id === dia.id
-                      ),
-                  );
-                  if (val) {
-                    filtered.push({
-                      horario_id: record.id,
-                      dia_semana_id: dia.id,
-                      disciplina_id: val,
-                      professor_id: null,
-                    });
-                  }
-                  return filtered;
-                })
+              value={
+                item.disciplina_id
               }
-              options={disciplinas.map((d) => ({
-                value: d.id,
-                label: (
-                  <Tooltip title={`${d.codigo} - ${d.nome}`}>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "block",
-                        maxWidth: 220,
-                      }}
-                    >
-                      {d.codigo} - {d.nome}
-                    </span>
-                  </Tooltip>
-                ),
-              }))}
+              optionFilterProp="label"
+              style={{
+                width: "100%",
+              }}
+              dropdownStyle={{
+                width: 500,
+              }}
+              onChange={(value) =>
+                updateSlot(
+                  record.id,
+                  dia.id,
+                  "disciplina_id",
+                  value,
+                )
+              }
+              options={disciplinas.map(
+                (d) => ({
+                  value: d.id,
+
+                  label: `${d.codigo} - ${d.nome}`,
+                }),
+              )}
             />
 
-            {item?.disciplina_id && (
-              <Select
-                allowClear
-                showSearch
-                size="small"
-                placeholder="Professor"
-                value={item?.professor_id}
-                dropdownMatchSelectWidth={false}
-                style={{ width: "100%", fontSize: "11px" }}
-                onChange={(val) =>
-                  setGrade((prev) =>
-                    prev.map((g) =>
-                      g.horario_id === record.id && g.dia_semana_id === dia.id
-                        ? { ...g, professor_id: val }
-                        : g,
-                    ),
-                  )
-                }
-                options={professores.map((p) => ({
-                  value: p.id,
-                  label: p.nome,
-                }))}
-              />
+            {/* PROFESSOR */}
+            {item.disciplina_id && (
+              <>
+                <Select
+                  allowClear
+                  showSearch
+                  size="small"
+                  placeholder="Professor"
+                  value={
+                    item.professor_id
+                  }
+                  optionFilterProp="label"
+                  style={{
+                    width: "100%",
+                  }}
+                  dropdownStyle={{
+                    width: 350,
+                  }}
+                  onChange={(value) =>
+                    updateSlot(
+                      record.id,
+                      dia.id,
+                      "professor_id",
+                      value,
+                    )
+                  }
+                  options={professores.map(
+                    (p) => ({
+                      value: p.id,
+                      label: p.nome,
+                    }),
+                  )}
+                />
+
+                {/* DEPARTAMENTO */}
+                <Select
+                  allowClear
+                  showSearch
+                  size="small"
+                  placeholder="Departamento"
+                  value={
+                    item.departamento_id
+                  }
+                  optionFilterProp="label"
+                  style={{
+                    width: "100%",
+                  }}
+                  dropdownStyle={{
+                    width: 350,
+                  }}
+                  onChange={(value) =>
+                    updateSlot(
+                      record.id,
+                      dia.id,
+                      "departamento_id",
+                      value,
+                    )
+                  }
+                  options={departamentos.map(
+                    (d) => ({
+                      value: d.id,
+
+                      label: `${d.sigla} - ${d.nome}`,
+                    }),
+                  )}
+                />
+              </>
             )}
           </div>
         );
@@ -315,154 +569,212 @@ const handlePDF = async () => {
   ];
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary } }}>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary:
+            THEME.primary,
+        },
+      }}
+    >
       <div
-        style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+        style={{
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          background: "#fff",
+        }}
       >
-        {/* FILTROS COMPACTOS */}
-
-        {/* FILTROS MODERNOS AZUL INSTITUCIONAL */}
+        {/* HEADER */}
         <div
           style={{
             padding: "12px 16px",
             display: "flex",
             alignItems: "flex-end",
-            justifyContent: "space-between",
-            gap: "14px",
+            justifyContent:
+              "space-between",
+            gap: 14,
             flexWrap: "wrap",
-
-            background: "linear-gradient(180deg, #f5faff 0%, #ffffff 100%)",
-            borderBottom: "1px solid rgba(11, 61, 92, 0.12)",
+            background:
+              "linear-gradient(180deg,#f8fbff 0%,#ffffff 100%)",
+            borderBottom:
+              "1px solid rgba(11,61,92,0.12)",
           }}
         >
-          {/* LADO ESQUERDO */}
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {/* DEPARTAMENTO */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Departamento</span>
-              <Select
-                size="middle"
-                style={selectStyle}
-                placeholder="Selecione o departamento"
-                value={deptoId}
-                onChange={handleDeptoChange}
-                allowClear
-                options={departamentos.map((d) => ({
-                  value: d.id,
-                  label: d.nome,
-                }))}
-              />
-            </div>
-
+          {/* FILTROS */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
             {/* CURSO */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Curso</span>
+            <div>
+              <div style={labelStyle}>
+                Curso
+              </div>
+
               <Select
-                size="middle"
                 style={selectStyle}
-                placeholder="Selecione o curso"
+                placeholder="Curso"
                 value={cursoId}
                 onChange={setCursoId}
                 allowClear
-                options={cursos.map((c) => ({
-                  value: c.id,
-                  label: c.nome,
-                }))}
+                options={cursos.map(
+                  (c) => ({
+                    value: c.id,
+                    label: c.nome,
+                  }),
+                )}
+              />
+            </div>
+
+            {/* CURRICULO */}
+            <div>
+              <div style={labelStyle}>
+                Currículo
+              </div>
+
+              <Select
+                style={selectStyle}
+                placeholder="Currículo"
+                value={curriculoId}
+                onChange={
+                  setCurriculoId
+                }
+                allowClear
+                options={curriculos.map(
+                  (c) => ({
+                    value: c.id,
+
+                    label:
+                      c.descricao ||
+                      c.nome,
+                  }),
+                )}
               />
             </div>
 
             {/* ANO */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Ano letivo</span>
+            <div>
+              <div style={labelStyle}>
+                Ano
+              </div>
+
               <Select
-                size="middle"
-                style={{ ...selectStyle, width: 120 }}
+                style={{
+                  width: 120,
+                }}
                 placeholder="Ano"
                 value={anoId}
                 onChange={setAnoId}
                 allowClear
-                options={anos.map((a) => ({
-                  value: a.id,
-                  label: a.ano,
-                }))}
+                options={anos.map(
+                  (a) => ({
+                    value: a.id,
+
+                    label:
+                      a.descricao ||
+                      a.ano,
+                  }),
+                )}
               />
             </div>
 
             {/* SEMESTRE */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Semestre</span>
+            <div>
+              <div style={labelStyle}>
+                Semestre
+              </div>
+
               <Select
-                size="middle"
-                style={{ ...selectStyle, width: 120 }}
+                style={{
+                  width: 140,
+                }}
                 placeholder="Semestre"
                 value={semestreId}
-                onChange={setSemestreId}
+                onChange={
+                  setSemestreId
+                }
                 allowClear
-                options={semestres.map((s) => ({
-                  value: s.id,
-                  label: s.nome,
-                }))}
-              />
-            </div>
+                options={semestres.map(
+                  (s) => ({
+                    value: s.id,
 
-            {/* CURRÍCULO */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Matriz curricular</span>
-              <Select
-                size="middle"
-                style={{ ...selectStyle, width: 180 }}
-                placeholder="Currículo"
-                value={curriculoId}
-                onChange={setCurriculoId}
-                allowClear
-                options={curriculos.map((c) => ({
-                  value: c.id,
-                  label: c.nome,
-                }))}
+                    label:
+                      s.descricao ||
+                      s.nome,
+                  }),
+                )}
               />
             </div>
 
             {/* COORDENADOR */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={labelStyle}>Coordenador</span>
+            <div>
+              <div style={labelStyle}>
+                Coordenador
+              </div>
+
               <Select
-                size="middle"
-                style={{ ...selectStyle, width: 200 }}
-                placeholder="Responsável"
-                value={coordenadorId}
-                onChange={setCoordenadorId}
                 allowClear
                 showSearch
-                options={coordenadores.map((c) => ({
-                  value: c.id,
-                  label: c.nome,
-                }))}
+                optionFilterProp="label"
+                style={{
+                  width: 220,
+                }}
+                placeholder="Coordenador"
+                value={coordenadorId}
+                onChange={
+                  setCoordenadorId
+                }
+                options={coordenadores.map(
+                  (c) => ({
+                    value: c.id,
+                    label: c.nome,
+                  }),
+                )}
               />
             </div>
           </div>
 
-          {/* BOTÕES */}
-          <div style={{ display: "flex", gap: "6px" }}>
+          {/* BOTOES */}
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+            }}
+          >
             <Button
               type="primary"
               icon={<SaveOutlined />}
-              onClick={handleSave}
               loading={saving}
-              style={{ background: "#0b3d5c" }}
+              onClick={handleSave}
             >
               Salvar
             </Button>
 
-            <Button icon={<FilePdfOutlined />} onClick={handlePDF}>
+            <Button
+              icon={
+                <FilePdfOutlined />
+              }
+              onClick={handlePDF}
+            >
               PDF
             </Button>
 
             <Button
-              icon={<ReloadOutlined />}
-              onClick={() => window.location.reload()}
+              icon={
+                <ReloadOutlined />
+              }
+              onClick={() =>
+                window.location.reload()
+              }
             />
           </div>
         </div>
+
+        {/* TABELA */}
         <Table
           rowKey="id"
           dataSource={horarios}
@@ -470,8 +782,12 @@ const handlePDF = async () => {
           pagination={false}
           bordered
           size="small"
-          scroll={{ x: "max-content", y: "calc(100vh - 100px)" }}
+          tableLayout="fixed"
           sticky
+          scroll={{
+            x: 1800,
+            y: "calc(100vh - 120px)",
+          }}
         />
       </div>
     </ConfigProvider>

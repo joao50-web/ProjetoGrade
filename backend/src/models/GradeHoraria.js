@@ -30,6 +30,11 @@ const GradeHoraria = sequelize.define(
       allowNull: true,
     },
 
+    departamento_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     horario_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -85,7 +90,9 @@ const GradeHoraria = sequelize.define(
 
 GradeHoraria.associate = (models) => {
 
-  /* ================= DISCIPLINA ================= */
+  /* =========================
+     DISCIPLINA
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Disciplina,
@@ -95,7 +102,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= PROFESSOR ================= */
+  /* =========================
+     PROFESSOR
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Pessoa,
@@ -105,7 +114,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= COORDENADOR ================= */
+  /* =========================
+     COORDENADOR
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Pessoa,
@@ -115,7 +126,21 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= HORÁRIO ================= */
+  /* =========================
+     DEPARTAMENTO
+  ========================= */
+
+  GradeHoraria.belongsTo(
+    models.Departamento,
+    {
+      foreignKey: "departamento_id",
+      as: "departamento",
+    }
+  );
+
+  /* =========================
+     HORÁRIO
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Horario,
@@ -125,7 +150,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= DIA DA SEMANA ================= */
+  /* =========================
+     DIA DA SEMANA
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.DiaSemana,
@@ -135,7 +162,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= SEMESTRE ================= */
+  /* =========================
+     SEMESTRE
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Semestre,
@@ -145,7 +174,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= CURSO ================= */
+  /* =========================
+     CURSO
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Curso,
@@ -155,7 +186,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= ANO ================= */
+  /* =========================
+     ANO
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Ano,
@@ -165,7 +198,9 @@ GradeHoraria.associate = (models) => {
     }
   );
 
-  /* ================= CURRÍCULO ================= */
+  /* =========================
+     CURRÍCULO
+  ========================= */
 
   GradeHoraria.belongsTo(
     models.Curriculo,
