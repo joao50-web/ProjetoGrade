@@ -6,6 +6,12 @@ const {
   Curso,
   Departamento,
   Pessoa,
+  GradeHoraria,
+  Horario,
+  DiaSemana,
+  Ano,
+  Semestre,
+  Curriculo,
 } = require("../models");
 
 /* =======================================================
@@ -13,136 +19,300 @@ const {
 ======================================================= */
 
 const buscarDados = async (query) => {
+
   const {
     departamento_id,
     curso_id,
     professor_id,
+    disciplina_id,
+    ano_id,
+    semestre_id,
+    curriculo_id,
     tipoRelatorio,
   } = query;
 
-  const disciplinas = await Disciplina.findAll({
-    attributes: ["id", "nome", "codigo"],
+  /* =====================================================
+     WHERE
+  ===================================================== */
 
-    include: [
-      /* ==========================================
-         PROFESSORES
-      ========================================== */
+  const where = {};
 
-      {
-        model: Pessoa,
-        as: "professores",
+  if (
+    departamento_id &&
+    departamento_id !== "null"
+  ) {
+    where.departamento_id =
+      departamento_id;
+  }
 
-        attributes: ["id", "nome"],
+  if (
+    curso_id &&
+    curso_id !== "null"
+  ) {
+    where.curso_id = curso_id;
+  }
 
-        through: {
-          attributes: [],
+  if (
+    professor_id &&
+    professor_id !== "null"
+  ) {
+    where.professor_id =
+      professor_id;
+  }
+
+  if (
+    disciplina_id &&
+    disciplina_id !== "null"
+  ) {
+    where.disciplina_id =
+      disciplina_id;
+  }
+
+  if (
+    ano_id &&
+    ano_id !== "null"
+  ) {
+    where.ano_id = ano_id;
+  }
+
+  if (
+    semestre_id &&
+    semestre_id !== "null"
+  ) {
+    where.semestre_id =
+      semestre_id;
+  }
+
+  if (
+    curriculo_id &&
+    curriculo_id !== "null"
+  ) {
+    where.curriculo_id =
+      curriculo_id;
+  }
+
+  /* =====================================================
+     BUSCA
+  ===================================================== */
+
+  const grades =
+    await GradeHoraria.findAll({
+      where,
+
+      include: [
+
+        {
+          model: Disciplina,
+          as: "disciplina",
+          required: false,
         },
 
-        required: false,
-
-        where: professor_id
-          ? { id: professor_id }
-          : undefined,
-      },
-
-      /* ==========================================
-         CURSOS
-      ========================================== */
-
-      {
-        model: Curso,
-        as: "cursos",
-
-        attributes: ["id", "nome"],
-
-        through: {
-          attributes: [],
+        {
+          model: Curso,
+          as: "curso",
+          required: false,
         },
 
-        required:
-          !!curso_id || !!departamento_id,
+        {
+          model: Departamento,
+          as: "departamento",
+          required: false,
+        },
 
-        where: curso_id
-          ? { id: curso_id }
-          : undefined,
+        {
+          model: Pessoa,
+          as: "professor",
+          required: false,
+        },
 
-        include: [
+        {
+          model: Horario,
+          as: "horario",
+          required: false,
+        },
+
+        {
+          model: DiaSemana,
+          as: "diaSemana",
+          required: false,
+        },
+
+        {
+          model: Ano,
+          as: "ano",
+          required: false,
+        },
+
+        {
+          model: Semestre,
+          as: "semestre",
+          required: false,
+        },
+
+        {
+          model: Curriculo,
+          as: "curriculo",
+          required: false,
+        },
+      ],
+
+      order: [
+        [
           {
-            model: Departamento,
-            as: "departamento",
-
-            attributes: [
-              "id",
-              "nome",
-            ],
-
-            required:
-              !!departamento_id,
-
-            where: departamento_id
-              ? {
-                  id: departamento_id,
-                }
-              : undefined,
+            model: Disciplina,
+            as: "disciplina",
           },
+          "nome",
+          "ASC",
         ],
-      },
-    ],
-  });
+      ],
+    });
 
-  /* ==========================================
-     FORMATAR RESULTADO
-  ========================================== */
+  /* =====================================================
+     AGRUPAR
+  ===================================================== */
 
-  let resultado = disciplinas.map(
-    (d) => {
-      const agora = new Date();
+  const mapa = new Map();
 
-      return {
-        id: d.id,
+  grades.forEach((g) => {
 
-        codigo: d.codigo,
+    if (!g.disciplina) {
+      return;
+    }
 
-        disciplina: d.nome,
+    const chave =
+      `${g.disciplina_id}-${g.curso_id}-${g.professor_id}-${g.ano_id}-${g.semestre_id}-${g.curriculo_id}`;
 
-        cursos: (d.cursos || [])
-          .map((c) => c.nome),
+    if (!mapa.has(chave)) {
 
-        professores:
-          d.professores &&
-          d.professores.length > 0
-            ? d.professores.map(
-                (p) => p.nome
-              )
-            : [],
+      mapa.set(chave, {
+        id: chave,
+
+        codigo:
+          g.disciplina?.codigo || "-",
+
+        disciplina:
+          g.disciplina?.nome || "-",
+
+        cursos: [],
+
+        professores: [],
+
+        horarios: [],
 
         departamento:
-          d.cursos?.[0]
-            ?.departamento?.nome ||
-          "-",
-
-        data:
-          agora.toLocaleDateString(
-            "pt-BR"
-          ),
+          g.departamento?.nome || "-",
 
         ano:
-          agora.getFullYear(),
+          g.ano?.descricao ||
+          g.ano?.ano ||
+          "-",
 
-        totalCursos:
-          (d.cursos || []).length,
-      };
+        semestre:
+          g.semestre?.descricao ||
+          g.semestre?.nome ||
+          "-",
+
+        curriculo:
+          g.curriculo?.descricao ||
+          g.curriculo?.nome ||
+          "-",
+
+        totalCursos: 0,
+      });
     }
-  );
 
-  /* ==========================================
-     RELATÓRIO MULTICURSO
-  ========================================== */
+    const item =
+      mapa.get(chave);
+
+    /* =========================================
+       CURSO
+    ========================================= */
+
+    if (
+      g.curso?.nome &&
+      !item.cursos.includes(
+        g.curso.nome
+      )
+    ) {
+      item.cursos.push(
+        g.curso.nome
+      );
+    }
+
+    /* =========================================
+       PROFESSOR
+    ========================================= */
+
+    if (
+      g.professor?.nome &&
+      !item.professores.includes(
+        g.professor.nome
+      )
+    ) {
+      item.professores.push(
+        g.professor.nome
+      );
+    }
+
+    /* =========================================
+       HORÁRIO
+    ========================================= */
+
+    const descricaoHorario =
+      `${g.diaSemana?.descricao || "-"} - ${g.horario?.descricao || "-"}`;
+
+    const jaExiste =
+      item.horarios.find(
+        (h) =>
+          h.descricao ===
+          descricaoHorario
+      );
+
+    if (!jaExiste) {
+
+      item.horarios.push({
+        dia:
+          g.diaSemana
+            ?.descricao || "-",
+
+        horario:
+          g.horario
+            ?.descricao || "-",
+
+        descricao:
+          descricaoHorario,
+      });
+    }
+
+    item.totalCursos =
+      item.cursos.length;
+  });
+
+  /* =====================================================
+     RESULTADO
+  ===================================================== */
+
+  let resultado =
+    Array.from(
+      mapa.values()
+    ).map((r) => ({
+      ...r,
+
+      multicurso:
+        r.totalCursos > 1,
+    }));
+
+  /* =====================================================
+     MULTICURSO
+  ===================================================== */
 
   if (tipoRelatorio === "multi") {
-    resultado = resultado.filter(
-      (d) => d.totalCursos > 1
-    );
+
+    resultado =
+      resultado.filter(
+        (r) => r.multicurso
+      );
   }
 
   return resultado;
@@ -156,22 +326,32 @@ const exportRelatorioExcel = async (
   req,
   res
 ) => {
+
   try {
+
     const dados =
       await buscarDados(req.query);
-
-    const tipoRelatorio =
-      req.query.tipoRelatorio ||
-      "professor";
 
     const workbook =
       new ExcelJS.Workbook();
 
+    workbook.creator =
+      "Projeto Grade";
+
+    workbook.created =
+      new Date();
+
     const sheet =
       workbook.addWorksheet(
-        tipoRelatorio === "multi"
-          ? "Multicurso"
-          : "Estrutura Acadêmica"
+        "Relatório Acadêmico",
+        {
+          views: [
+            {
+              state: "frozen",
+              ySplit: 1,
+            },
+          ],
+        }
       );
 
     /* ==========================================
@@ -179,46 +359,65 @@ const exportRelatorioExcel = async (
     ========================================== */
 
     sheet.columns = [
+
       {
-        header: "Código",
+        header: "DEPARTAMENTO",
+        key: "departamento",
+        width: 42,
+      },
+
+      {
+        header: "DISCIPLINA",
+        key: "disciplina",
+        width: 42,
+      },
+
+      {
+        header: "CÓDIGO",
         key: "codigo",
         width: 18,
       },
 
       {
-        header: "Disciplina",
-        key: "disciplina",
-        width: 40,
-      },
-
-      {
-        header: "Cursos",
-        key: "cursos",
-        width: 40,
-      },
-
-      {
-        header: "Professores",
-        key: "professores",
+        header: "PROFESSOR",
+        key: "professor",
         width: 35,
       },
 
       {
-        header: "Departamento",
-        key: "departamento",
-        width: 30,
+        header: "CURSO",
+        key: "curso",
+        width: 35,
       },
 
       {
-        header: "Data",
-        key: "data",
-        width: 15,
-      },
-
-      {
-        header: "Ano",
+        header: "ANO LETIVO",
         key: "ano",
-        width: 12,
+        width: 18,
+      },
+
+      {
+        header: "SEMESTRE",
+        key: "semestre",
+        width: 16,
+      },
+
+      {
+        header: "CURRÍCULO",
+        key: "curriculo",
+        width: 28,
+      },
+
+      {
+        header: "DIA",
+        key: "dia",
+        width: 18,
+      },
+
+      {
+        header: "HORÁRIO",
+        key: "horario",
+        width: 22,
       },
     ];
 
@@ -229,8 +428,22 @@ const exportRelatorioExcel = async (
     const headerRow =
       sheet.getRow(1);
 
+    headerRow.values = [
+      "DEPARTAMENTO",
+      "DISCIPLINA",
+      "CÓDIGO",
+      "PROFESSOR",
+      "CURSO",
+      "ANO LETIVO",
+      "SEMESTRE",
+      "CURRÍCULO",
+      "DIA",
+      "HORÁRIO",
+    ];
+
     headerRow.font = {
       bold: true,
+      size: 11,
       color: {
         argb: "FFFFFF",
       },
@@ -241,77 +454,136 @@ const exportRelatorioExcel = async (
       pattern: "solid",
 
       fgColor: {
-        argb: "093E5E",
+        argb: "1F4E78",
       },
     };
 
     headerRow.alignment = {
       vertical: "middle",
       horizontal: "center",
+      wrapText: true,
     };
 
-    headerRow.height = 25;
+    headerRow.height = 28;
 
     /* ==========================================
        DADOS
     ========================================== */
 
-    dados.forEach((d) => {
-      const row = sheet.addRow({
-        codigo: d.codigo,
+    let linhaAtual = 2;
 
-        disciplina:
-          d.disciplina,
+    dados.forEach((d, index) => {
 
-        cursos:
-          d.cursos.length > 0
-            ? d.cursos.join(", ")
-            : "-",
+      const horarios =
+        d.horarios.length > 0
+          ? d.horarios
+          : [
+              {
+                dia: "-",
+                horario: "-",
+              },
+            ];
 
-        professores:
-          d.professores.length >
-          0
-            ? d.professores.join(
-                ", "
-              )
-            : "-",
+      horarios.forEach((h) => {
 
-        departamento:
+        const row =
+          sheet.getRow(
+            linhaAtual
+          );
+
+        row.values = [
+
           d.departamento,
 
-        data: d.data,
+          d.disciplina,
 
-        ano: d.ano,
-      });
+          d.codigo,
 
-      row.alignment = {
-        vertical: "middle",
-        horizontal: "left",
-        wrapText: true,
-      };
+          d.professores.join(", ") ||
+            "-",
 
-      row.height = 28;
+          d.cursos.join(", ") ||
+            "-",
 
-      row.eachCell((cell) => {
-        cell.border = {
-          top: {
-            style: "thin",
-          },
+          d.ano,
 
-          left: {
-            style: "thin",
-          },
+          d.semestre,
 
-          bottom: {
-            style: "thin",
-          },
+          d.curriculo,
 
-          right: {
-            style: "thin",
-          },
-        };
+          h.dia,
+
+          h.horario,
+        ];
+
+        row.height = 30;
+
+        row.eachCell((cell) => {
+
+          cell.border = {
+            top: {
+              style: "thin",
+              color: {
+                argb: "D9D9D9",
+              },
+            },
+
+            left: {
+              style: "thin",
+              color: {
+                argb: "D9D9D9",
+              },
+            },
+
+            bottom: {
+              style: "thin",
+              color: {
+                argb: "D9D9D9",
+              },
+            },
+
+            right: {
+              style: "thin",
+              color: {
+                argb: "D9D9D9",
+              },
+            },
+          };
+
+          cell.alignment = {
+            vertical: "middle",
+            wrapText: true,
+          };
+
+          cell.font = {
+            size: 10,
+          };
+
+          if (index % 2 === 0) {
+
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+
+              fgColor: {
+                argb: "F8FAFC",
+              },
+            };
+          }
+        });
+
+        linhaAtual++;
       });
     });
+
+    /* ==========================================
+       FILTRO
+    ========================================== */
+
+    sheet.autoFilter = {
+      from: "A1",
+      to: "J1",
+    };
 
     /* ==========================================
        DOWNLOAD
@@ -324,7 +596,7 @@ const exportRelatorioExcel = async (
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${tipoRelatorio}.xlsx"`
+      'attachment; filename="relatorio_academico.xlsx"'
     );
 
     await workbook.xlsx.write(
@@ -332,7 +604,9 @@ const exportRelatorioExcel = async (
     );
 
     res.end();
+
   } catch (err) {
+
     console.error(err);
 
     res.status(500).json({
@@ -350,23 +624,17 @@ const exportRelatorioPDF = async (
   req,
   res
 ) => {
+
   try {
+
     const dados =
       await buscarDados(req.query);
 
-    const tipoRelatorio =
-      req.query.tipoRelatorio ||
-      "professor";
-
-    const titulo =
-      tipoRelatorio === "multi"
-        ? "RELATÓRIO MULTICURSO"
-        : "RELATÓRIO ACADÊMICO";
-
-    const doc = new PDFDocument({
-      margin: 30,
-      size: "A4",
-    });
+    const doc =
+      new PDFDocument({
+        margin: 40,
+        size: "A4",
+      });
 
     res.setHeader(
       "Content-Type",
@@ -375,97 +643,137 @@ const exportRelatorioPDF = async (
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${tipoRelatorio}.pdf"`
+      'attachment; filename="relatorio_academico.pdf"'
     );
 
     doc.pipe(res);
 
-    /* ==========================================
-       TÍTULO
-    ========================================== */
-
     doc
       .fontSize(18)
-      .text(titulo, {
-        align: "center",
-      });
-
-    doc.moveDown(2);
-
-    /* ==========================================
-       DADOS
-    ========================================== */
-
-    dados.forEach((d) => {
-      doc
-        .fontSize(11)
-        .text(
-          `Código: ${d.codigo}`
-        );
-
-      doc.text(
-        `Disciplina: ${d.disciplina}`
+      .font("Helvetica-Bold")
+      .fillColor("#093E5E")
+      .text(
+        "RELATÓRIO ACADÊMICO",
+        {
+          align: "center",
+        }
       );
 
-      doc.text(
-        `Cursos: ${
-          d.cursos.length > 0
-            ? d.cursos.join(
-                ", "
-              )
-            : "-"
-        }`
-      );
+    doc.moveDown(1.5);
 
-      doc.text(
-        `Professores: ${
-          d.professores.length >
-          0
-            ? d.professores.join(
-                ", "
-              )
-            : "-"
-        }`
-      );
-
-      doc.text(
-        `Departamento: ${d.departamento}`
-      );
-
-      doc.text(
-        `Data: ${d.data}`
-      );
-
-      doc.text(
-        `Ano: ${d.ano}`
-      );
-
-      /* ======================================
-         STATUS MULTICURSO
-      ====================================== */
-
-      if (
-        tipoRelatorio ===
-        "multi"
-      ) {
-        doc.text(
-          `Quantidade de Cursos: ${d.totalCursos}`
-        );
-      }
-
-      doc.moveDown();
+    dados.forEach((d, index) => {
 
       doc
-        .moveTo(30, doc.y)
-        .lineTo(560, doc.y)
-        .strokeColor("#cccccc")
+        .roundedRect(
+          35,
+          doc.y,
+          525,
+          125
+        )
+        .strokeColor("#E5E7EB")
         .stroke();
 
-      doc.moveDown();
+      const inicioY =
+        doc.y + 10;
+
+      doc
+        .fontSize(13)
+        .fillColor("#111827")
+        .font("Helvetica-Bold")
+        .text(
+          d.disciplina,
+          50,
+          inicioY
+        );
+
+      doc
+        .fontSize(10)
+        .font("Helvetica")
+        .fillColor("#374151");
+
+      doc.text(
+        `Código: ${d.codigo}`,
+        50,
+        inicioY + 22
+      );
+
+      doc.text(
+        `Professor(es): ${
+          d.professores.join(
+            ", "
+          ) || "-"
+        }`,
+        50,
+        inicioY + 38
+      );
+
+      doc.text(
+        `Curso(s): ${
+          d.cursos.join(", ") ||
+          "-"
+        }`,
+        50,
+        inicioY + 54
+      );
+
+      doc.text(
+        `Departamento: ${d.departamento}`,
+        50,
+        inicioY + 70
+      );
+
+      doc.text(
+        `Ano Letivo: ${d.ano}`,
+        340,
+        inicioY + 22
+      );
+
+      doc.text(
+        `Semestre: ${d.semestre}`,
+        340,
+        inicioY + 38
+      );
+
+      doc.text(
+        `Currículo: ${d.curriculo}`,
+        340,
+        inicioY + 54
+      );
+
+      const horariosTexto =
+        d.horarios.length > 0
+          ? d.horarios
+              .map(
+                (h) =>
+                  `${h.dia} - ${h.horario}`
+              )
+              .join(" | ")
+          : "-";
+
+      doc.text(
+        `Horários: ${horariosTexto}`,
+        340,
+        inicioY + 70,
+        {
+          width: 180,
+        }
+      );
+
+      doc.moveDown(8);
+
+      if (
+        doc.y > 700 &&
+        index <
+          dados.length - 1
+      ) {
+        doc.addPage();
+      }
     });
 
     doc.end();
+
   } catch (err) {
+
     console.error(err);
 
     res.status(500).json({

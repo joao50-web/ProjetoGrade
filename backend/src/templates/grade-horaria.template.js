@@ -254,6 +254,26 @@ ${HORARIOS.map(horario => {
     const celula =
       linha?.celulas?.[colIndex] || {};
 
+    /* =========================================
+       IGNORA DISCIPLINA INVÁLIDA
+    ========================================= */
+
+    const disciplinaValida =
+      celula &&
+      (
+        celula.nome ||
+        celula.codigo ||
+        celula.professor ||
+        celula.departamento
+      );
+
+    if (!disciplinaValida) {
+      return `
+      <td class="disciplina">
+      </td>
+      `;
+    }
+
     return `
     <td class="disciplina">
 

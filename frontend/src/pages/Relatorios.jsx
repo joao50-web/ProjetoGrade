@@ -642,201 +642,183 @@ export default function Relatorios() {
       {/* FILTROS */}
 
       <Row
-        gutter={[10, 10]}
-        style={{
-          marginBottom: 20,
-        }}
-      >
+  gutter={[12, 12]}
+  style={{
+    marginBottom: 20,
+  }}
+>
 
-        {/* DISCIPLINA */}
+  <Col flex="230px">
+    <Select
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      placeholder="Disciplina"
+      style={{ width: "100%" }}
+      dropdownStyle={{
+        width: 420,
+      }}
+      value={filtros.disciplina_id}
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          disciplina_id: v,
+        }))
+      }
+      options={disciplinas.map(
+        (d) => ({
+          value: d.id,
+          label: `${d.codigo} - ${d.nome}`,
+        })
+      )}
+    />
+  </Col>
 
-        <Col flex="210px">
-          <Select
-            allowClear
-            showSearch
-            placeholder="Disciplina"
-            optionFilterProp="label"
-            style={{
-              width: "100%",
-            }}
-            dropdownStyle={{
-              maxWidth: 350,
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                disciplina_id:
-                  v,
-              }))
-            }
-            options={disciplinas.map(
-              (d) => ({
-                value: d.id,
+  <Col flex="220px">
+    <Select
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      placeholder="Curso"
+      style={{ width: "100%" }}
+      value={filtros.curso_id}
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          curso_id: v,
+        }))
+      }
+      options={cursos.map(
+        (c) => ({
+          value: c.id,
+          label: c.nome,
+        })
+      )}
+    />
+  </Col>
 
-                // TEXTO LIMITADO
-                label:
-                  d.codigo +
-                  " - " +
-                  (
-                    d.nome?.length > 45
-                      ? d.nome.slice(
-                          0,
-                          45
-                        ) + "..."
-                      : d.nome
-                  ),
-              })
-            )}
-          />
-        </Col>
+  <Col flex="220px">
+    <Select
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      placeholder="Departamento"
+      style={{ width: "100%" }}
+      value={
+        filtros.departamento_id
+      }
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          departamento_id: v,
+        }))
+      }
+      options={departamentos.map(
+        (d) => ({
+          value: d.id,
+          label: `${d.sigla} - ${d.nome}`,
+        })
+      )}
+    />
+  </Col>
 
-        {/* CURSO */}
+  <Col flex="220px">
+    <Select
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      placeholder="Professor"
+      style={{ width: "100%" }}
+      value={filtros.professor_id}
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          professor_id: v,
+        }))
+      }
+      options={professores.map(
+        (p) => ({
+          value: p.id,
+          label: p.nome,
+        })
+      )}
+    />
+  </Col>
 
-        <Col flex="180px">
-          <Select
-            allowClear
-            placeholder="Curso"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                curso_id: v,
-              }))
-            }
-            options={cursos.map(
-              (c) => ({
-                value: c.id,
-                label: c.nome,
-              })
-            )}
-          />
-        </Col>
+  <Col flex="140px">
+    <Select
+      allowClear
+      placeholder="Ano"
+      style={{ width: "100%" }}
+      value={filtros.ano_id}
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          ano_id: v,
+        }))
+      }
+      options={anos.map(
+        (a) => ({
+          value: a.id,
+          label:
+            a.descricao ||
+            a.ano,
+        })
+      )}
+    />
+  </Col>
 
-        {/* DEPARTAMENTO */}
+  <Col flex="140px">
+    <Select
+      allowClear
+      placeholder="Semestre"
+      style={{ width: "100%" }}
+      value={filtros.semestre_id}
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          semestre_id: v,
+        }))
+      }
+      options={semestres.map(
+        (s) => ({
+          value: s.id,
+          label:
+            s.descricao ||
+            s.nome,
+        })
+      )}
+    />
+  </Col>
 
-        <Col flex="180px">
-          <Select
-            allowClear
-            placeholder="Departamento"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                departamento_id:
-                  v,
-              }))
-            }
-            options={departamentos.map(
-              (d) => ({
-                value: d.id,
-                label: d.nome,
-              })
-            )}
-          />
-        </Col>
+  <Col flex="220px">
+    <Select
+      allowClear
+      showSearch
+      optionFilterProp="label"
+      placeholder="Currículo"
+      style={{ width: "100%" }}
+      value={
+        filtros.curriculo_id
+      }
+      onChange={(v) =>
+        setFiltros((f) => ({
+          ...f,
+          curriculo_id: v,
+        }))
+      }
+      options={curriculos.map(
+        (c) => ({
+          value: c.id,
+          label:
+            c.descricao ||
+            c.nome,
+        })
+      )}
+    />
+  </Col>
 
-        {/* PROFESSOR */}
-
-        <Col flex="200px">
-          <Select
-            allowClear
-            showSearch
-            placeholder="Professor"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                professor_id: v,
-              }))
-            }
-            options={professores.map(
-              (p) => ({
-                value: p.id,
-                label: p.nome,
-              })
-            )}
-          />
-        </Col>
-
-        {/* ANO */}
-
-        <Col flex="120px">
-          <Select
-            allowClear
-            placeholder="Ano"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                ano_id: v,
-              }))
-            }
-            options={anos.map(
-              (a) => ({
-                value: a.id,
-                label: a.ano,
-              })
-            )}
-          />
-        </Col>
-
-        {/* SEMESTRE */}
-
-        <Col flex="140px">
-          <Select
-            allowClear
-            placeholder="Semestre"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                semestre_id: v,
-              }))
-            }
-            options={semestres.map(
-              (s) => ({
-                value: s.id,
-                label: s.nome,
-              })
-            )}
-          />
-        </Col>
-
-        {/* CURRICULO */}
-
-        <Col flex="180px">
-          <Select
-            allowClear
-            placeholder="Currículo"
-            style={{
-              width: "100%",
-            }}
-            onChange={(v) =>
-              setFiltros((f) => ({
-                ...f,
-                curriculo_id: v,
-              }))
-            }
-            options={curriculos.map(
-              (c) => ({
-                value: c.id,
-                label: c.nome,
-              })
-            )}
-          />
-        </Col>
-
-      </Row>
+</Row>
 
       {/* TABELA */}
 

@@ -43,6 +43,7 @@ const headerStyle = {
 };
 
 export default function GradeTabela() {
+
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
   const [semestres, setSemestres] = useState([]);
@@ -75,8 +76,11 @@ export default function GradeTabela() {
   ========================================================= */
 
   useEffect(() => {
+
     const load = async () => {
+
       try {
+
         const [
           cursosRes,
           anosRes,
@@ -124,6 +128,7 @@ export default function GradeTabela() {
         setHorarios(
           (horariosRes.data || []).sort(
             (a, b) => {
+
               const horaA =
                 a.descricao.split("-")[0];
 
@@ -136,7 +141,9 @@ export default function GradeTabela() {
             },
           ),
         );
+
       } catch (err) {
+
         console.error(err);
 
         message.error(
@@ -146,6 +153,7 @@ export default function GradeTabela() {
     };
 
     load();
+
   }, []);
 
   /* =========================================================
@@ -153,6 +161,7 @@ export default function GradeTabela() {
   ========================================================= */
 
   useEffect(() => {
+
     if (!cursoId) {
       setDisciplinas([]);
       return;
@@ -163,13 +172,16 @@ export default function GradeTabela() {
         `/cursos/${cursoId}/disciplinas`,
       )
       .then((res) => {
+
         setDisciplinas(
           res.data || [],
         );
       })
       .catch(() => {
+
         setDisciplinas([]);
       });
+
   }, [cursoId]);
 
   /* =========================================================
@@ -177,6 +189,7 @@ export default function GradeTabela() {
   ========================================================= */
 
   useEffect(() => {
+
     if (
       !cursoId ||
       !anoId ||
@@ -188,6 +201,7 @@ export default function GradeTabela() {
     }
 
     loadGrade();
+
   }, [
     cursoId,
     anoId,
@@ -196,7 +210,9 @@ export default function GradeTabela() {
   ]);
 
   const loadGrade = async () => {
+
     try {
+
       const response = await api.get(
         "/grade-horaria",
         {
@@ -204,34 +220,33 @@ export default function GradeTabela() {
             curso_id: cursoId,
             ano_id: anoId,
             semestre_id: semestreId,
-            curriculo_id:
-              curriculoId,
+            curriculo_id: curriculoId,
           },
         },
       );
 
       setGrade(response.data || []);
 
-      /* ======================================
-         AJUSTA COORDENADOR AUTOMATICAMENTE
-      ====================================== */
-
       if (
         response.data &&
         response.data.length > 0
       ) {
+
         const primeiro =
           response.data[0];
 
         if (
           primeiro.coordenador_id
         ) {
+
           setCoordenadorId(
             primeiro.coordenador_id,
           );
         }
       }
+
     } catch (err) {
+
       console.error(err);
 
       setGrade([]);
@@ -252,15 +267,17 @@ export default function GradeTabela() {
     field,
     value,
   ) => {
+
     setGrade((prev) => {
+
       const exists = prev.find(
         (g) =>
-          g.horario_id ===
-            horarioId &&
+          g.horario_id === horarioId &&
           g.dia_semana_id === diaId,
       );
 
       if (!exists) {
+
         return [
           ...prev,
           {
@@ -275,8 +292,7 @@ export default function GradeTabela() {
       }
 
       return prev.map((g) =>
-        g.horario_id ===
-          horarioId &&
+        g.horario_id === horarioId &&
         g.dia_semana_id === diaId
           ? {
               ...g,
@@ -292,6 +308,7 @@ export default function GradeTabela() {
   ========================================================= */
 
   const handleSave = async () => {
+
     if (
       !cursoId ||
       !anoId ||
@@ -316,19 +333,17 @@ export default function GradeTabela() {
     setSaving(true);
 
     try {
+
       await api.post(
         "/grade-horaria/save",
         {
           contexto: {
             curso_id: cursoId,
             ano_id: anoId,
-            semestre_id:
-              semestreId,
-            curriculo_id:
-              curriculoId,
+            semestre_id: semestreId,
+            curriculo_id: curriculoId,
             coordenador_id:
-              coordenadorId ??
-              null,
+              coordenadorId ?? null,
           },
 
           slots,
@@ -340,15 +355,18 @@ export default function GradeTabela() {
       );
 
       loadGrade();
+
     } catch (err) {
+
       console.error(err);
 
       message.error(
-        err?.response?.data
-          ?.error ||
-          "Erro ao salvar",
+        err?.response?.data?.error ||
+        "Erro ao salvar",
       );
+
     } finally {
+
       setSaving(false);
     }
   };
@@ -358,17 +376,17 @@ export default function GradeTabela() {
   ========================================================= */
 
   const handlePDF = async () => {
+
     try {
+
       const response = await api.get(
         "/api/relatorio-grade/pdf",
         {
           params: {
             curso_id: cursoId,
             ano_id: anoId,
-            semestre_id:
-              semestreId,
-            curriculo_id:
-              curriculoId,
+            semestre_id: semestreId,
+            curriculo_id: curriculoId,
           },
 
           responseType: "blob",
@@ -386,7 +404,9 @@ export default function GradeTabela() {
         URL.createObjectURL(file);
 
       window.open(fileURL);
+
     } catch (err) {
+
       console.error(err);
 
       message.error(
@@ -435,13 +455,12 @@ export default function GradeTabela() {
       }),
 
       render: (_, record) => {
+
         const item =
           grade.find(
             (g) =>
-              g.horario_id ===
-                record.id &&
-              g.dia_semana_id ===
-                dia.id,
+              g.horario_id === record.id &&
+              g.dia_semana_id === dia.id,
           ) || {
             horario_id: record.id,
             dia_semana_id: dia.id,
@@ -455,21 +474,18 @@ export default function GradeTabela() {
             style={{
               padding: 6,
               display: "flex",
-              flexDirection:
-                "column",
+              flexDirection: "column",
               gap: 6,
               minHeight: 130,
             }}
           >
-            {/* DISCIPLINA */}
+
             <Select
               allowClear
               showSearch
               size="small"
               placeholder="Disciplina"
-              value={
-                item.disciplina_id
-              }
+              value={item.disciplina_id}
               optionFilterProp="label"
               style={{
                 width: "100%",
@@ -488,13 +504,11 @@ export default function GradeTabela() {
               options={disciplinas.map(
                 (d) => ({
                   value: d.id,
-
                   label: `${d.codigo} - ${d.nome}`,
                 }),
               )}
             />
 
-            {/* PROFESSOR */}
             {item.disciplina_id && (
               <>
                 <Select
@@ -502,15 +516,10 @@ export default function GradeTabela() {
                   showSearch
                   size="small"
                   placeholder="Professor"
-                  value={
-                    item.professor_id
-                  }
+                  value={item.professor_id}
                   optionFilterProp="label"
                   style={{
                     width: "100%",
-                  }}
-                  dropdownStyle={{
-                    width: 350,
                   }}
                   onChange={(value) =>
                     updateSlot(
@@ -528,21 +537,15 @@ export default function GradeTabela() {
                   )}
                 />
 
-                {/* DEPARTAMENTO */}
                 <Select
                   allowClear
                   showSearch
                   size="small"
                   placeholder="Departamento"
-                  value={
-                    item.departamento_id
-                  }
+                  value={item.departamento_id}
                   optionFilterProp="label"
                   style={{
                     width: "100%",
-                  }}
-                  dropdownStyle={{
-                    width: 350,
                   }}
                   onChange={(value) =>
                     updateSlot(
@@ -555,7 +558,6 @@ export default function GradeTabela() {
                   options={departamentos.map(
                     (d) => ({
                       value: d.id,
-
                       label: `${d.sigla} - ${d.nome}`,
                     }),
                   )}
@@ -572,8 +574,7 @@ export default function GradeTabela() {
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary:
-            THEME.primary,
+          colorPrimary: THEME.primary,
         },
       }}
     >
@@ -585,14 +586,13 @@ export default function GradeTabela() {
           background: "#fff",
         }}
       >
-        {/* HEADER */}
+
         <div
           style={{
             padding: "12px 16px",
             display: "flex",
             alignItems: "flex-end",
-            justifyContent:
-              "space-between",
+            justifyContent: "space-between",
             gap: 14,
             flexWrap: "wrap",
             background:
@@ -601,7 +601,7 @@ export default function GradeTabela() {
               "1px solid rgba(11,61,92,0.12)",
           }}
         >
-          {/* FILTROS */}
+
           <div
             style={{
               display: "flex",
@@ -609,7 +609,7 @@ export default function GradeTabela() {
               flexWrap: "wrap",
             }}
           >
-            {/* CURSO */}
+
             <div>
               <div style={labelStyle}>
                 Curso
@@ -630,7 +630,6 @@ export default function GradeTabela() {
               />
             </div>
 
-            {/* CURRICULO */}
             <div>
               <div style={labelStyle}>
                 Currículo
@@ -640,14 +639,11 @@ export default function GradeTabela() {
                 style={selectStyle}
                 placeholder="Currículo"
                 value={curriculoId}
-                onChange={
-                  setCurriculoId
-                }
+                onChange={setCurriculoId}
                 allowClear
                 options={curriculos.map(
                   (c) => ({
                     value: c.id,
-
                     label:
                       c.descricao ||
                       c.nome,
@@ -656,15 +652,14 @@ export default function GradeTabela() {
               />
             </div>
 
-            {/* ANO */}
             <div>
               <div style={labelStyle}>
-                Ano
+                Ano Letivo
               </div>
 
               <Select
                 style={{
-                  width: 120,
+                  width: 140,
                 }}
                 placeholder="Ano"
                 value={anoId}
@@ -673,16 +668,12 @@ export default function GradeTabela() {
                 options={anos.map(
                   (a) => ({
                     value: a.id,
-
-                    label:
-                      a.descricao ||
-                      a.ano,
+                    label: a.descricao,
                   }),
                 )}
               />
             </div>
 
-            {/* SEMESTRE */}
             <div>
               <div style={labelStyle}>
                 Semestre
@@ -694,14 +685,11 @@ export default function GradeTabela() {
                 }}
                 placeholder="Semestre"
                 value={semestreId}
-                onChange={
-                  setSemestreId
-                }
+                onChange={setSemestreId}
                 allowClear
                 options={semestres.map(
                   (s) => ({
                     value: s.id,
-
                     label:
                       s.descricao ||
                       s.nome,
@@ -710,7 +698,6 @@ export default function GradeTabela() {
               />
             </div>
 
-            {/* COORDENADOR */}
             <div>
               <div style={labelStyle}>
                 Coordenador
@@ -725,9 +712,7 @@ export default function GradeTabela() {
                 }}
                 placeholder="Coordenador"
                 value={coordenadorId}
-                onChange={
-                  setCoordenadorId
-                }
+                onChange={setCoordenadorId}
                 options={coordenadores.map(
                   (c) => ({
                     value: c.id,
@@ -738,7 +723,6 @@ export default function GradeTabela() {
             </div>
           </div>
 
-          {/* BOTOES */}
           <div
             style={{
               display: "flex",
@@ -755,18 +739,14 @@ export default function GradeTabela() {
             </Button>
 
             <Button
-              icon={
-                <FilePdfOutlined />
-              }
+              icon={<FilePdfOutlined />}
               onClick={handlePDF}
             >
               PDF
             </Button>
 
             <Button
-              icon={
-                <ReloadOutlined />
-              }
+              icon={<ReloadOutlined />}
               onClick={() =>
                 window.location.reload()
               }
@@ -774,7 +754,6 @@ export default function GradeTabela() {
           </div>
         </div>
 
-        {/* TABELA */}
         <Table
           rowKey="id"
           dataSource={horarios}

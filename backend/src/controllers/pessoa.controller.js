@@ -137,24 +137,67 @@ exports.findCoordenadores = async (req, res) => {
 /* ================= REMOVER ================= */
 exports.remove = async (req, res) => {
   try {
+
     const pessoa = await Pessoa.findByPk(req.params.id, {
       include: [{ model: Usuario, as: "usuario" }],
     });
 
-    if (!pessoa) {
-      return res.status(404).json({ error: "Pessoa não encontrada" });
-    }
+    /* =========================================
+       PESSOA NÃO EXISTE
+    ========================================= */
 
-    if (pessoa.usuario) {
-      return res.status(400).json({
-        error: "Pessoa possui usuário e não pode ser removida",
+    if (!pessoa) {
+      return res.status(404).json({
+        error: "Pessoa não encontrada",
       });
     }
 
+    /* =========================================
+       POSSUI USUÁRIO
+    ========================================= */
+
+    if (pessoa.usuario) {
+      return res.status(400).json({
+        error:
+          "Pessoa possui usuário vinculado e não pode ser removida",
+      });
+    }
+
+    /* =========================================
+       REMOVE
+    ========================================= */
+
     await pessoa.destroy();
+
     return res.status(204).send();
+
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Erro ao remover pessoa" });
+
+    /* =========================================
+       FK - GRADE HORÁRIA
+    ========================================= */
+
+    if (
+      error.name ===
+        "SequelizeForeignKeyConstraintError" ||
+
+      error.parent?.code ===
+        "ER_ROW_IS_REFERENCED_2"
+    ) {
+
+      return res.status(409).json({
+        error:
+          "Não é possível remover esta pessoa porque ela está vinculada à grade horária.",
+      });
+    }
+
+    /* =========================================
+       ERRO GENÉRICO
+    ========================================= */
+
+    return res.status(500).json({
+      error:
+        "Erro interno ao remover pessoa",
+    });
   }
 };

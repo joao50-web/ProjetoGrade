@@ -25,14 +25,18 @@ exports.findByContext = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
+
+      // FILTROS VISUAIS
       coordenador_id,
+      professor_id,
+      departamento_id,
     } = req.query;
 
-    const where = {};
-
     /* =========================================
-       FILTROS
+       CONTEXTO PRINCIPAL DA GRADE
     ========================================= */
+
+    const where = {};
 
     if (curso_id)
       where.curso_id = curso_id;
@@ -46,18 +50,81 @@ exports.findByContext = async (req, res) => {
     if (curriculo_id)
       where.curriculo_id = curriculo_id;
 
+    /* =========================================
+       FILTROS VISUAIS
+    ========================================= */
+
     if (
       coordenador_id &&
       coordenador_id !== "null" &&
       coordenador_id !== "undefined"
     ) {
-      where.coordenador_id =
-        coordenador_id;
+      where[Op.or] = [
+        { coordenador_id },
+        { coordenador_id: null },
+      ];
     }
+
+    if (
+      professor_id &&
+      professor_id !== "null" &&
+      professor_id !== "undefined"
+    ) {
+      where.professor_id =
+        professor_id;
+    }
+
+    if (
+      departamento_id &&
+      departamento_id !== "null" &&
+      departamento_id !== "undefined"
+    ) {
+      where.departamento_id =
+        departamento_id;
+    }
+
+    /* =========================================
+       DISCIPLINAS VÁLIDAS DO CURSO
+    ========================================= */
+
+    let disciplinasValidas = [];
+
+    if (curso_id) {
+
+      const curso =
+        await Curso.findByPk(
+          curso_id,
+          {
+            include: [
+              {
+                model: Disciplina,
+                as: "disciplinas",
+
+                attributes: ["id"],
+
+                through: {
+                  attributes: [],
+                },
+              },
+            ],
+          }
+        );
+
+      disciplinasValidas =
+        curso?.disciplinas?.map(
+          (d) => d.id
+        ) || [];
+    }
+
+    /* =========================================
+       BUSCA
+    ========================================= */
 
     const registros =
       await GradeHoraria.findAll({
         where,
+
+        distinct: true,
 
         include: [
           {
@@ -143,26 +210,45 @@ exports.findByContext = async (req, res) => {
       });
 
     /* =========================================
+       MAPA MULTICURSO
+    ========================================= */
+
+    const mapaMulticurso =
+      new Map();
+
+    registros.forEach((r) => {
+
+      const chave =
+        `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
+
+      mapaMulticurso.set(
+        chave,
+        (mapaMulticurso.get(chave) || 0) + 1
+      );
+    });
+
+    /* =========================================
        FORMATAR RETORNO
     ========================================= */
 
     const resultado =
       registros.map((r) => {
 
+        const chave =
+          `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
+
         const multicurso =
-          registros.filter(
-            (x) =>
-              x.disciplina_id ===
-                r.disciplina_id &&
-              x.curso_id ===
-                r.curso_id &&
-              x.ano_id ===
-                r.ano_id &&
-              x.semestre_id ===
-                r.semestre_id &&
-              x.curriculo_id ===
-                r.curriculo_id
-          ).length > 1;
+          mapaMulticurso.get(chave) > 1;
+
+        /* =====================================
+           DISCIPLINA VÁLIDA
+        ===================================== */
+
+        const disciplinaValida =
+          r.disciplina &&
+          disciplinasValidas.includes(
+            r.disciplina.id
+          );
 
         return {
           id: r.id,
@@ -191,7 +277,9 @@ exports.findByContext = async (req, res) => {
             r.departamento_id,
 
           disciplina_id:
-            r.disciplina_id,
+            disciplinaValida
+              ? r.disciplina_id
+              : null,
 
           horario_id:
             r.horario_id,
@@ -199,7 +287,7 @@ exports.findByContext = async (req, res) => {
           dia_semana_id:
             r.dia_semana_id,
 
-          /* TEXTO FORMATADO */
+          /* TEXTO */
 
           curso:
             r.curso?.nome || "-",
@@ -231,7 +319,7 @@ exports.findByContext = async (req, res) => {
           /* OBJETOS */
 
           disciplina:
-            r.disciplina
+            disciplinaValida
               ? {
                   id:
                     r.disciplina.id,
@@ -280,6 +368,14 @@ exports.findByContext = async (req, res) => {
                 }
               : null,
 
+          /* =====================================
+             STATUS
+          ===================================== */
+
+          disciplinaInvalida:
+            !!r.disciplina &&
+            !disciplinaValida,
+
           multicurso,
         };
       });
@@ -314,10 +410,6 @@ exports.saveGrade = async (
     slots,
   } = req.body;
 
-  /* =========================================
-     VALIDAÇÃO
-  ========================================= */
-
   if (
     !contexto ||
     !Array.isArray(slots)
@@ -344,7 +436,7 @@ exports.saveGrade = async (
   ) {
     return res.status(400).json({
       error:
-        "Preencha todos os filtros",
+        "Preencha os filtros principais",
     });
   }
 
@@ -446,51 +538,6 @@ exports.saveGrade = async (
       );
 
     /* =========================================
-       VALIDA CONFLITO PROFESSOR
-    ========================================= */
-
-    for (const registro of registros) {
-
-      if (
-        registro.professor_id
-      ) {
-
-        const conflito =
-          await GradeHoraria.findOne({
-            where: {
-              professor_id:
-                registro.professor_id,
-
-              horario_id:
-                registro.horario_id,
-
-              dia_semana_id:
-                registro.dia_semana_id,
-
-              [Op.not]: {
-                curso_id,
-                ano_id,
-                semestre_id,
-                curriculo_id,
-              },
-            },
-
-            transaction,
-          });
-
-        if (conflito) {
-
-          await transaction.rollback();
-
-          return res.status(409).json({
-            error:
-              "Professor já possui aula nesse horário",
-          });
-        }
-      }
-    }
-
-    /* =========================================
        SALVAR
     ========================================= */
 
@@ -567,29 +614,6 @@ exports.saveSlot = async (
         error:
           "Dados incompletos",
       });
-    }
-
-    /* =========================================
-       CONFLITO PROFESSOR
-    ========================================= */
-
-    if (professor_id) {
-
-      const conflito =
-        await GradeHoraria.findOne({
-          where: {
-            professor_id,
-            horario_id,
-            dia_semana_id,
-          },
-        });
-
-      if (conflito) {
-        return res.status(409).json({
-          error:
-            "Professor já possui aula neste horário",
-        });
-      }
     }
 
     /* =========================================

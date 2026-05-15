@@ -1,8 +1,14 @@
+const { Op } = require("sequelize");
+
 const {
   Disciplina,
   Curso,
   Departamento,
   Pessoa,
+  GradeHoraria,
+  Ano,
+  Semestre,
+  Curriculo,
 } = require("../models");
 
 /* =========================================================
@@ -14,138 +20,236 @@ const relatorioProfessor = async (
   res
 ) => {
   try {
+
     const {
       departamento_id,
       curso_id,
       professor_id,
       disciplina_id,
+      ano_id,
+      semestre_id,
+      curriculo_id,
     } = req.query;
 
-    const whereDisciplina = {};
+    /* =====================================================
+       WHERE PRINCIPAL
+    ===================================================== */
 
-    if (disciplina_id) {
-      whereDisciplina.id =
+    const where = {};
+
+    if (
+      disciplina_id &&
+      disciplina_id !== "null"
+    ) {
+      where.disciplina_id =
         disciplina_id;
     }
 
-    const disciplinas =
-      await Disciplina.findAll({
-        where: whereDisciplina,
+    if (
+      curso_id &&
+      curso_id !== "null"
+    ) {
+      where.curso_id = curso_id;
+    }
 
-        attributes: [
-          "id",
-          "nome",
-          "codigo",
-        ],
+    if (
+      professor_id &&
+      professor_id !== "null"
+    ) {
+      where.professor_id =
+        professor_id;
+    }
+
+    if (
+      departamento_id &&
+      departamento_id !== "null"
+    ) {
+      where.departamento_id =
+        departamento_id;
+    }
+
+    if (
+      ano_id &&
+      ano_id !== "null"
+    ) {
+      where.ano_id = ano_id;
+    }
+
+    if (
+      semestre_id &&
+      semestre_id !== "null"
+    ) {
+      where.semestre_id =
+        semestre_id;
+    }
+
+    if (
+      curriculo_id &&
+      curriculo_id !== "null"
+    ) {
+      where.curriculo_id =
+        curriculo_id;
+    }
+
+    /* =====================================================
+       BUSCA
+    ===================================================== */
+
+    const registros =
+      await GradeHoraria.findAll({
+        where,
+
+        distinct: true,
 
         include: [
           {
-            model: Pessoa,
-            as: "professores",
-
-            attributes: [
-              "id",
-              "nome",
-            ],
-
-            through: {
-              attributes: [],
-            },
-
+            model: Disciplina,
+            as: "disciplina",
             required: false,
-
-            where: professor_id
-              ? {
-                  id: professor_id,
-                }
-              : undefined,
           },
 
           {
             model: Curso,
-            as: "cursos",
-
-            attributes: [
-              "id",
-              "nome",
-            ],
-
-            through: {
-              attributes: [],
-            },
-
-            required:
-              !!curso_id ||
-              !!departamento_id,
-
-            where: curso_id
-              ? { id: curso_id }
-              : undefined,
-
+            as: "curso",
+            required: false,
             include: [
               {
                 model: Departamento,
                 as: "departamento",
-
-                attributes: [
-                  "id",
-                  "nome",
-                ],
-
-                required:
-                  !!departamento_id,
-
-                where:
-                  departamento_id
-                    ? {
-                        id: departamento_id,
-                      }
-                    : undefined,
+                required: false,
               },
             ],
           },
+
+          {
+            model: Pessoa,
+            as: "professor",
+            required: false,
+          },
+
+          {
+            model: Ano,
+            as: "ano",
+            required: false,
+          },
+
+          {
+            model: Semestre,
+            as: "semestre",
+            required: false,
+          },
+
+          {
+            model: Curriculo,
+            as: "curriculo",
+            required: false,
+          },
+        ],
+
+        order: [
+          [
+            {
+              model: Disciplina,
+              as: "disciplina",
+            },
+            "nome",
+            "ASC",
+          ],
         ],
       });
 
-    const resultado =
-      disciplinas.map((d) => {
-        const cursos =
-          d.cursos || [];
+    /* =====================================================
+       AGRUPAMENTO
+    ===================================================== */
 
-        const professores =
-          d.professores || [];
+    const mapa = new Map();
 
-        return {
-          id: d.id,
+    registros.forEach((r) => {
 
-          nome: d.nome,
+      const chave =
+        `${r.disciplina_id}-${r.curso_id}-${r.professor_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
 
-          codigo: d.codigo,
+      if (!mapa.has(chave)) {
 
-          cursos: cursos.map(
-            (c) => c.nome
-          ),
+        mapa.set(chave, {
+          id: chave,
 
-          professores:
-            professores.map(
-              (p) => p.nome
-            ),
+          nome:
+            r.disciplina?.nome || "-",
+
+          codigo:
+            r.disciplina?.codigo || "-",
+
+          cursos: [],
+
+          professores: [],
 
           departamento:
-            cursos?.[0]
-              ?.departamento
+            r.curso?.departamento
               ?.nome || "-",
 
-          totalCursos:
-            cursos.length,
+          ano:
+            r.ano?.descricao ||
+            r.ano?.ano ||
+            "-",
 
-          multicurso:
-            cursos.length > 1,
-        };
-      });
+          semestre:
+            r.semestre
+              ?.descricao ||
+            r.semestre?.nome ||
+            "-",
+
+          curriculo:
+            r.curriculo
+              ?.descricao ||
+            r.curriculo?.nome ||
+            "-",
+        });
+      }
+
+      const item =
+        mapa.get(chave);
+
+      if (
+        r.curso?.nome &&
+        !item.cursos.includes(
+          r.curso.nome
+        )
+      ) {
+        item.cursos.push(
+          r.curso.nome
+        );
+      }
+
+      if (
+        r.professor?.nome &&
+        !item.professores.includes(
+          r.professor.nome
+        )
+      ) {
+        item.professores.push(
+          r.professor.nome
+        );
+      }
+    });
+
+    const resultado =
+      Array.from(
+        mapa.values()
+      ).map((r) => ({
+        ...r,
+
+        totalCursos:
+          r.cursos.length,
+
+        multicurso:
+          r.cursos.length > 1,
+      }));
 
     return res.json(resultado);
+
   } catch (err) {
+
     console.error(err);
 
     return res.status(500).json({
