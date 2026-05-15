@@ -17,20 +17,8 @@ import { api } from "../services/api";
 
 const THEME = {
   primary: "#0b3d5c",
-  border: "#d9e2ec",
   bgHeader: "#0b3d5c",
   textWhite: "#ffffff",
-};
-
-const labelStyle = {
-  fontSize: 11,
-  color: "#0b3d5c",
-  marginBottom: 4,
-  fontWeight: 600,
-};
-
-const selectStyle = {
-  width: 220,
 };
 
 const headerStyle = {
@@ -40,6 +28,14 @@ const headerStyle = {
   fontSize: "12px",
   textAlign: "center",
   padding: "10px 6px",
+};
+
+const horarioCellStyle = {
+  backgroundColor: THEME.primary,
+  color: "#fff",
+  fontWeight: "700",
+  textAlign: "center",
+  fontSize: "12px",
 };
 
 export default function GradeTabela() {
@@ -71,16 +67,10 @@ export default function GradeTabela() {
     { id: 5, nome: "SEXTA" },
   ];
 
-  /* =========================================================
-     LOAD INICIAL
-  ========================================================= */
-
+  /* LOAD INICIAL */
   useEffect(() => {
-
     const load = async () => {
-
       try {
-
         const [
           cursosRes,
           anosRes,
@@ -102,182 +92,77 @@ export default function GradeTabela() {
         ]);
 
         setCursos(cursosRes.data || []);
-
         setAnos(anosRes.data || []);
-
-        setSemestres(
-          semestresRes.data || [],
-        );
-
-        setCurriculos(
-          curriculosRes.data || [],
-        );
-
-        setProfessores(
-          professoresRes.data || [],
-        );
-
-        setCoordenadores(
-          coordenadoresRes.data || [],
-        );
-
-        setDepartamentos(
-          departamentosRes.data || [],
-        );
+        setSemestres(semestresRes.data || []);
+        setCurriculos(curriculosRes.data || []);
+        setProfessores(professoresRes.data || []);
+        setCoordenadores(coordenadoresRes.data || []);
+        setDepartamentos(departamentosRes.data || []);
 
         setHorarios(
-          (horariosRes.data || []).sort(
-            (a, b) => {
-
-              const horaA =
-                a.descricao.split("-")[0];
-
-              const horaB =
-                b.descricao.split("-")[0];
-
-              return horaA.localeCompare(
-                horaB,
-              );
-            },
-          ),
+          (horariosRes.data || []).sort((a, b) =>
+            a.descricao.split("-")[0].localeCompare(b.descricao.split("-")[0])
+          )
         );
 
       } catch (err) {
-
-        console.error(err);
-
-        message.error(
-          "Erro ao carregar dados",
-        );
+        message.error("Erro ao carregar dados");
       }
     };
 
     load();
-
   }, []);
 
-  /* =========================================================
-     DISCIPLINAS DO CURSO
-  ========================================================= */
-
+  /* DISCIPLINAS */
   useEffect(() => {
+    if (!cursoId) return setDisciplinas([]);
 
-    if (!cursoId) {
-      setDisciplinas([]);
-      return;
-    }
-
-    api
-      .get(
-        `/cursos/${cursoId}/disciplinas`,
-      )
-      .then((res) => {
-
-        setDisciplinas(
-          res.data || [],
-        );
-      })
-      .catch(() => {
-
-        setDisciplinas([]);
-      });
+    api.get(`/cursos/${cursoId}/disciplinas`)
+      .then(res => setDisciplinas(res.data || []))
+      .catch(() => setDisciplinas([]));
 
   }, [cursoId]);
 
-  /* =========================================================
-     BUSCAR GRADE
-  ========================================================= */
-
+  /* GRADE */
   useEffect(() => {
-
-    if (
-      !cursoId ||
-      !anoId ||
-      !semestreId ||
-      !curriculoId
-    ) {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
       setGrade([]);
       return;
     }
-
     loadGrade();
-
-  }, [
-    cursoId,
-    anoId,
-    semestreId,
-    curriculoId,
-  ]);
+  }, [cursoId, anoId, semestreId, curriculoId]);
 
   const loadGrade = async () => {
-
     try {
-
-      const response = await api.get(
-        "/grade-horaria",
-        {
-          params: {
-            curso_id: cursoId,
-            ano_id: anoId,
-            semestre_id: semestreId,
-            curriculo_id: curriculoId,
-          },
+      const response = await api.get("/grade-horaria", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
         },
-      );
+      });
 
       setGrade(response.data || []);
 
-      if (
-        response.data &&
-        response.data.length > 0
-      ) {
-
-        const primeiro =
-          response.data[0];
-
-        if (
-          primeiro.coordenador_id
-        ) {
-
-          setCoordenadorId(
-            primeiro.coordenador_id,
-          );
-        }
+      if (response.data?.length > 0) {
+        setCoordenadorId(response.data[0].coordenador_id);
       }
 
-    } catch (err) {
-
-      console.error(err);
-
+    } catch {
       setGrade([]);
-
-      message.error(
-        "Erro ao carregar grade",
-      );
+      message.error("Erro ao carregar grade");
     }
   };
 
-  /* =========================================================
-     UPDATE SLOT
-  ========================================================= */
-
-  const updateSlot = (
-    horarioId,
-    diaId,
-    field,
-    value,
-  ) => {
-
-    setGrade((prev) => {
-
+  /* UPDATE SLOT */
+  const updateSlot = (horarioId, diaId, field, value) => {
+    setGrade(prev => {
       const exists = prev.find(
-        (g) =>
-          g.horario_id === horarioId &&
-          g.dia_semana_id === diaId,
+        g => g.horario_id === horarioId && g.dia_semana_id === diaId
       );
 
       if (!exists) {
-
         return [
           ...prev,
           {
@@ -291,279 +176,169 @@ export default function GradeTabela() {
         ];
       }
 
-      return prev.map((g) =>
-        g.horario_id === horarioId &&
-        g.dia_semana_id === diaId
-          ? {
-              ...g,
-              [field]: value,
-            }
-          : g,
+      return prev.map(g =>
+        g.horario_id === horarioId && g.dia_semana_id === diaId
+          ? { ...g, [field]: value }
+          : g
       );
     });
   };
 
-  /* =========================================================
-     SAVE
-  ========================================================= */
-
+  /* SAVE */
   const handleSave = async () => {
-
-    if (
-      !cursoId ||
-      !anoId ||
-      !semestreId ||
-      !curriculoId
-    ) {
-      return message.warning(
-        "Selecione os filtros",
-      );
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
+      return message.warning("Selecione os filtros");
     }
 
-    const slots = grade.filter(
-      (g) => g.disciplina_id,
-    );
+    const slots = grade.filter(g => g.disciplina_id);
 
     if (!slots.length) {
-      return message.warning(
-        "Nenhuma disciplina selecionada",
-      );
+      return message.warning("Nenhuma disciplina selecionada");
     }
 
     setSaving(true);
 
     try {
-
-      await api.post(
-        "/grade-horaria/save",
-        {
-          contexto: {
-            curso_id: cursoId,
-            ano_id: anoId,
-            semestre_id: semestreId,
-            curriculo_id: curriculoId,
-            coordenador_id:
-              coordenadorId ?? null,
-          },
-
-          slots,
+      await api.post("/grade-horaria/save", {
+        contexto: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+          coordenador_id: coordenadorId,
         },
-      );
+        slots,
+      });
 
-      message.success(
-        "Grade salva com sucesso",
-      );
-
+      message.success("Grade salva com sucesso");
       loadGrade();
 
     } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        err?.response?.data?.error ||
-        "Erro ao salvar",
-      );
-
+      message.error("Erro ao salvar");
     } finally {
-
       setSaving(false);
     }
   };
 
-  /* =========================================================
-     PDF
-  ========================================================= */
-
-  const handlePDF = async () => {
-
+  /* DELETE */
+  const handleDeleteGrade = async () => {
     try {
-
-      const response = await api.get(
-        "/api/relatorio-grade/pdf",
-        {
-          params: {
-            curso_id: cursoId,
-            ano_id: anoId,
-            semestre_id: semestreId,
-            curriculo_id: curriculoId,
-          },
-
-          responseType: "blob",
+      await api.delete("/grade-horaria/delete", {
+        data: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
         },
-      );
+      });
 
-      const file = new Blob(
-        [response.data],
-        {
-          type: "application/pdf",
-        },
-      );
+      setGrade([]);
+      message.success("Grade excluída");
 
-      const fileURL =
-        URL.createObjectURL(file);
-
-      window.open(fileURL);
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        "Erro ao gerar PDF",
-      );
+    } catch {
+      message.error("Erro ao excluir");
     }
   };
 
-  /* =========================================================
-     COLUMNS
-  ========================================================= */
+  /* PDF */
+  const handlePDF = async () => {
+    try {
+      const response = await api.get("/api/relatorio-grade/pdf", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+        },
+        responseType: "blob",
+      });
 
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(file);
+      window.open(url);
+
+    } catch {
+      message.error("Erro ao gerar PDF");
+    }
+  };
+
+  /* COLUMNS */
   const columns = [
     {
       title: "HORÁRIO",
       dataIndex: "descricao",
-      width: 100,
+      width: 85,
       fixed: "left",
       align: "center",
-
-      onHeaderCell: () => ({
-        style: headerStyle,
-      }),
-
-      render: (text) => (
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: 12,
-          }}
-        >
+      onHeaderCell: () => ({ style: headerStyle }),
+      onCell: () => ({ style: horarioCellStyle }),
+      render: text => (
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>
           {text}
         </div>
       ),
     },
 
-    ...diasFixos.map((dia) => ({
+    ...diasFixos.map(dia => ({
       title: dia.nome,
-
-      width: 320,
-
+      width: 380,
       align: "center",
-
-      onHeaderCell: () => ({
-        style: headerStyle,
-      }),
+      onHeaderCell: () => ({ style: headerStyle }),
 
       render: (_, record) => {
 
-        const item =
-          grade.find(
-            (g) =>
-              g.horario_id === record.id &&
-              g.dia_semana_id === dia.id,
-          ) || {
-            horario_id: record.id,
-            dia_semana_id: dia.id,
-            disciplina_id: null,
-            professor_id: null,
-            departamento_id: null,
-          };
+        const item = grade.find(
+          g =>
+            g.horario_id === record.id &&
+            g.dia_semana_id === dia.id
+        ) || {
+          horario_id: record.id,
+          dia_semana_id: dia.id,
+          disciplina_id: null,
+          professor_id: null,
+          departamento_id: null,
+        };
 
         return (
-          <div
-            style={{
-              padding: 6,
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              minHeight: 130,
-            }}
-          >
+          <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 12, minHeight: 180 }}>
 
             <Select
               allowClear
-              showSearch
-              size="small"
               placeholder="Disciplina"
               value={item.disciplina_id}
-              optionFilterProp="label"
-              style={{
-                width: "100%",
-              }}
-              dropdownStyle={{
-                width: 500,
-              }}
-              onChange={(value) =>
-                updateSlot(
-                  record.id,
-                  dia.id,
-                  "disciplina_id",
-                  value,
-                )
-              }
-              options={disciplinas.map(
-                (d) => ({
-                  value: d.id,
-                  label: `${d.codigo} - ${d.nome}`,
-                }),
-              )}
+              onChange={v => updateSlot(record.id, dia.id, "disciplina_id", v)}
+              options={disciplinas.map(d => ({
+                value: d.id,
+                label: `${d.codigo} - ${d.nome}`,
+              }))}
             />
 
             {item.disciplina_id && (
               <>
                 <Select
                   allowClear
-                  showSearch
-                  size="small"
                   placeholder="Professor"
                   value={item.professor_id}
-                  optionFilterProp="label"
-                  style={{
-                    width: "100%",
-                  }}
-                  onChange={(value) =>
-                    updateSlot(
-                      record.id,
-                      dia.id,
-                      "professor_id",
-                      value,
-                    )
-                  }
-                  options={professores.map(
-                    (p) => ({
-                      value: p.id,
-                      label: p.nome,
-                    }),
-                  )}
+                  onChange={v => updateSlot(record.id, dia.id, "professor_id", v)}
+                  options={professores.map(p => ({
+                    value: p.id,
+                    label: p.nome,
+                  }))}
                 />
 
                 <Select
                   allowClear
-                  showSearch
-                  size="small"
                   placeholder="Departamento"
                   value={item.departamento_id}
-                  optionFilterProp="label"
-                  style={{
-                    width: "100%",
-                  }}
-                  onChange={(value) =>
-                    updateSlot(
-                      record.id,
-                      dia.id,
-                      "departamento_id",
-                      value,
-                    )
-                  }
-                  options={departamentos.map(
-                    (d) => ({
-                      value: d.id,
-                      label: `${d.sigla} - ${d.nome}`,
-                    }),
-                  )}
+                  onChange={v => updateSlot(record.id, dia.id, "departamento_id", v)}
+                  options={departamentos.map(d => ({
+                    value: d.id,
+                    label: `${d.sigla} - ${d.nome}`,
+                  }))}
                 />
               </>
             )}
+
           </div>
         );
       },
@@ -571,187 +346,26 @@ export default function GradeTabela() {
   ];
 
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: THEME.primary,
-        },
-      }}
-    >
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          background: "#fff",
-        }}
-      >
+    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary } }}>
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
 
-        <div
-          style={{
-            padding: "12px 16px",
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-            gap: 14,
-            flexWrap: "wrap",
-            background:
-              "linear-gradient(180deg,#f8fbff 0%,#ffffff 100%)",
-            borderBottom:
-              "1px solid rgba(11,61,92,0.12)",
-          }}
-        >
+        <div style={{ padding: 12, display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-
-            <div>
-              <div style={labelStyle}>
-                Curso
-              </div>
-
-              <Select
-                style={selectStyle}
-                placeholder="Curso"
-                value={cursoId}
-                onChange={setCursoId}
-                allowClear
-                options={cursos.map(
-                  (c) => ({
-                    value: c.id,
-                    label: c.nome,
-                  }),
-                )}
-              />
-            </div>
-
-            <div>
-              <div style={labelStyle}>
-                Currículo
-              </div>
-
-              <Select
-                style={selectStyle}
-                placeholder="Currículo"
-                value={curriculoId}
-                onChange={setCurriculoId}
-                allowClear
-                options={curriculos.map(
-                  (c) => ({
-                    value: c.id,
-                    label:
-                      c.descricao ||
-                      c.nome,
-                  }),
-                )}
-              />
-            </div>
-
-            <div>
-              <div style={labelStyle}>
-                Ano Letivo
-              </div>
-
-              <Select
-                style={{
-                  width: 140,
-                }}
-                placeholder="Ano"
-                value={anoId}
-                onChange={setAnoId}
-                allowClear
-                options={anos.map(
-                  (a) => ({
-                    value: a.id,
-                    label: a.descricao,
-                  }),
-                )}
-              />
-            </div>
-
-            <div>
-              <div style={labelStyle}>
-                Semestre
-              </div>
-
-              <Select
-                style={{
-                  width: 140,
-                }}
-                placeholder="Semestre"
-                value={semestreId}
-                onChange={setSemestreId}
-                allowClear
-                options={semestres.map(
-                  (s) => ({
-                    value: s.id,
-                    label:
-                      s.descricao ||
-                      s.nome,
-                  }),
-                )}
-              />
-            </div>
-
-            <div>
-              <div style={labelStyle}>
-                Coordenador
-              </div>
-
-              <Select
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                style={{
-                  width: 220,
-                }}
-                placeholder="Coordenador"
-                value={coordenadorId}
-                onChange={setCoordenadorId}
-                options={coordenadores.map(
-                  (c) => ({
-                    value: c.id,
-                    label: c.nome,
-                  }),
-                )}
-              />
-            </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Select placeholder="Curso" value={cursoId} onChange={setCursoId} style={{ width: 220 }} options={cursos.map(c => ({ value: c.id, label: c.nome }))} />
+            <Select placeholder="Currículo" value={curriculoId} onChange={setCurriculoId} style={{ width: 220 }} options={curriculos.map(c => ({ value: c.id, label: c.descricao || c.nome }))} />
+            <Select placeholder="Ano" value={anoId} onChange={setAnoId} style={{ width: 140 }} options={anos.map(a => ({ value: a.id, label: a.descricao }))} />
+            <Select placeholder="Semestre" value={semestreId} onChange={setSemestreId} style={{ width: 140 }} options={semestres.map(s => ({ value: s.id, label: s.descricao }))} />
+            <Select placeholder="Coordenador" value={coordenadorId} onChange={setCoordenadorId} style={{ width: 220 }} options={coordenadores.map(c => ({ value: c.id, label: c.nome }))} />
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-            }}
-          >
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSave}
-            >
-              Salvar
-            </Button>
-
-            <Button
-              icon={<FilePdfOutlined />}
-              onClick={handlePDF}
-            >
-              PDF
-            </Button>
-
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() =>
-                window.location.reload()
-              }
-            />
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>Salvar</Button>
+            <Button icon={<FilePdfOutlined />} onClick={handlePDF}>PDF</Button>
+            <Button danger onClick={handleDeleteGrade}>Excluir Grade</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()} />
           </div>
+
         </div>
 
         <Table
@@ -761,13 +375,10 @@ export default function GradeTabela() {
           pagination={false}
           bordered
           size="small"
-          tableLayout="fixed"
           sticky
-          scroll={{
-            x: 1800,
-            y: "calc(100vh - 120px)",
-          }}
+          scroll={{ x: 1900, y: "calc(100vh - 120px)" }}
         />
+
       </div>
     </ConfigProvider>
   );

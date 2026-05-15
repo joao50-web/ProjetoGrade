@@ -1,13 +1,24 @@
-const router = require('express').Router();
-const controller = require('../controllers/grade-horaria.controller');
+const router = require("express").Router();
+const controller = require("../controllers/grade-horaria.controller");
 
-// Buscar grade filtrada por contexto
-router.get('/', controller.findByContext);
+/* ======================================================
+   CONSULTA
+====================================================== */
+router.get("/", controller.findByContext);
 
-// Salvar um slot único
-router.post('/', controller.saveSlot);
+/* ======================================================
+   SLOT ISOLADO (uso opcional / futuro)
+====================================================== */
+router.post("/", controller.saveSlot);
 
-// Salvar grade inteira
-router.post('/save', controller.saveGrade);
+/* ======================================================
+   SALVAR GRADE COMPLETA
+====================================================== */
+router.post("/save", controller.saveGrade);
+
+/* ======================================================
+   EXCLUIR GRADE COMPLETA (NOVO)
+====================================================== */
+router.delete("/delete", controller.deleteGrade);
 
 module.exports = router;

@@ -1,4 +1,5 @@
-const { Curso, Disciplina, Pessoa } = require("../models");
+const { Curso, Disciplina, Pessoa, GradeHoraria } = require("../models");
+const { Sequelize } = require("sequelize");
 
 /* ===============================
    CREATE
@@ -25,7 +26,6 @@ exports.create = async (req, res) => {
 =============================== */
 exports.findAll = async (req, res) => {
   try {
-
     const cursos = await Curso.findAll({
       include: [
         {
@@ -35,14 +35,12 @@ exports.findAll = async (req, res) => {
           through: { attributes: [] },
         },
       ],
-
       order: [["nome", "ASC"]],
     });
 
     res.json(cursos);
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
@@ -56,7 +54,6 @@ exports.findAll = async (req, res) => {
 =============================== */
 exports.findById = async (req, res) => {
   try {
-
     const curso = await Curso.findByPk(req.params.id);
 
     if (!curso) {
@@ -68,7 +65,6 @@ exports.findById = async (req, res) => {
     res.json(curso);
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
@@ -82,7 +78,6 @@ exports.findById = async (req, res) => {
 =============================== */
 exports.update = async (req, res) => {
   try {
-
     const curso = await Curso.findByPk(req.params.id);
 
     if (!curso) {
@@ -98,7 +93,6 @@ exports.update = async (req, res) => {
     res.json(curso);
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
@@ -108,11 +102,10 @@ exports.update = async (req, res) => {
 };
 
 /* ===============================
-   DELETE
+   DELETE (100% SEGURO)
 =============================== */
 exports.remove = async (req, res) => {
   try {
-
     const curso = await Curso.findByPk(req.params.id);
 
     if (!curso) {
@@ -121,16 +114,41 @@ exports.remove = async (req, res) => {
       });
     }
 
+    // 🔥 CHECAGEM ANTES DE DELETAR (EVITA ERRO 1451)
+    const usadoNaGrade = await GradeHoraria.count({
+      where: {
+        curso_id: curso.id,
+      },
+    });
+
+    if (usadoNaGrade > 0) {
+      return res.status(409).json({
+        error:
+          "Não é possível excluir este curso pois ele está sendo usado na grade horária.",
+      });
+    }
+
     await curso.destroy();
 
-    res.status(204).send();
+    return res.status(204).send();
 
   } catch (error) {
+    console.error("Erro ao remover curso:", error);
 
-    console.error(error);
+    // 🔥 FALLBACK CASO FK AINDA PASSE (SEGURANÇA DUPLA)
+    if (
+      error instanceof Sequelize.ForeignKeyConstraintError ||
+      error.name === "SequelizeForeignKeyConstraintError" ||
+      error.code === "ER_ROW_IS_REFERENCED_2"
+    ) {
+      return res.status(409).json({
+        error:
+          "Não é possível excluir este curso pois existem registros vinculados a ele.",
+      });
+    }
 
-    res.status(500).json({
-      error: "Erro ao remover curso",
+    return res.status(500).json({
+      error: "Erro interno ao remover curso",
     });
   }
 };
@@ -140,7 +158,6 @@ exports.remove = async (req, res) => {
 =============================== */
 exports.listDisciplinas = async (req, res) => {
   try {
-
     const curso = await Curso.findByPk(req.params.id, {
       include: [
         {
@@ -161,7 +178,6 @@ exports.listDisciplinas = async (req, res) => {
     res.json(curso.disciplinas || []);
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
@@ -175,7 +191,6 @@ exports.listDisciplinas = async (req, res) => {
 =============================== */
 exports.updateDisciplinas = async (req, res) => {
   try {
-
     const { disciplinas } = req.body;
 
     if (!Array.isArray(disciplinas)) {
@@ -199,7 +214,6 @@ exports.updateDisciplinas = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({
@@ -213,23 +227,17 @@ exports.updateDisciplinas = async (req, res) => {
 =============================== */
 exports.findDisciplinasComProfessores = async (req, res) => {
   try {
-
     const { id } = req.params;
 
     const curso = await Curso.findByPk(id, {
       include: {
         model: Disciplina,
         as: "disciplinas",
-
         include: {
           model: Pessoa,
           as: "professores",
-
           attributes: ["id", "nome"],
-
-          through: {
-            attributes: [],
-          },
+          through: { attributes: [] },
         },
       },
     });
@@ -243,9 +251,7 @@ exports.findDisciplinasComProfessores = async (req, res) => {
     const result = [];
 
     curso.disciplinas.forEach((disciplina) => {
-
       disciplina.professores.forEach((professor) => {
-
         result.push({
           disciplina_id: disciplina.id,
           disciplina_nome: disciplina.nome,
@@ -258,7 +264,6 @@ exports.findDisciplinasComProfessores = async (req, res) => {
     res.json(result);
 
   } catch (error) {
-
     console.error(error);
 
     res.status(500).json({

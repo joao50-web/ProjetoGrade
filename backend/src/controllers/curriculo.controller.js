@@ -1,21 +1,40 @@
-const { Curriculo } = require('../models');
+const { Curriculo } = require("../models");
 
 exports.getOrCreate = async (req, res) => {
-  const { descricao } = req.body;
+  try {
+    let { descricao } = req.body;
 
-  if (!/^\d{4}$/.test(descricao)) {
-    return res.status(400).json({ error: 'Currículo inválido' });
+    if (!descricao) {
+      return res.status(400).json({ error: "Currículo obrigatório" });
+    }
+
+    descricao = String(descricao).trim();
+
+    if (!/^\d{4}$/.test(descricao)) {
+      return res.status(400).json({ error: "Currículo inválido (use YYYY)" });
+    }
+
+    const [curriculo] = await Curriculo.findOrCreate({
+      where: { descricao },
+      defaults: { descricao },
+    });
+
+    return res.json(curriculo);
+  } catch (err) {
+    console.error("Erro currículo:", err);
+    return res.status(500).json({ error: "Erro ao processar currículo" });
   }
-
-  const [curriculo] = await Curriculo.findOrCreate({
-    where: { descricao }
-  });
-
-  res.json(curriculo);
 };
+
 exports.findAll = async (req, res) => {
-  const curriculos = await Curriculo.findAll({
-    order: [['descricao', 'DESC']]
-  });
-  res.json(curriculos);
+  try {
+    const curriculos = await Curriculo.findAll({
+      order: [["descricao", "DESC"]],
+    });
+
+    return res.json(curriculos);
+  } catch (err) {
+    console.error("Erro curriculos:", err);
+    return res.status(500).json({ error: "Erro ao listar currículos" });
+  }
 };
