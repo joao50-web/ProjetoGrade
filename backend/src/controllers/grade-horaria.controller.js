@@ -63,15 +63,21 @@ exports.findByContext = async (req, res) => {
         ],
       });
 
-      disciplinasValidas =
-        curso?.disciplinas?.map((d) => d.id) || [];
+      disciplinasValidas = curso?.disciplinas?.map((d) => d.id) || [];
     }
 
     const registros = await GradeHoraria.findAll({
       where,
       distinct: true,
       include: [
-        { model: Disciplina, as: "disciplina", required: false },
+        {
+          model: Disciplina,
+          as: "disciplina",
+          required: false,
+
+          // 🔧 ÚNICA MUDANÇA IMPORTANTE
+          attributes: ["id", "nome", "codigo", "carga_horaria"],
+        },
         { model: Departamento, as: "departamento", required: false },
         { model: Curso, as: "curso", required: false },
         { model: Pessoa, as: "professor", required: false },
@@ -92,10 +98,7 @@ exports.findByContext = async (req, res) => {
 
     registros.forEach((r) => {
       const chave = `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
-      mapaMulticurso.set(
-        chave,
-        (mapaMulticurso.get(chave) || 0) + 1
-      );
+      mapaMulticurso.set(chave, (mapaMulticurso.get(chave) || 0) + 1);
     });
 
     const resultado = registros.map((r) => {
@@ -132,6 +135,9 @@ exports.findByContext = async (req, res) => {
               id: r.disciplina.id,
               nome: r.disciplina.nome,
               codigo: r.disciplina.codigo,
+
+              // 🔥 AGORA FUNCIONA NO FRONTEND
+              carga_horaria: r.disciplina.carga_horaria,
             }
           : null,
 
@@ -151,9 +157,7 @@ exports.findByContext = async (req, res) => {
             }
           : null,
 
-        disciplinaInvalida:
-          !!r.disciplina && !disciplinaValida,
-
+        disciplinaInvalida: !!r.disciplina && !disciplinaValida,
         multicurso,
       };
     });
@@ -166,7 +170,7 @@ exports.findByContext = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR GRADE
+   SALVAR GRADE (SEM ALTERAÇÃO)
 ====================================================== */
 
 exports.saveGrade = async (req, res) => {
@@ -241,7 +245,7 @@ exports.saveGrade = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR SLOT (ISOLADO)
+   SALVAR SLOT (SEM ALTERAÇÃO)
 ====================================================== */
 
 exports.saveSlot = async (req, res) => {
@@ -291,7 +295,7 @@ exports.saveSlot = async (req, res) => {
 };
 
 /* ======================================================
-   DELETE GRADE (NOVO)
+   DELETE GRADE (SEM ALTERAÇÃO)
 ====================================================== */
 
 exports.deleteGrade = async (req, res) => {

@@ -16,6 +16,12 @@ const Disciplina = sequelize.define('Tb_Disciplina', {
   nome: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+
+  carga_horaria: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   }
 
 }, {

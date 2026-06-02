@@ -22,7 +22,6 @@ async function seedGradeBase() {
       });
     }
 
-    // ===== HORÁRIOS (MANHÃ + TARDE + NOITE) =====
     const horarios = [
       // MANHÃ
       '08:00-08:50',
