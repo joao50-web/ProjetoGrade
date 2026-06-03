@@ -11,6 +11,7 @@ const {
   Ano,
   Curriculo,
   Semestre,
+  Turma,
   sequelize,
 } = require("../models");
 
@@ -74,8 +75,6 @@ exports.findByContext = async (req, res) => {
           model: Disciplina,
           as: "disciplina",
           required: false,
-
-          // 🔧 ÚNICA MUDANÇA IMPORTANTE
           attributes: ["id", "nome", "codigo", "carga_horaria"],
         },
         { model: Departamento, as: "departamento", required: false },
@@ -87,6 +86,7 @@ exports.findByContext = async (req, res) => {
         { model: Ano, as: "ano", required: false },
         { model: Curriculo, as: "curriculo", required: false },
         { model: Semestre, as: "semestre", required: false },
+        { model: Turma, as: "turma", required: false },
       ],
       order: [
         [{ model: DiaSemana, as: "diaSemana" }, "id", "ASC"],
@@ -119,9 +119,18 @@ exports.findByContext = async (req, res) => {
         coordenador_id: r.coordenador_id,
         professor_id: r.professor_id,
         departamento_id: r.departamento_id,
+
         disciplina_id: disciplinaValida ? r.disciplina_id : null,
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
+
+        turma_id: r.turma_id,
+        turma: r.turma
+          ? {
+              id: r.turma.id,
+              nome: r.turma.nome,
+            }
+          : null,
 
         curso: r.curso?.nome || "-",
         ano: r.ano?.descricao || r.ano?.ano || "-",
@@ -135,8 +144,6 @@ exports.findByContext = async (req, res) => {
               id: r.disciplina.id,
               nome: r.disciplina.nome,
               codigo: r.disciplina.codigo,
-
-              // 🔥 AGORA FUNCIONA NO FRONTEND
               carga_horaria: r.disciplina.carga_horaria,
             }
           : null,
@@ -170,7 +177,7 @@ exports.findByContext = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR GRADE (SEM ALTERAÇÃO)
+   SALVAR GRADE
 ====================================================== */
 
 exports.saveGrade = async (req, res) => {
@@ -227,6 +234,7 @@ exports.saveGrade = async (req, res) => {
       horario_id: slot.horario_id,
       dia_semana_id: slot.dia_semana_id,
       disciplina_id: slot.disciplina_id,
+      turma_id: slot.turma_id || null,
     }));
 
     await GradeHoraria.bulkCreate(registros, { transaction });
@@ -245,7 +253,7 @@ exports.saveGrade = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR SLOT (SEM ALTERAÇÃO)
+   SALVAR SLOT
 ====================================================== */
 
 exports.saveSlot = async (req, res) => {
@@ -261,6 +269,7 @@ exports.saveSlot = async (req, res) => {
       horario_id,
       dia_semana_id,
       disciplina_id,
+      turma_id,
     } = req.body;
 
     if (
@@ -285,6 +294,7 @@ exports.saveSlot = async (req, res) => {
       horario_id,
       dia_semana_id,
       disciplina_id: disciplina_id || null,
+      turma_id: turma_id || null,
     });
 
     return res.json(registro);
@@ -295,7 +305,7 @@ exports.saveSlot = async (req, res) => {
 };
 
 /* ======================================================
-   DELETE GRADE (SEM ALTERAÇÃO)
+   DELETE GRADE
 ====================================================== */
 
 exports.deleteGrade = async (req, res) => {

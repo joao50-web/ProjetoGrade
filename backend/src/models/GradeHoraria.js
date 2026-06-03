@@ -59,156 +59,81 @@ const GradeHoraria = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-  },
 
+    turma_id: {
+      type: DataTypes.BIGINT.UNSIGNED,
+      allowNull: true,
+    },
+  },
   {
     tableName: "tb_grade_horaria",
-
     freezeTableName: true,
-
     timestamps: true,
-
     indexes: [
       {
         name: "uk_grade_slot",
-
         unique: true,
-
-        fields: [
-          "dia_semana_id",
-          "horario_id",
-          "professor_id",
-        ],
+        fields: ["dia_semana_id", "horario_id", "professor_id"],
       },
     ],
   }
 );
 
-/* ======================================================
-   ASSOCIAÇÕES
-====================================================== */
-
 GradeHoraria.associate = (models) => {
+  GradeHoraria.belongsTo(models.Disciplina, {
+    foreignKey: "disciplina_id",
+    as: "disciplina",
+  });
 
-  /* =========================
-     DISCIPLINA
-  ========================= */
+  GradeHoraria.belongsTo(models.Turma, {
+    foreignKey: "turma_id",
+    as: "turma",
+  });
 
-  GradeHoraria.belongsTo(
-    models.Disciplina,
-    {
-      foreignKey: "disciplina_id",
-      as: "disciplina",
-    }
-  );
+  GradeHoraria.belongsTo(models.Pessoa, {
+    foreignKey: "professor_id",
+    as: "professor",
+  });
 
-  /* =========================
-     PROFESSOR
-  ========================= */
+  GradeHoraria.belongsTo(models.Pessoa, {
+    foreignKey: "coordenador_id",
+    as: "coordenador",
+  });
 
-  GradeHoraria.belongsTo(
-    models.Pessoa,
-    {
-      foreignKey: "professor_id",
-      as: "professor",
-    }
-  );
+  GradeHoraria.belongsTo(models.Departamento, {
+    foreignKey: "departamento_id",
+    as: "departamento",
+  });
 
-  /* =========================
-     COORDENADOR
-  ========================= */
+  GradeHoraria.belongsTo(models.Horario, {
+    foreignKey: "horario_id",
+    as: "horario",
+  });
 
-  GradeHoraria.belongsTo(
-    models.Pessoa,
-    {
-      foreignKey: "coordenador_id",
-      as: "coordenador",
-    }
-  );
+  GradeHoraria.belongsTo(models.DiaSemana, {
+    foreignKey: "dia_semana_id",
+    as: "diaSemana",
+  });
 
-  /* =========================
-     DEPARTAMENTO
-  ========================= */
+  GradeHoraria.belongsTo(models.Semestre, {
+    foreignKey: "semestre_id",
+    as: "semestre",
+  });
 
-  GradeHoraria.belongsTo(
-    models.Departamento,
-    {
-      foreignKey: "departamento_id",
-      as: "departamento",
-    }
-  );
+  GradeHoraria.belongsTo(models.Curso, {
+    foreignKey: "curso_id",
+    as: "curso",
+  });
 
-  /* =========================
-     HORÁRIO
-  ========================= */
+  GradeHoraria.belongsTo(models.Ano, {
+    foreignKey: "ano_id",
+    as: "ano",
+  });
 
-  GradeHoraria.belongsTo(
-    models.Horario,
-    {
-      foreignKey: "horario_id",
-      as: "horario",
-    }
-  );
-
-  /* =========================
-     DIA DA SEMANA
-  ========================= */
-
-  GradeHoraria.belongsTo(
-    models.DiaSemana,
-    {
-      foreignKey: "dia_semana_id",
-      as: "diaSemana",
-    }
-  );
-
-  /* =========================
-     SEMESTRE
-  ========================= */
-
-  GradeHoraria.belongsTo(
-    models.Semestre,
-    {
-      foreignKey: "semestre_id",
-      as: "semestre",
-    }
-  );
-
-  /* =========================
-     CURSO
-  ========================= */
-
-  GradeHoraria.belongsTo(
-    models.Curso,
-    {
-      foreignKey: "curso_id",
-      as: "curso",
-    }
-  );
-
-  /* =========================
-     ANO
-  ========================= */
-
-  GradeHoraria.belongsTo(
-    models.Ano,
-    {
-      foreignKey: "ano_id",
-      as: "ano",
-    }
-  );
-
-  /* =========================
-     CURRÍCULO
-  ========================= */
-
-  GradeHoraria.belongsTo(
-    models.Curriculo,
-    {
-      foreignKey: "curriculo_id",
-      as: "curriculo",
-    }
-  );
+  GradeHoraria.belongsTo(models.Curriculo, {
+    foreignKey: "curriculo_id",
+    as: "curriculo",
+  });
 };
 
 module.exports = GradeHoraria;

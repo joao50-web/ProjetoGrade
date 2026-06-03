@@ -436,12 +436,38 @@ export default function GradeTabela() {
               }))}
             />
 
-            {/* 🔥 CARGA HORÁRIA (AJUSTE PRINCIPAL) */}
-            {item.disciplina_id && item.disciplina && (
-              <Text style={{ fontSize: 11 }}>
-                Carga horária: {item.disciplina.carga_horaria ?? 0}h
-              </Text>
-            )}
+           {/* 🔥 CARGA HORÁRIA */}
+{item.disciplina_id && item.disciplina && (
+  <div
+    style={{
+      height: 32,
+      width: "100%",
+      border: "1px solid #d9d9d9",
+      borderRadius: 6,
+      backgroundColor: "#fff",
+      padding: "0 11px",
+      display: "flex",
+      alignItems: "center",
+      boxSizing: "border-box",
+      fontSize: 14,
+      color: "rgba(0,0,0,0.88)",
+    }}
+  >
+    <span
+      style={{
+        color: THEME.primary,
+        fontWeight: 600,
+        marginRight: 4,
+      }}
+    >
+      Carga Horária:
+    </span>
+
+    <span>
+      {item.disciplina.carga_horaria ?? 0}h
+    </span>
+  </div>
+)}
 
             {item.disciplina_id && (
               <>

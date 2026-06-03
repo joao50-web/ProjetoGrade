@@ -18,6 +18,7 @@ const Curriculo = require("./Curriculo");
 const GradeHoraria = require("./GradeHoraria");
 const Departamento = require("./Departamento");
 const Log = require("./Log");
+const Turma = require("./Turma");
 
 const models = {
   Curso,
@@ -36,6 +37,7 @@ const models = {
   GradeHoraria,
   Departamento,
   Log,
+  Turma,
   sequelize,
   Sequelize,
 };
