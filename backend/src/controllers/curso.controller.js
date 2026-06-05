@@ -163,7 +163,7 @@ exports.listDisciplinas = async (req, res) => {
         {
           model: Disciplina,
           as: "disciplinas",
-          attributes: ["id", "nome", "codigo"],
+          attributes: ["id", "nome", "codigo","carga_horaria"],
           through: { attributes: [] },
         },
       ],

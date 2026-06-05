@@ -8,7 +8,7 @@ exports.listarPorCurso = async (req, res) => {
         {
           model: Disciplina,
           as: 'disciplinas',
-          attributes: ['id', 'codigo', 'nome'],
+          attributes: ['id', 'codigo', 'nome','carga_horaria'],
           through: { attributes: [] }
         }
       ]

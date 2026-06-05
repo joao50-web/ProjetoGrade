@@ -31,7 +31,8 @@ const headerStyle = {
   fontWeight: "700",
   fontSize: "12px",
   textAlign: "center",
-  padding: "10px 6px",
+  padding: "8px 4px",
+  textTransform: "uppercase",
 };
 
 const horarioCellStyle = {
@@ -40,6 +41,7 @@ const horarioCellStyle = {
   fontWeight: "700",
   textAlign: "center",
   fontSize: "12px",
+  padding: "6px",
 };
 
 const filtroContainerStyle = {
@@ -49,9 +51,10 @@ const filtroContainerStyle = {
 };
 
 const filtroLabelStyle = {
-  fontSize: 12,
+  fontSize: "12px",
   fontWeight: 700,
   color: "#0b3d5c",
+  marginBottom: "2px",
 };
 
 export default function GradeTabela() {
@@ -125,7 +128,7 @@ export default function GradeTabela() {
       setDepartamentos(departamentosRes.data || []);
 
       const horariosOrdenados = (horariosRes.data || []).sort(
-        (a, b) => a.id - b.id
+        (a, b) => a.id - b.id,
       );
 
       setHorarios(horariosOrdenados);
@@ -200,6 +203,16 @@ export default function GradeTabela() {
     return map;
   }, [grade]);
 
+  const disciplinasMap = useMemo(() => {
+    const map = {};
+
+    disciplinas.forEach((d) => {
+      map[d.id] = d;
+    });
+
+    return map;
+  }, [disciplinas]);
+
   /* =========================================
      UPDATE SLOT
   ========================================= */
@@ -207,7 +220,7 @@ export default function GradeTabela() {
   const updateSlot = (horarioId, diaId, field, value) => {
     setGrade((prev) => {
       const exists = prev.find(
-        (g) => g.horario_id === horarioId && g.dia_semana_id === diaId
+        (g) => g.horario_id === horarioId && g.dia_semana_id === diaId,
       );
 
       if (!exists) {
@@ -227,7 +240,7 @@ export default function GradeTabela() {
       return prev.map((g) =>
         g.horario_id === horarioId && g.dia_semana_id === diaId
           ? { ...g, [field]: value }
-          : g
+          : g,
       );
     });
   };
@@ -242,11 +255,11 @@ export default function GradeTabela() {
     const horariosAtualizados = [...horarios];
 
     const oldIndex = horariosAtualizados.findIndex(
-      (h) => h.id === oldHorarioId
+      (h) => h.id === oldHorarioId,
     );
 
     const newIndex = horariosAtualizados.findIndex(
-      (h) => h.id === newHorarioId
+      (h) => h.id === newHorarioId,
     );
 
     if (oldIndex === -1 || newIndex === -1) return;
@@ -272,9 +285,7 @@ export default function GradeTabela() {
     setGrade([]);
     setDisciplinas([]);
 
-    const horariosResetados = JSON.parse(
-      JSON.stringify(horariosOriginais)
-    );
+    const horariosResetados = JSON.parse(JSON.stringify(horariosOriginais));
 
     horariosResetados.sort((a, b) => a.id - b.id);
 
@@ -378,7 +389,7 @@ export default function GradeTabela() {
     {
       title: "HORÁRIO",
       dataIndex: "descricao",
-      width: 150,
+      width: 130,
       fixed: "left",
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
@@ -386,8 +397,9 @@ export default function GradeTabela() {
 
       render: (_, record) => (
         <Select
+          size="middle"
           value={record.id}
-          style={{ width: "100%" }}
+          style={{ width: "100%", fontSize: "13px" }}
           onChange={(v) => updateHorario(record.id, v)}
           options={horarios.map((h) => ({
             value: h.id,
@@ -399,28 +411,28 @@ export default function GradeTabela() {
 
     ...diasFixos.map((dia) => ({
       title: dia.nome,
-      width: 340,
+      width: 320,
       align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
 
       render: (_, record) => {
-        const item =
-          gradeMap[`${record.id}-${dia.id}`] || {
-            horario_id: record.id,
-            dia_semana_id: dia.id,
-          };
+        const item = gradeMap[`${record.id}-${dia.id}`] || {
+          horario_id: record.id,
+          dia_semana_id: dia.id,
+        };
 
         return (
           <div
             style={{
-              padding: 10,
+              padding: "6px 8px",
               display: "flex",
               flexDirection: "column",
-              gap: 8,
-              minHeight: 145,
+              gap: 4,
+              minHeight: 110,
             }}
           >
             <Select
+              size="middle"
               allowClear
               showSearch
               optionFilterProp="label"
@@ -429,49 +441,36 @@ export default function GradeTabela() {
               onChange={(v) =>
                 updateSlot(record.id, dia.id, "disciplina_id", v)
               }
-              style={{ width: "100%" }}
+              style={{ width: "100%", fontSize: "13px" }}
               options={disciplinas.map((d) => ({
                 value: d.id,
                 label: `${d.codigo} - ${d.nome} (${d.carga_horaria ?? 0}h)`,
               }))}
             />
 
-           {/* 🔥 CARGA HORÁRIA */}
-{item.disciplina_id && item.disciplina && (
-  <div
-    style={{
-      height: 32,
-      width: "100%",
-      border: "1px solid #d9d9d9",
-      borderRadius: 6,
-      backgroundColor: "#fff",
-      padding: "0 11px",
-      display: "flex",
-      alignItems: "center",
-      boxSizing: "border-box",
-      fontSize: 14,
-      color: "rgba(0,0,0,0.88)",
-    }}
-  >
-    <span
-      style={{
-        color: THEME.primary,
-        fontWeight: 600,
-        marginRight: 4,
-      }}
-    >
-      Carga Horária:
-    </span>
-
-    <span>
-      {item.disciplina.carga_horaria ?? 0}h
-    </span>
-  </div>
-)}
-
             {item.disciplina_id && (
               <>
+                <div
+                  style={{
+                    height: 28,
+                    width: "100%",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 4,
+                    backgroundColor: "#fafafa",
+                    padding: "0 8px",
+                    display: "flex",
+                    alignItems: "center",
+                    boxSizing: "border-box",
+                    fontSize: "12px",
+                    color: "rgba(0,0,0,0.85)",
+                  }}
+                >
+                  <span style={{ color: THEME.primary, fontWeight: 700, marginRight: 6 }}>Carga Horária:</span>
+                  <span>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
+                </div>
+
                 <Select
+                  size="middle"
                   allowClear
                   showSearch
                   placeholder="Professor"
@@ -479,6 +478,7 @@ export default function GradeTabela() {
                   onChange={(v) =>
                     updateSlot(record.id, dia.id, "professor_id", v)
                   }
+                  style={{ width: "100%", fontSize: "13px" }}
                   options={professores.map((p) => ({
                     value: p.id,
                     label: p.nome,
@@ -486,6 +486,7 @@ export default function GradeTabela() {
                 />
 
                 <Select
+                  size="middle"
                   allowClear
                   showSearch
                   placeholder="Departamento"
@@ -493,6 +494,7 @@ export default function GradeTabela() {
                   onChange={(v) =>
                     updateSlot(record.id, dia.id, "departamento_id", v)
                   }
+                  style={{ width: "100%", fontSize: "13px" }}
                   options={departamentos.map((d) => ({
                     value: d.id,
                     label: `${d.sigla} - ${d.nome}`,
@@ -507,53 +509,133 @@ export default function GradeTabela() {
   ];
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary } }}>
+    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary, borderRadius: 6 } }}>
       <div
         style={{
           height: "100vh",
           display: "flex",
           flexDirection: "column",
-          background: "#f5f7fa",
+          background: "#f0f2f5",
+          padding: "16px",
+          gap: "16px"
         }}
       >
-        {/* FILTROS */}
-        <div style={{ padding: 12, display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <Select value={cursoId} onChange={setCursoId} placeholder="Curso" style={{ width: 200 }} options={cursos.map(c => ({ value: c.id, label: c.nome }))} />
-          <Select value={curriculoId} onChange={setCurriculoId} placeholder="Currículo" style={{ width: 200 }} options={curriculos.map(c => ({ value: c.id, label: c.descricao }))} />
-          <Select value={anoId} onChange={setAnoId} placeholder="Ano" style={{ width: 150 }} options={anos.map(a => ({ value: a.id, label: a.descricao }))} />
-          <Select value={semestreId} onChange={setSemestreId} placeholder="Semestre" style={{ width: 150 }} options={semestres.map(s => ({ value: s.id, label: s.descricao }))} />
+        {/* BARRA DE FILTROS E AÇÕES */}
+        <div
+          style={{ 
+            padding: "16px 20px", 
+            display: "flex", 
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            background: "#fff",
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+            border: "1px solid #e8e8e8"
+          }}
+        >
+          {/* LADO ESQUERDO: FILTROS COM LABELS */}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div style={filtroContainerStyle}>
+              <span style={filtroLabelStyle}>CURSO</span>
+              <Select
+                size="middle"
+                value={cursoId}
+                onChange={setCursoId}
+                placeholder="Selecione o curso"
+                style={{ width: 220 }}
+                options={cursos.map((c) => ({ value: c.id, label: c.nome }))}
+              />
+            </div>
+
+            <div style={filtroContainerStyle}>
+              <span style={filtroLabelStyle}>CURRÍCULO</span>
+              <Select
+                size="middle"
+                value={curriculoId}
+                onChange={setCurriculoId}
+                placeholder="Selecione o currículo"
+                style={{ width: 220 }}
+                options={curriculos.map((c) => ({
+                  value: c.id,
+                  label: c.descricao,
+                }))}
+              />
+            </div>
+
+            <div style={filtroContainerStyle}>
+              <span style={filtroLabelStyle}>ANO</span>
+              <Select
+                size="middle"
+                value={anoId}
+                onChange={setAnoId}
+                placeholder="Ano"
+                style={{ width: 100 }}
+                options={anos.map((a) => ({ value: a.id, label: a.descricao }))}
+              />
+            </div>
+
+            <div style={filtroContainerStyle}>
+              <span style={filtroLabelStyle}>SEMESTRE</span>
+              <Select
+                size="middle"
+                value={semestreId}
+                onChange={setSemestreId}
+                placeholder="Semestre"
+                style={{ width: 130 }}
+                options={semestres.map((s) => ({
+                  value: s.id,
+                  label: s.descricao,
+                }))}
+              />
+            </div>
+          </div>
+
+          {/* LADO DIREITO: BOTÕES DE AÇÃO */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <Button
+              size="middle"
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={saving}
+              onClick={handleSave}
+            >
+              Salvar Grade
+            </Button>
+            <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>
+              PDF
+            </Button>
+            <Button size="middle" icon={<ReloadOutlined />} onClick={handleReset}>
+              Limpar
+            </Button>
+            <Button size="middle" danger onClick={handleDeleteGrade}>
+              Excluir
+            </Button>
+          </div>
         </div>
 
-        {/* BOTÕES */}
-        <div style={{ padding: 12, display: "flex", gap: 10 }}>
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-            Salvar
-          </Button>
-
-          <Button icon={<FilePdfOutlined />} onClick={handlePDF}>
-            PDF
-          </Button>
-
-          <Button danger onClick={handleDeleteGrade}>
-            Excluir Grade
-          </Button>
-
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
-            Redefinir
-          </Button>
+        {/* ÁREA DA TABELA */}
+        <div 
+          style={{ 
+            flex: 1, 
+            background: "#fff", 
+            borderRadius: "8px", 
+            padding: "10px",
+            border: "1px solid #e8e8e8",
+            overflow: "hidden",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+          }}
+        >
+          <Table
+            rowKey={(record) => record.id}
+            dataSource={horarios}
+            columns={columns}
+            pagination={false}
+            bordered
+            size="small"
+            sticky
+            scroll={{ x: 1700, y: "calc(100vh - 200px)" }}
+          />
         </div>
-
-        {/* TABELA */}
-        <Table
-          rowKey={(record) => record.id}
-          dataSource={horarios}
-          columns={columns}
-          pagination={false}
-          bordered
-          size="small"
-          sticky
-          scroll={{ x: 1850, y: "calc(100vh - 200px)" }}
-        />
       </div>
     </ConfigProvider>
   );

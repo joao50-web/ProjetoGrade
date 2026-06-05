@@ -6,12 +6,23 @@ module.exports = function renderGradeHTML({
   anoLetivo,
   semestres,
 }) {
-
   const HORARIOS = [
-    "08:00-08:50","08:50-09:40","09:40-10:30","10:30-11:20",
-    "11:20-12:10","13:20-14:10","14:10-15:00","15:00-15:50",
-    "15:50-16:40","16:40-17:30","17:30-18:20","18:20-19:10",
-    "19:10-20:00","20:00-20:50","20:50-21:40","21:40-22:30",
+    "08:00-08:50",
+    "08:50-09:40",
+    "09:40-10:30",
+    "10:30-11:20",
+    "11:20-12:10",
+    "13:20-14:10",
+    "14:10-15:00",
+    "15:00-15:50",
+    "15:50-16:40",
+    "16:40-17:30",
+    "17:30-18:20",
+    "18:20-19:10",
+    "19:10-20:00",
+    "20:00-20:50",
+    "20:50-21:40",
+    "21:40-22:30",
   ];
 
   return `
@@ -141,7 +152,8 @@ td.disciplina {
   min-height: 30px;
   max-height: 30px;
 
-  vertical-align: top;
+  /* Alterado para centralizar verticalmente o conteúdo */
+  vertical-align: middle; 
 
   line-height: 1.1;
 
@@ -149,6 +161,15 @@ td.disciplina {
   overflow-wrap: break-word;
 
   padding: 2px;
+}
+
+/* Container flex para centralizar conteúdo */
+.celula-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 /* ======================================================
@@ -159,13 +180,13 @@ td.disciplina {
   font-weight: bold;
   font-size: 7.8px;
   color: #000;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .linha2 {
   font-size: 7.8px;
   color: #1f2937;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .linha3 {
@@ -203,15 +224,18 @@ footer {
 
     <div>
       <strong>Sem:</strong>
-      ${Array.isArray(semestres)
-        ? semestres.map(s => s.descricao).join(" / ")
-        : "-"
+      ${
+        Array.isArray(semestres)
+          ? semestres.map((s) => s.descricao).join(" / ")
+          : "-"
       }
     </div>
   </div>
 </div>
 
-${(semestres || []).map(semestre => `
+${(semestres || [])
+  .map(
+    (semestre) => `
 <div class="semester">
 
 <div class="semester-title">
@@ -227,20 +251,15 @@ ${(semestres || []).map(semestre => `
   Horário
 </th>
 
-${(semestre.dias || [])
-  .map(d => `<th>${d}</th>`)
-  .join("")}
+${(semestre.dias || []).map((d) => `<th>${d}</th>`).join("")}
 
 </tr>
 </thead>
 
 <tbody>
 
-${HORARIOS.map(horario => {
-
-  const linha = (semestre.linhas || []).find(
-    l => l.horario === horario
-  );
+${HORARIOS.map((horario) => {
+  const linha = (semestre.linhas || []).find((l) => l.horario === horario);
 
   return `
   <tr>
@@ -249,62 +268,61 @@ ${HORARIOS.map(horario => {
     ${horario}
   </td>
 
-  ${(semestre.dias || []).map((_, colIndex) => {
+  ${(semestre.dias || [])
+    .map((_, colIndex) => {
+      const celula = linha?.celulas?.[colIndex] || {};
 
-    const celula =
-      linha?.celulas?.[colIndex] || {};
-
-    /* =========================================
+      /* =========================================
        IGNORA DISCIPLINA INVÁLIDA
     ========================================= */
 
-    const disciplinaValida =
-      celula &&
-      (
-        celula.nome ||
-        celula.codigo ||
-        celula.professor ||
-        celula.departamento
-      );
+      const disciplinaValida =
+        celula &&
+        (celula.nome ||
+          celula.codigo ||
+          celula.professor ||
+          celula.departamento);
 
-    if (!disciplinaValida) {
-      return `
+      if (!disciplinaValida) {
+        return `
       <td class="disciplina">
       </td>
       `;
-    }
+      }
 
-    return `
+      return `
     <td class="disciplina">
+      <div class="celula-container">
+        ${
+          celula.codigo || celula.departamento
+            ? `<div class="linha1">
+                ${celula.departamento || ""}
+                ${celula.codigo ? ` (${celula.codigo})` : ""}
+              </div>`
+            : ""
+        }
 
-      ${
-        celula.codigo || celula.departamento
-          ? `<div class="linha1">
-              ${celula.departamento || ""}
-              ${celula.codigo ? ` (${celula.codigo})` : ""}
-            </div>`
-          : ""
-      }
-
-      ${
-        celula.nome
-          ? `<div class="linha2">
+        ${
+          celula.nome
+            ? `<div class="linha2">
               ${celula.nome}
+              ${celula.cargaHoraria ? ` (${celula.cargaHoraria}h)` : ""}
             </div>`
-          : ""
-      }
-
-      ${
-        celula.professor
-          ? `<div class="linha3">
-              ${celula.professor}
-            </div>`
-          : ""
-      }
-
+            : ""
+        }
+        
+        ${
+          celula.professor
+            ? `<div class="linha3">
+                ${celula.professor}
+              </div>`
+            : ""
+        }
+      </div>
     </td>
     `;
-  }).join("")}
+    })
+    .join("")}
 
   </tr>
   `;
@@ -313,7 +331,9 @@ ${HORARIOS.map(horario => {
 </tbody>
 </table>
 </div>
-`).join("")}
+`,
+  )
+  .join("")}
 
 <footer>
 Universidade Federal de Ciências da Saúde de Porto Alegre
