@@ -15,7 +15,7 @@ const {
 } = require("../models");
 
 /* =======================================================
-   BUSCAR DADOS (SEM ALTERAÇÃO)
+   BUSCAR DADOS
 ======================================================= */
 
 const buscarDados = async (query) => {
@@ -27,7 +27,8 @@ const buscarDados = async (query) => {
     ano_id,
     semestre_id,
     curriculo_id,
-    tipoRelatorio,
+    coordenador_id,
+    carga_horaria,
   } = query;
 
   const where = {};
@@ -39,11 +40,24 @@ const buscarDados = async (query) => {
   if (ano_id && ano_id !== "null") where.ano_id = ano_id;
   if (semestre_id && semestre_id !== "null") where.semestre_id = semestre_id;
   if (curriculo_id && curriculo_id !== "null") where.curriculo_id = curriculo_id;
+  if (coordenador_id && coordenador_id !== "null") where.coordenador_id = coordenador_id;
+
+  const includeDisciplina = {
+    model: Disciplina,
+    as: "disciplina",
+    required: false,
+    attributes: ["id", "nome", "codigo", "carga_horaria"],
+  };
+
+  if (carga_horaria && carga_horaria !== "null") {
+    includeDisciplina.where = { carga_horaria: Number(carga_horaria) };
+    includeDisciplina.required = true;
+  }
 
   const grades = await GradeHoraria.findAll({
     where,
     include: [
-      { model: Disciplina, as: "disciplina", required: false },
+      includeDisciplina,
       { model: Curso, as: "curso", required: false },
       { model: Departamento, as: "departamento", required: false },
       { model: Pessoa, as: "professor", required: false },
@@ -62,13 +76,14 @@ const buscarDados = async (query) => {
     if (!g.disciplina) return;
 
     const chave =
-      `${g.disciplina_id}-${g.curso_id}-${g.professor_id}-${g.ano_id}-${g.semestre_id}-${g.curriculo_id}`;
+      `${g.disciplina_id}-${g.curso_id}-${g.professor_id}-${g.ano_id}-${g.semestre_id}-${g.curriculo_id}-${g.coordenador_id}`;
 
     if (!mapa.has(chave)) {
       mapa.set(chave, {
         id: chave,
         disciplina: g.disciplina?.nome || "-",
         codigo: g.disciplina?.codigo || "-",
+        carga_horaria: g.disciplina?.carga_horaria || 0,
 
         cursos: [],
         professores: [],
@@ -80,8 +95,6 @@ const buscarDados = async (query) => {
         ano: g.ano?.descricao || g.ano?.ano || "-",
         semestre: g.semestre?.descricao || g.semestre?.nome || "-",
         curriculo: g.curriculo?.descricao || g.curriculo?.nome || "-",
-
-        totalCursos: 0,
       });
     }
 
@@ -105,18 +118,13 @@ const buscarDados = async (query) => {
         descricao: descHorario,
       });
     }
-
-    item.totalCursos = item.cursos.length;
   });
 
-  return Array.from(mapa.values()).map((r) => ({
-    ...r,
-    multicurso: r.totalCursos > 1,
-  }));
+  return Array.from(mapa.values());
 };
 
 /* =======================================================
-   PDF (SÓ AUMENTEI ESPAÇO ENTRE DISCIPLINA E CÓDIGO)
+   PDF (MANTÉM ORDEM: DISCIPLINA, CURSO, DEPARTAMENTO...)
 ======================================================= */
 
 const exportRelatorioPDF = async (req, res) => {
@@ -146,7 +154,6 @@ const exportRelatorioPDF = async (req, res) => {
     doc.moveDown(1);
 
     let y = 60;
-
     const boxHeight = 118;
     const colLeft = 30;
     const colRight = 420;
@@ -170,30 +177,18 @@ const exportRelatorioPDF = async (req, res) => {
         .strokeColor("#E5E7EB")
         .stroke();
 
-      /* ==================================================
-         🔥 COLUNA ESQUERDA (AJUSTE SOLICITADO AQUI)
-      ================================================== */
-
-      write(`Disciplina: ${d.disciplina}`, colLeft, y + 8);
-
-      // 🔥 AUMENTEI O ESPAÇO AQUI (ANTES ERA +28, AGORA +40)
-      write(`Código: ${d.codigo}`, colLeft, y + 40);
-
-      write(`Departamento: ${d.departamento}`, colLeft, y + 60);
-
-      write(`Coordenador: ${d.coordenador}`, colLeft, y + 80);
-
-      write(`Horários: ${horarios}`, colLeft, y + 100);
-
-      /* ==================================================
-         COLUNA DIREITA (INALTERADO)
-      ================================================== */
-
-      write(`Professor: ${d.professores.join(", ") || "-"}`, colRight, y + 8);
-      write(`Curso: ${d.cursos.join(", ") || "-"}`, colRight, y + 28);
-      write(`Ano: ${d.ano}`, colRight, y + 48);
-      write(`Semestre: ${d.semestre}`, colRight, y + 68);
-      write(`Currículo: ${d.curriculo}`, colRight, y + 88);
+      // ORDEM: Disciplina, Curso, Departamento, Professor, Coordenador, Carga, Ano, Semestre
+      write(`Disciplina: ${d.disciplina} (${d.codigo})`, colLeft, y + 8);
+      write(`Curso: ${d.cursos.join(", ") || "-"}`, colLeft, y + 28);
+      write(`Departamento: ${d.departamento}`, colLeft, y + 48);
+      write(`Professor: ${d.professores.join(", ") || "-"}`, colLeft, y + 68);
+      write(`Coordenador: ${d.coordenador}`, colLeft, y + 88);
+      
+      write(`Carga Horária: ${d.carga_horaria}h`, colRight, y + 8);
+      write(`Ano: ${d.ano}`, colRight, y + 28);
+      write(`Semestre: ${d.semestre}`, colRight, y + 48);
+      write(`Currículo: ${d.curriculo}`, colRight, y + 68);
+      write(`Horários: ${horarios}`, colRight, y + 88);
 
       y += boxHeight + 10;
 
@@ -211,7 +206,7 @@ const exportRelatorioPDF = async (req, res) => {
 };
 
 /* =======================================================
-   EXCEL (INALTERADO)
+   EXCEL (ORDEM: Disciplina, Curso, Departamento, Professor, Coordenador, Carga, Ano, Semestre)
 ======================================================= */
 
 const exportRelatorioExcel = async (req, res) => {
@@ -222,12 +217,13 @@ const exportRelatorioExcel = async (req, res) => {
     const sheet = workbook.addWorksheet("Relatório Acadêmico");
 
     sheet.columns = [
-      { header: "DEPARTAMENTO", key: "departamento", width: 30 },
       { header: "DISCIPLINA", key: "disciplina", width: 35 },
       { header: "CÓDIGO", key: "codigo", width: 15 },
+      { header: "CURSO", key: "curso", width: 30 },
+      { header: "DEPARTAMENTO", key: "departamento", width: 30 },
       { header: "PROFESSOR", key: "professor", width: 30 },
       { header: "COORDENADOR", key: "coordenador", width: 30 },
-      { header: "CURSO", key: "curso", width: 30 },
+      { header: "CARGA HORÁRIA", key: "carga_horaria", width: 20 },
       { header: "ANO LETIVO", key: "ano", width: 18 },
       { header: "SEMESTRE", key: "semestre", width: 15 },
       { header: "CURRÍCULO", key: "curriculo", width: 25 },
@@ -238,38 +234,31 @@ const exportRelatorioExcel = async (req, res) => {
     const headerRow = sheet.getRow(1);
     headerRow.values = sheet.columns.map(c => c.header);
 
-    headerRow.font = {
-      bold: true,
-      color: { argb: "FFFFFF" },
-    };
-
+    headerRow.font = { bold: true, color: { argb: "FFFFFF" } };
     headerRow.fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "093E5E" },
     };
 
-    let linha = 2;
-
     dados.forEach((d) => {
       const horarios = d.horarios.length ? d.horarios : [{ dia: "-", horario: "-" }];
 
       horarios.forEach((h) => {
         sheet.addRow([
-          d.departamento || "-",
           d.disciplina || "-",
           d.codigo || "-",
+          d.cursos.join(", ") || "-",
+          d.departamento || "-",
           d.professores.join(", ") || "-",
           d.coordenador || "-",
-          d.cursos.join(", ") || "-",
+          `${d.carga_horaria}h`,
           d.ano || "-",
           d.semestre || "-",
           d.curriculo || "-",
           h.dia || "-",
           h.horario || "-",
         ]);
-
-        linha++;
       });
     });
 

@@ -23,6 +23,8 @@ const relatorioProfessor = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
+      coordenador_id,
+      carga_horaria, // Novo filtro
     } = req.query;
 
     const where = {};
@@ -55,16 +57,28 @@ const relatorioProfessor = async (req, res) => {
       where.curriculo_id = curriculo_id;
     }
 
+    if (coordenador_id && coordenador_id !== "null") {
+      where.coordenador_id = coordenador_id;
+    }
+
+    // Lógica para filtrar por carga horária através da associação
+    const includeDisciplina = {
+      model: Disciplina,
+      as: "disciplina",
+      required: false,
+      attributes: ["id", "nome", "codigo", "carga_horaria"],
+    };
+
+    if (carga_horaria && carga_horaria !== "null") {
+      includeDisciplina.where = { carga_horaria: Number(carga_horaria) };
+      includeDisciplina.required = true; // Força o filtro
+    }
+
     const registros = await GradeHoraria.findAll({
       where,
       distinct: true,
-
       include: [
-        {
-          model: Disciplina,
-          as: "disciplina",
-          required: false,
-        },
+        includeDisciplina,
         {
           model: Curso,
           as: "curso",
@@ -78,6 +92,11 @@ const relatorioProfessor = async (req, res) => {
         {
           model: Pessoa,
           as: "professor",
+          required: false,
+        },
+        {
+          model: Pessoa,
+          as: "coordenador",
           required: false,
         },
         {
@@ -99,14 +118,14 @@ const relatorioProfessor = async (req, res) => {
     });
 
     /* =====================================================
-       AGRUPAMENTO (MANTIDO COMO ESTÁ)
+       AGRUPAMENTO
     ===================================================== */
 
     const mapa = new Map();
 
     registros.forEach((r) => {
       const chave =
-        `${r.disciplina_id}-${r.curso_id}-${r.professor_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
+        `${r.disciplina_id}-${r.curso_id}-${r.professor_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}-${r.coordenador_id}`;
 
       if (!mapa.has(chave)) {
         mapa.set(chave, {
@@ -114,9 +133,11 @@ const relatorioProfessor = async (req, res) => {
 
           nome: r.disciplina?.nome || "-",
           codigo: r.disciplina?.codigo || "-",
+          carga_horaria: r.disciplina?.carga_horaria || 0,
 
           cursos: [],
           professores: [],
+          coordenador: r.coordenador?.nome || "-",
 
           departamento: r.departamento?.nome || "-",
 
@@ -137,30 +158,7 @@ const relatorioProfessor = async (req, res) => {
       }
     });
 
-    /* =====================================================
-       🔥 CORREÇÃO DO MULTICURSO (SEM QUEBRAR SEU FLUXO)
-    ===================================================== */
-
-    const resultado = Array.from(mapa.values()).map((r) => {
-      // 🔥 agora a regra é baseada em DISCIPLINAS DA GRADE
-      const disciplinasUnicas = new Set(
-        registros
-          .filter((x) =>
-            x.curso_id &&
-            r.cursos.includes(x.curso?.nome)
-          )
-          .map((x) => x.disciplina_id)
-      );
-
-      return {
-        ...r,
-
-        totalCursos: r.cursos.length,
-
-        // 🔥 REGRA REAL (GradeHorária)
-        multicurso: disciplinasUnicas.size > 1,
-      };
-    });
+    const resultado = Array.from(mapa.values());
 
     return res.json(resultado);
   } catch (err) {

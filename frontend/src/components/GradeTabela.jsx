@@ -23,38 +23,43 @@ const THEME = {
   primary: "#0b3d5c",
   bgHeader: "#0b3d5c",
   textWhite: "#ffffff",
+  borderColor: "#e5e7eb", // Borda cinza clara profissional
+  separatorColor: "#cbd5e1", // Cor para separar blocos (um pouco mais escura)
 };
 
 const headerStyle = {
   backgroundColor: THEME.bgHeader,
   color: THEME.textWhite,
   fontWeight: "700",
-  fontSize: "12px",
+  fontSize: "13px", // Aumentado para melhor leitura
   textAlign: "center",
-  padding: "8px 4px",
+  padding: "12px 4px",
   textTransform: "uppercase",
+  letterSpacing: "0.5px",
 };
 
 const horarioCellStyle = {
-  backgroundColor: THEME.primary,
-  color: "#fff",
+  backgroundColor: "#f9fafb",
+  color: THEME.primary,
   fontWeight: "700",
   textAlign: "center",
-  fontSize: "12px",
-  padding: "6px",
+  fontSize: "14px", // Aumentado para melhor leitura
+  padding: "8px 4px",
+  borderRight: `2px solid ${THEME.separatorColor}`, // Separador de bloco na coluna fixa
+  borderBottom: `1px solid ${THEME.separatorColor}`, // Linha horizontal de destaque
 };
 
 const filtroContainerStyle = {
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 2,
 };
 
 const filtroLabelStyle = {
   fontSize: "12px",
   fontWeight: 700,
-  color: "#0b3d5c",
-  marginBottom: "2px",
+  color: THEME.primary,
+  marginBottom: "1px",
 };
 
 export default function GradeTabela() {
@@ -392,14 +397,15 @@ export default function GradeTabela() {
       width: 130,
       fixed: "left",
       align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
+      onHeaderCell: () => ({ style: { ...headerStyle, borderRight: `2px solid ${THEME.separatorColor}` } }),
       onCell: () => ({ style: horarioCellStyle }),
 
       render: (_, record) => (
         <Select
           size="middle"
+          variant="borderless"
           value={record.id}
-          style={{ width: "100%", fontSize: "13px" }}
+          style={{ width: "100%", fontSize: "14px", fontWeight: "700" }}
           onChange={(v) => updateHorario(record.id, v)}
           options={horarios.map((h) => ({
             value: h.id,
@@ -411,9 +417,9 @@ export default function GradeTabela() {
 
     ...diasFixos.map((dia) => ({
       title: dia.nome,
-      width: 320,
+      width: 300,
       align: "center",
-      onHeaderCell: () => ({ style: headerStyle }),
+      onHeaderCell: () => ({ style: { ...headerStyle, borderRight: `1px solid ${THEME.separatorColor}` } }),
 
       render: (_, record) => {
         const item = gradeMap[`${record.id}-${dia.id}`] || {
@@ -424,11 +430,14 @@ export default function GradeTabela() {
         return (
           <div
             style={{
-              padding: "6px 8px",
+              padding: "12px 8px",
               display: "flex",
               flexDirection: "column",
-              gap: 4,
-              minHeight: 110,
+              gap: 6,
+              minHeight: 130,
+              backgroundColor: item.disciplina_id ? "#fff" : "transparent",
+              borderRight: `1px solid ${THEME.separatorColor}`, // Linha vertical de separação
+              borderBottom: `1px solid ${THEME.separatorColor}`, // Linha horizontal de destaque
             }}
           >
             <Select
@@ -441,32 +450,33 @@ export default function GradeTabela() {
               onChange={(v) =>
                 updateSlot(record.id, dia.id, "disciplina_id", v)
               }
-              style={{ width: "100%", fontSize: "13px" }}
+              style={{ width: "100%", fontSize: "14px" }}
               options={disciplinas.map((d) => ({
                 value: d.id,
-                label: `${d.codigo} - ${d.nome} (${d.carga_horaria ?? 0}h)`,
+                label: `${d.codigo} - ${d.nome}`,
               }))}
             />
 
             {item.disciplina_id && (
               <>
+                {/* Carga Horária estilizada como os outros selects */}
                 <div
                   style={{
-                    height: 28,
+                    height: 32,
                     width: "100%",
-                    border: "1px solid #d9d9d9",
+                    border: `1px solid ${THEME.borderColor}`,
                     borderRadius: 4,
-                    backgroundColor: "#fafafa",
-                    padding: "0 8px",
+                    backgroundColor: "#f9fafb",
+                    padding: "0 11px",
                     display: "flex",
                     alignItems: "center",
                     boxSizing: "border-box",
-                    fontSize: "12px",
-                    color: "rgba(0,0,0,0.85)",
+                    fontSize: "13px",
+                    color: "rgba(0,0,0,0.88)",
                   }}
                 >
-                  <span style={{ color: THEME.primary, fontWeight: 700, marginRight: 6 }}>Carga Horária:</span>
-                  <span>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
+                  <span style={{ color: "rgba(0,0,0,0.45)", marginRight: 4 }}>Carga Horária:</span>
+                  <span style={{ fontWeight: 600 }}>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
                 </div>
 
                 <Select
@@ -509,13 +519,33 @@ export default function GradeTabela() {
   ];
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary, borderRadius: 6 } }}>
+    <ConfigProvider 
+      theme={{ 
+        token: { 
+          colorPrimary: THEME.primary, 
+          borderRadius: 6,
+          colorBorder: THEME.borderColor,
+        },
+        components: {
+          Table: {
+            headerBg: THEME.bgHeader,
+            headerColor: THEME.textWhite,
+            borderColor: THEME.borderColor,
+            cellPaddingInline: 0,
+            cellPaddingBlock: 0,
+          },
+          Select: {
+            fontSize: 14,
+          }
+        }
+      }}
+    >
       <div
         style={{
           height: "100vh",
           display: "flex",
           flexDirection: "column",
-          background: "#f0f2f5",
+          background: "#f3f4f6",
           padding: "16px",
           gap: "16px"
         }}
@@ -525,91 +555,107 @@ export default function GradeTabela() {
           style={{ 
             padding: "16px 20px", 
             display: "flex", 
-            justifyContent: "space-between",
-            alignItems: "flex-end",
+            flexDirection: "column",
+            gap: 16,
             background: "#fff",
             borderRadius: "8px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            border: "1px solid #e8e8e8"
+            border: `1px solid ${THEME.borderColor}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
           }}
         >
-          {/* LADO ESQUERDO: FILTROS COM LABELS */}
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <div style={filtroContainerStyle}>
-              <span style={filtroLabelStyle}>CURSO</span>
-              <Select
-                size="middle"
-                value={cursoId}
-                onChange={setCursoId}
-                placeholder="Selecione o curso"
-                style={{ width: 220 }}
-                options={cursos.map((c) => ({ value: c.id, label: c.nome }))}
-              />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>CURSO</span>
+                <Select
+                  size="middle"
+                  value={cursoId}
+                  onChange={setCursoId}
+                  style={{ width: 220 }}
+                  options={cursos.map((c) => ({ value: c.id, label: c.nome }))}
+                />
+              </div>
+
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>CURRÍCULO</span>
+                <Select
+                  size="middle"
+                  value={curriculoId}
+                  onChange={setCurriculoId}
+                  style={{ width: 220 }}
+                  options={curriculos.map((c) => ({
+                    value: c.id,
+                    label: c.descricao,
+                  }))}
+                />
+              </div>
+
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>ANO</span>
+                <Select
+                  size="middle"
+                  value={anoId}
+                  onChange={setAnoId}
+                  style={{ width: 100 }}
+                  options={anos.map((a) => ({ value: a.id, label: a.descricao }))}
+                />
+              </div>
+
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>SEMESTRE</span>
+                <Select
+                  size="middle"
+                  value={semestreId}
+                  onChange={setSemestreId}
+                  placeholder="Selecione"
+                  style={{ width: 200 }}
+                  options={semestres.map((s) => ({
+                    value: s.id,
+                    label: s.descricao,
+                  }))}
+                />
+              </div>
+
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>COORDENADOR</span>
+                <Select
+                  size="middle"
+                  allowClear
+                  showSearch
+                  value={coordenadorId}
+                  onChange={setCoordenadorId}
+                  placeholder="Selecione o Coordenador"
+                  style={{ width: 240 }}
+                  options={coordenadores.map((c) => ({ value: c.id, label: c.nome }))}
+                />
+              </div>
             </div>
 
-            <div style={filtroContainerStyle}>
-              <span style={filtroLabelStyle}>CURRÍCULO</span>
-              <Select
+            <div style={{ display: "flex", gap: 12 }}>
+              <Button
                 size="middle"
-                value={curriculoId}
-                onChange={setCurriculoId}
-                placeholder="Selecione o currículo"
-                style={{ width: 220 }}
-                options={curriculos.map((c) => ({
-                  value: c.id,
-                  label: c.descricao,
-                }))}
-              />
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={saving}
+                onClick={handleSave}
+                style={{ fontWeight: 600 }}
+              >
+                Salvar
+              </Button>
+              <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>
+                PDF
+              </Button>
+              <Button 
+                size="middle" 
+                icon={<ReloadOutlined />} 
+                onClick={handleReset}
+              >
+                Redefinir
+              </Button>
+              <Button size="middle" danger onClick={handleDeleteGrade}>
+                Excluir
+              </Button>
             </div>
-
-            <div style={filtroContainerStyle}>
-              <span style={filtroLabelStyle}>ANO</span>
-              <Select
-                size="middle"
-                value={anoId}
-                onChange={setAnoId}
-                placeholder="Ano"
-                style={{ width: 100 }}
-                options={anos.map((a) => ({ value: a.id, label: a.descricao }))}
-              />
-            </div>
-
-            <div style={filtroContainerStyle}>
-              <span style={filtroLabelStyle}>SEMESTRE</span>
-              <Select
-                size="middle"
-                value={semestreId}
-                onChange={setSemestreId}
-                placeholder="Semestre"
-                style={{ width: 130 }}
-                options={semestres.map((s) => ({
-                  value: s.id,
-                  label: s.descricao,
-                }))}
-              />
-            </div>
-          </div>
-
-          {/* LADO DIREITO: BOTÕES DE AÇÃO */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <Button
-              size="middle"
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSave}
-            >
-              Salvar Grade
-            </Button>
-            <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>
-              PDF
-            </Button>
-            <Button size="middle" icon={<ReloadOutlined />} onClick={handleReset}>
-              Limpar
-            </Button>
-            <Button size="middle" danger onClick={handleDeleteGrade}>
-              Excluir
-            </Button>
           </div>
         </div>
 
@@ -619,10 +665,8 @@ export default function GradeTabela() {
             flex: 1, 
             background: "#fff", 
             borderRadius: "8px", 
-            padding: "10px",
-            border: "1px solid #e8e8e8",
+            border: `1px solid ${THEME.borderColor}`,
             overflow: "hidden",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
           }}
         >
           <Table
@@ -631,9 +675,9 @@ export default function GradeTabela() {
             columns={columns}
             pagination={false}
             bordered
-            size="small"
+            size="middle"
             sticky
-            scroll={{ x: 1700, y: "calc(100vh - 200px)" }}
+            scroll={{ x: 1600, y: "calc(100vh - 200px)" }}
           />
         </div>
       </div>

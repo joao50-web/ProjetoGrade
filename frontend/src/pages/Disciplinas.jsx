@@ -29,7 +29,7 @@ const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
   fontWeight: 600,
-  padding: '14px 20px',
+  padding: '14px 30px',
   fontSize: 16,
   textAlign: 'center',
 };
@@ -175,7 +175,7 @@ export default function Disciplinas() {
             render: (t) => renderText(t),
           },
           {
-            title: 'Nome',
+            title: 'Disciplina',
             dataIndex: 'nome',
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (t) => renderText(t, true),

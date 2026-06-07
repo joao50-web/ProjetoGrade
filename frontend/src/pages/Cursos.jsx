@@ -21,12 +21,16 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
+/* =========================================
+   HEADER STYLE (AZUL PADRÃO SISTEMA)
+========================================= */
+
 const headerCellStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",
-  fontWeight: 700,
-  padding: "14px 16px",
-  fontSize: 18,
+  fontWeight: 600,
+  padding: "14px 10px",
+  fontSize: 16,
   textAlign: "center",
 };
 
@@ -69,20 +73,13 @@ export default function Cursos() {
     }
   };
 
-  /* ======================================================
-     DELETE COM TRATAMENTO AMIGÁVEL
-  ====================================================== */
-
   const remove = async (id) => {
     try {
       await api.delete(`/cursos/${id}`);
-
       message.success("Curso removido com sucesso");
       load();
     } catch (error) {
       const backendMsg = error?.response?.data?.error;
-
-      // 🔥 TRATAMENTO DE CURSO EM USO (FOREIGN KEY)
       if (
         backendMsg?.includes("foreign") ||
         backendMsg?.includes("constraint") ||
@@ -94,18 +91,15 @@ export default function Cursos() {
         );
         return;
       }
-
-      message.error("Não é possível excluir este curso pois ele já está sendo utilizado em grades horárias ou registros do sistema.");
+      message.error("Erro ao excluir curso");
     }
   };
 
   const edit = (curso) => {
     setEditing(curso);
-
     form.setFieldsValue({
       nome: curso.nome,
     });
-
     setOpen(true);
   };
 
@@ -119,98 +113,79 @@ export default function Cursos() {
     c.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const buttonStyle = {
-    height: 36,
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  };
+  const renderText = (text, strong = false) => (
+    <div style={{ padding: '8px 16px' }}>
+      <span
+        style={{
+          fontSize: strong ? 17 : 16,
+          fontWeight: strong ? 600 : 400,
+          color: '#111827',
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
 
   const columns = [
     {
       title: "Curso",
       dataIndex: "nome",
-      width: 260,
-      ellipsis: true,
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (text) => (
-        <div style={{ padding: "10px 54px" }}>
-          <p style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
-            {text}
-          </p>
-        </div>
-      ),
+      render: (t) => renderText(t, true),
     },
     {
       title: "Disciplinas",
       dataIndex: "disciplinas",
-      width: 160,
+      align: 'center',
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = []) => (
-        <div style={{ padding: "10px 14px" }}>
-          <p style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
-            {disciplinas.length} disciplina
-            {disciplinas.length !== 1 ? "s" : ""}
-          </p>
-        </div>
+      render: (disciplinas = []) => renderText(`${disciplinas.length} disciplina${disciplinas.length !== 1 ? "s" : ""}`),
+    },
+    {
+      title: "Gerenciar",
+      align: 'center',
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (_, record) => (
+        <Button 
+          icon={<BookOutlined />} 
+          onClick={() => navigate(`/academico/cursos/${record.id}/disciplinas`)}
+        >
+          Ver Disciplinas
+        </Button>
       ),
     },
     {
-      title: "Editar",
-      width: 280,
+      title: "Editar Curso",
+      align: 'center',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
-        <div style={{ display: "flex", gap: 20, padding: "10px 20px" }}>
-          <Button
-            icon={<BookOutlined />}
-            onClick={() =>
-              navigate(`/academico/cursos/${record.id}/disciplinas`)
-            }
-            style={buttonStyle}
-          >
-            Disciplinas
-          </Button>
-
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => edit(record)}
-            style={buttonStyle}
-          >
-            Editar
-          </Button>
-        </div>
+        <Button icon={<EditOutlined />} onClick={() => edit(record)} />
       ),
     },
     {
       title: "Excluir",
-      width: 90,
+      align: 'center',
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
-        <div style={{ textAlign: "center" }}>
-          <Popconfirm
-            title="Deseja excluir este curso?"
-            onConfirm={() => remove(record.id)}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </div>
+        <Popconfirm
+          title="Deseja excluir este curso?"
+          onConfirm={() => remove(record.id)}
+        >
+          <Button danger icon={<DeleteOutlined />} />
+        </Popconfirm>
       ),
     },
   ];
 
   return (
     <AppLayout>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 20,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
         <Input
           placeholder="Buscar curso..."
           prefix={<SearchOutlined />}
-          style={{ width: 280, height: 38 }}
+          allowClear
+          value={search}
+          style={{ width: 300, height: 42 }}
           onChange={(e) => setSearch(e.target.value)}
         />
 
@@ -228,7 +203,6 @@ export default function Cursos() {
         dataSource={filtered}
         pagination={{ pageSize: 6 }}
         bordered
-        size="middle"
         columns={columns}
       />
 
@@ -237,14 +211,13 @@ export default function Cursos() {
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
+        okText="Salvar"
       >
         <Form layout="vertical" form={form} onFinish={submit}>
           <Form.Item
             name="nome"
             label="Nome do Curso"
-            rules={[
-              { required: true, message: "Digite o nome do curso" },
-            ]}
+            rules={[{ required: true, message: "Digite o nome do curso" }]}
           >
             <Input />
           </Form.Item>
