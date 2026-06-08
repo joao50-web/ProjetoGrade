@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import {
   Table,
   Button,
@@ -8,7 +9,6 @@ import {
   Select,
   message,
   Popconfirm,
-  Space,
   Tag,
   Tooltip
 } from 'antd';
@@ -24,14 +24,9 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-// Paleta de cores para hierarquias (mesmo padrão de cargoColors em Pessoas)
-const hierarquiaColors = {
-  Administrador: { bg: '#f5f4f0', color: '#093e5e' },
-  'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
-  Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
-  PROGRAD: { bg: '#f5f4f0', color: '#093e5e' },
-  Professor: { bg: '#f5f4f0', color: '#093e5e' }
-};
+/* =========================================
+   HEADER STYLE (AZUL PADRÃO SISTEMA)
+========================================= */
 
 const headerCellStyle = {
   backgroundColor: '#093e5e',
@@ -42,6 +37,15 @@ const headerCellStyle = {
   textAlign: 'center'
 };
 
+// Paleta de cores para hierarquias
+const hierarquiaColors = {
+  Administrador: { bg: '#f5f4f0', color: '#093e5e' },
+  'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
+  Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
+  PROGRAD: { bg: '#f5f4f0', color: '#093e5e' },
+  Professor: { bg: '#f5f4f0', color: '#093e5e' }
+};
+
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [pessoas, setPessoas] = useState([]);
@@ -49,8 +53,12 @@ export default function Usuarios() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
   const [search, setSearch] = useState('');
+  const [form] = Form.useForm();
+
+  /* =========================================
+     LOAD
+  ========================================= */
 
   const load = async () => {
     try {
@@ -59,10 +67,11 @@ export default function Usuarios() {
         api.get('/pessoas'),
         api.get('/hierarquias')
       ]);
-      setUsuarios(usuariosRes.data);
-      setPessoas(pessoasRes.data);
-      setHierarquias(hierarquiasRes.data);
-    } catch {
+      setUsuarios(usuariosRes.data || []);
+      setPessoas(pessoasRes.data || []);
+      setHierarquias(hierarquiasRes.data || []);
+    } catch (err) {
+      console.error(err);
       message.error('Erro ao carregar dados');
     }
   };
@@ -71,6 +80,10 @@ export default function Usuarios() {
     load();
   }, []);
 
+  /* =========================================
+     SALVAR
+  ========================================= */
+
   const save = async () => {
     try {
       const values = await form.validateFields();
@@ -78,28 +91,41 @@ export default function Usuarios() {
 
       if (editing) {
         await api.put(`/usuarios/${editing.id}`, values);
+        message.success('Usuário atualizado com sucesso');
       } else {
         await api.post('/usuarios', values);
+        message.success('Usuário criado com sucesso');
       }
 
       closeModal();
       load();
     } catch (err) {
+      console.error(err);
       if (err.errorFields) return;
-      message.error(err.response?.data?.error || 'Erro ao salvar');
+      message.error(err.response?.data?.error || 'Erro ao salvar usuário');
     } finally {
       setLoading(false);
     }
   };
 
+  /* =========================================
+     REMOVER
+  ========================================= */
+
   const remove = async (id) => {
     try {
       await api.delete(`/usuarios/${id}`);
+      message.success('Usuário removido com sucesso');
       load();
     } catch (err) {
+      console.error(err);
       message.error(err.response?.data?.error || 'Erro ao remover usuário');
     }
   };
+
+  /* =========================================
+     EDITAR
+  ========================================= */
 
   const edit = (usuario) => {
     setEditing(usuario);
@@ -129,7 +155,8 @@ export default function Usuarios() {
     <div style={{ padding: '8px 20px' }}>
       <span style={{
         fontSize: strong ? 17 : 16,
-        fontWeight: strong ? 500 : 400
+        fontWeight: strong ? 600 : 400,
+        color: '#111827'
       }}>
         {text}
       </span>
@@ -144,7 +171,7 @@ export default function Usuarios() {
           background: style.bg,
           color: style.color,
           borderRadius: 12,
-          padding: '5px 16px',
+          padding: '5px 6px',
           fontSize: 15,
           fontWeight: 500
         }}>
@@ -162,24 +189,26 @@ export default function Usuarios() {
 
   return (
     <AppLayout>
+      {/* TOPO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
           placeholder="Buscar usuário..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280, fontSize: 16 }}
+          value={search}
+          style={{ width: 300, height: 42 }}
           onChange={e => setSearch(e.target.value)}
         />
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ fontSize: 16 }}
         >
           Novo Usuário
         </Button>
       </div>
 
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
@@ -208,29 +237,33 @@ export default function Usuarios() {
             render: renderHierarquia
           },
           {
-            title: 'Ações',
+            title: 'Editar',
             align: 'center',
+            width: 140,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => (
-              <Space size={20}>
+              <Tooltip title="Editar usuário">
                 <Button
-                  type="default"
                   icon={<EditOutlined />}
                   onClick={() => edit(r)}
-                  style={{
-                    fontSize: 16,
-                    color: '#333333',
-                    borderColor: '#cccccc',
-                    backgroundColor: '#f9f9f9'
-                  }}
                 />
-                <Popconfirm
-                  title="Excluir este usuário?"
-                  onConfirm={() => remove(r.id)}
-                >
+              </Tooltip>
+            )
+          },
+          {
+            title: 'Excluir',
+            align: 'center',
+            width: 140,
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, r) => (
+              <Popconfirm
+                title="Excluir este usuário?"
+                onConfirm={() => remove(r.id)}
+              >
+                <Tooltip title="Excluir usuário">
                   <Button type="text" danger icon={<DeleteOutlined />} />
-                </Popconfirm>
-              </Space>
+                </Tooltip>
+              </Popconfirm>
             )
           }
         ]}
@@ -238,6 +271,7 @@ export default function Usuarios() {
         scroll={{ x: 'max-content' }}
       />
 
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Usuário' : 'Novo Usuário'}
         open={open}
@@ -246,16 +280,14 @@ export default function Usuarios() {
         confirmLoading={loading}
         okText="Salvar"
         cancelText="Cancelar"
-        bodyStyle={{ fontSize: 16 }}
       >
-        <Form layout="vertical" form={form} style={{ fontSize: 16 }}>
+        <Form layout="vertical" form={form}>
           <Form.Item
             name="pessoa_id"
             label="Pessoa"
             rules={[{ required: true, message: 'Selecione uma pessoa' }]}
           >
             <Select
-              style={{ fontSize: 16 }}
               disabled={Boolean(editing)}
               placeholder="Selecione uma pessoa"
               showSearch
@@ -276,7 +308,6 @@ export default function Usuarios() {
           >
             <Input
               prefix={<UserOutlined />}
-              style={{ fontSize: 16 }}
               placeholder="Login do usuário"
             />
           </Form.Item>
@@ -287,7 +318,6 @@ export default function Usuarios() {
             rules={editing ? [] : [{ required: true, message: 'Informe a senha' }]}
           >
             <Input.Password
-              style={{ fontSize: 16 }}
               placeholder={editing ? 'Nova senha (opcional)' : 'Senha'}
             />
           </Form.Item>
@@ -297,7 +327,7 @@ export default function Usuarios() {
             label="Hierarquia"
             rules={[{ required: true, message: 'Selecione uma hierarquia' }]}
           >
-            <Select style={{ fontSize: 16 }} placeholder="Selecione uma hierarquia">
+            <Select placeholder="Selecione uma hierarquia">
               {hierarquias.map(h => (
                 <Select.Option key={h.id} value={h.id}>
                   {h.descricao}

@@ -8,7 +8,6 @@ import {
   Select,
   message,
   Popconfirm,
-  Space,
   Tag,
   Tooltip
 } from 'antd';
@@ -25,13 +24,9 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-const cargoColors = {
-  Administrador: { bg: '#f5f4f0', color: '#093e5e' },
-  'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
-  Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
-  PROGRAD: { bg: '#f5f4f0', color: '#093e5e' },
-  Professor: { bg: '#f5f4f0', color: '#093e5e' }
-};
+/* =========================================
+   HEADER STYLE (AZUL PADRÃO SISTEMA)
+========================================= */
 
 const headerCellStyle = {
   backgroundColor: '#093e5e',
@@ -42,14 +37,27 @@ const headerCellStyle = {
   textAlign: 'center'
 };
 
+// Paleta de cores para cargos
+const cargoColors = {
+  Administrador: { bg: '#f5f4f0', color: '#093e5e' },
+  'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },
+  Coordenador: { bg: '#f5f4f0', color: '#093e5e' },
+  PROGRAD: { bg: '#f5f4f0', color: '#093e5e' },
+  Professor: { bg: '#f5f4f0', color: '#093e5e' }
+};
+
 export default function Pessoas() {
   const [pessoas, setPessoas] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
   const [search, setSearch] = useState('');
+  const [form] = Form.useForm();
+
+  /* =========================================
+     LOAD
+  ========================================= */
 
   const load = async () => {
     try {
@@ -57,9 +65,10 @@ export default function Pessoas() {
         api.get('/pessoas'),
         api.get('/cargos')
       ]);
-      setPessoas(pessoasRes.data);
-      setCargos(cargosRes.data);
-    } catch {
+      setPessoas(pessoasRes.data || []);
+      setCargos(cargosRes.data || []);
+    } catch (err) {
+      console.error(err);
       message.error('Erro ao carregar dados');
     }
   };
@@ -68,11 +77,15 @@ export default function Pessoas() {
     load();
   }, []);
 
+  /* =========================================
+     SALVAR
+  ========================================= */
+
   const save = async () => {
     try {
       const values = await form.validateFields();
 
-      // ✅ CORREÇÃO PRINCIPAL
+      // ✅ EMAIL OPCIONAL
       if (!values.email || values.email.trim() === "") {
         values.email = null;
       }
@@ -90,6 +103,7 @@ export default function Pessoas() {
       closeModal();
       load();
     } catch (err) {
+      console.error(err);
       if (err.errorFields) return;
       message.error(err.response?.data?.error || 'Erro ao salvar');
     } finally {
@@ -97,22 +111,31 @@ export default function Pessoas() {
     }
   };
 
+  /* =========================================
+     REMOVER
+  ========================================= */
+
   const remove = async (id) => {
     try {
       await api.delete(`/pessoas/${id}`);
       message.success("Pessoa removida");
       load();
     } catch (err) {
-      message.error(err.response?.data?.error);
+      console.error(err);
+      message.error(err.response?.data?.error || 'Erro ao remover pessoa');
     }
   };
+
+  /* =========================================
+     EDITAR
+  ========================================= */
 
   const edit = (pessoa) => {
     setEditing(pessoa);
 
     form.setFieldsValue({
       nome: pessoa.nome,
-      email: pessoa.email || undefined, // evita null no input
+      email: pessoa.email || undefined,
       cargo_id: pessoa.cargo?.id
     });
 
@@ -134,8 +157,8 @@ export default function Pessoas() {
     <div style={{ padding: '8px 20px' }}>
       <span style={{
         fontSize: strong ? 17 : 16,
-        fontWeight: strong ? 500 : 400,
-        color: text ? "#000" : "#999"
+        fontWeight: strong ? 600 : 400,
+        color: text ? "#111827" : "#999"
       }}>
         {text || "—"}
       </span>
@@ -162,12 +185,14 @@ export default function Pessoas() {
 
   return (
     <AppLayout>
+      {/* TOPO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
         <Input
           placeholder="Buscar pessoa..."
           prefix={<SearchOutlined />}
           allowClear
-          style={{ width: 280, fontSize: 16 }}
+          value={search}
+          style={{ width: 300, height: 42 }}
           onChange={e => setSearch(e.target.value)}
         />
 
@@ -175,12 +200,12 @@ export default function Pessoas() {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setOpen(true)}
-          style={{ fontSize: 16 }}
         >
           Nova Pessoa
         </Button>
       </div>
 
+      {/* TABELA */}
       <Table
         rowKey="id"
         dataSource={filtered}
@@ -211,6 +236,7 @@ export default function Pessoas() {
           {
             title: 'Usuário',
             align: 'center',
+              width: 130,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) =>
               r.usuario?.id
@@ -222,44 +248,56 @@ export default function Pessoas() {
                 )
           },
           {
-            title: 'Ações',
+            title: 'Editar',
             align: 'center',
+            width: 130,
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, r) => (
+              <Tooltip title="Editar pessoa">
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => edit(r)}
+                />
+              </Tooltip>
+            )
+          },
+          {
+            title: 'Excluir',
+            align: 'center',
+            width: 130,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => {
               const possuiUsuario = Boolean(r.usuario?.id);
-
               return (
-                <Space size={20}>
-                  <Button
-                    icon={<EditOutlined />}
-                    onClick={() => edit(r)}
-                  />
-
-                  <Tooltip title={possuiUsuario ? 'Não pode excluir' : ''}>
-                    {possuiUsuario ? (
-                      <Button danger disabled icon={<DeleteOutlined />} />
-                    ) : (
-                      <Popconfirm
-                        title="Excluir esta pessoa?"
-                        onConfirm={() => remove(r.id)}
-                      >
-                        <Button danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                    )}
-                  </Tooltip>
-                </Space>
+                <Tooltip title={possuiUsuario ? 'Não é possível excluir pessoa com usuário vinculado' : 'Excluir pessoa'}>
+                  {possuiUsuario ? (
+                    <Button danger disabled icon={<DeleteOutlined />} />
+                  ) : (
+                    <Popconfirm
+                      title="Excluir esta pessoa?"
+                      onConfirm={() => remove(r.id)}
+                    >
+                      <Button danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  )}
+                </Tooltip>
               );
             }
           }
         ]}
+        style={{ fontSize: 16 }}
+        scroll={{ x: 'max-content' }}
       />
 
+      {/* MODAL */}
       <Modal
         title={editing ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={open}
         onCancel={closeModal}
         onOk={save}
         confirmLoading={loading}
+        okText="Salvar"
+        cancelText="Cancelar"
       >
         <Form layout="vertical" form={form}>
           <Form.Item
@@ -270,7 +308,6 @@ export default function Pessoas() {
             <Input />
           </Form.Item>
 
-          {/* ✅ EMAIL AGORA OPCIONAL */}
           <Form.Item
             name="email"
             label="Email"
@@ -289,7 +326,7 @@ export default function Pessoas() {
             label="Cargo"
             rules={[{ required: true, message: "Selecione o cargo" }]}
           >
-            <Select>
+            <Select placeholder="Selecione o cargo">
               {cargos.map(c => (
                 <Select.Option key={c.id} value={c.id}>
                   {c.descricao}

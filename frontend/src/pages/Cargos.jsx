@@ -134,7 +134,7 @@ export default function Cargos() {
         style={{ borderRadius: 10 }}
         columns={[
           {
-            title: "Descrição",
+            title: "Cargo",
             dataIndex: "descricao",
             align: "left",
             onHeaderCell: () => ({ style: headerCellStyle }),
