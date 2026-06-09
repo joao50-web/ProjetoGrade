@@ -11,8 +11,7 @@ const {
   Ano,
   Curriculo,
   Semestre,
-  Turma,
-  sequelize,
+  sequelize, // Removido Turma daqui, pois não faremos mais o include relacional
 } = require("../models");
 
 /* ======================================================
@@ -90,7 +89,7 @@ exports.findByContext = async (req, res) => {
         { model: Ano, as: "ano", required: false },
         { model: Curriculo, as: "curriculo", required: false },
         { model: Semestre, as: "semestre", required: false },
-        { model: Turma, as: "turma", required: false },
+        // Removido o include de Turma daqui
       ],
       order: [
         [{ model: DiaSemana, as: "diaSemana" }, "id", "ASC"],
@@ -125,19 +124,12 @@ exports.findByContext = async (req, res) => {
         professor_id: r.professor_id,
         departamento_id: r.departamento_id,
 
-        // Forçando o ID da disciplina a ser exposto no payload
         disciplina_id: r.disciplina_id,
-
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
 
-        turma_id: r.turma_id,
-        turma: r.turma
-          ? {
-              id: r.turma.id,
-              nome: r.turma.nome,
-            }
-          : null,
+        // Agora retorna a String direto da coluna 'turma' do banco de dados
+        turma: r.turma || "", 
 
         curso: r.curso?.nome || "-",
         ano: r.ano?.descricao || r.ano?.ano || "-",
@@ -240,7 +232,7 @@ exports.saveGrade = async (req, res) => {
       horario_id: slot.horario_id,
       dia_semana_id: slot.dia_semana_id,
       disciplina_id: slot.disciplina_id,
-      turma_id: slot.turma_id || null,
+      turma: slot.turma || null, // Alterado para receber a string do texto puro
     }));
 
     await GradeHoraria.bulkCreate(registros, { transaction });
@@ -274,7 +266,7 @@ exports.saveSlot = async (req, res) => {
       horario_id,
       dia_semana_id,
       disciplina_id,
-      turma_id,
+      turma, // Alterado de turma_id para turma
     } = req.body;
 
     if (
@@ -292,14 +284,14 @@ exports.saveSlot = async (req, res) => {
       curso_id,
       coordenador_id: coordenador_id || null,
       professor_id: professor_id || null,
-      departamento_id: departamento_id || null,
+      departamento_id: departmento_id || null,
       ano_id,
       semestre_id,
       curriculo_id,
       horario_id,
       dia_semana_id,
       disciplina_id: disciplina_id || null,
-      turma_id: turma_id || null,
+      turma: turma || null, // Salvando texto puro
     });
 
     return res.json(registro);

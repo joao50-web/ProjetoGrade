@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Table, Select, Button, message, ConfigProvider, Typography } from "antd";
+import { Table, Select, Input, Button, message, ConfigProvider, Typography } from "antd"; // Importado o Input do antd
 import { SaveOutlined, FilePdfOutlined, ReloadOutlined } from "@ant-design/icons";
 import { api, getUsuarioLogado } from "../services/api";
 
@@ -35,7 +35,7 @@ export default function GradeTabela() {
   const [professores, setProfessores] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
-  const [turmas, setTurmas] = useState([]); // ✅ NOVO ESTADO PARA TURMAS
+  // Removido o estado de turmas estáticas
   const [grade, setGrade] = useState([]);
   const [saving, setSaving] = useState(false);
   
@@ -51,13 +51,13 @@ export default function GradeTabela() {
 
   const loadInitialData = async () => {
     try {
-      // ✅ ADICIONADA A ROTA DE TURMAS NA BUSCA INICIAL
       const [
         cursosRes, anosRes, semestresRes, curriculosRes, horariosRes, 
-        professoresRes, coordenadoresRes, departamentosRes, turmasRes
+        professoresRes, coordenadoresRes, departamentosRes
       ] = await Promise.all([
         api.get("/cursos"), api.get("/anos"), api.get("/semestres"), api.get("/curriculos"), api.get("/horarios"), 
-        api.get("/pessoas/professores"), api.get("/pessoas/coordenadores"), api.get("/departamentos"), api.get("/turmas")
+        api.get("/pessoas/professores"), api.get("/pessoas/coordenadores"), api.get("/departamentos")
+        // Removido o endpoint de buscar turmas
       ]);
       
       setCursos(cursosRes.data || []); 
@@ -67,7 +67,6 @@ export default function GradeTabela() {
       setProfessores(professoresRes.data || []); 
       setCoordenadores(coordenadoresRes.data || []); 
       setDepartamentos(departamentosRes.data || []);
-      setTurmas(turmasRes.data || []); // ✅ SETANDO AS TURMAS
 
       const horariosOrdenados = (horariosRes.data || []).sort((a, b) => a.id - b.id);
       setHorarios(horariosOrdenados); 
@@ -109,7 +108,8 @@ export default function GradeTabela() {
     if (!canEdit) return;
     setGrade((prev) => {
       const exists = prev.find((g) => g.horario_id === horarioId && g.dia_semana_id === diaId);
-      if (!exists) return [...prev, { horario_id: horarioId, dia_semana_id: diaId, disciplina_id: null, professor_id: null, departamento_id: null, turma_id: null, [field]: value }];
+      // Alterado de turma_id: null para turma: "" para acomodar a string
+      if (!exists) return [...prev, { horario_id: horarioId, dia_semana_id: diaId, disciplina_id: null, professor_id: null, departamento_id: null, turma: "", [field]: value }];
       return prev.map((g) => g.horario_id === horarioId && g.dia_semana_id === diaId ? { ...g, [field]: value } : g);
     });
   };
@@ -153,12 +153,43 @@ export default function GradeTabela() {
     } catch { message.error("Erro ao excluir"); }
   };
 
+  // ✅ FUNÇÃO DE PDF CORRIGIDA (Com /api/ e criação de link dinâmico)
   const handlePDF = async () => {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
+      return message.warning("Selecione todos os filtros superiores antes de gerar o PDF");
+    }
+    
     try {
-      const response = await api.get("/relatorio-grade/pdf", { params: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId }, responseType: "blob" });
+      message.loading({ content: "Gerando documento...", key: "pdfLoading" });
+      
+      const response = await api.get("/api/relatorio-grade/pdf", { 
+        params: { 
+          curso_id: cursoId, 
+          ano_id: anoId, 
+          semestre_id: semestreId, 
+          curriculo_id: curriculoId,
+          coordenador_id: coordenadorId
+        }, 
+        responseType: "blob" 
+      });
+      
       const file = new Blob([response.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(file); window.open(url);
-    } catch { message.error("Erro ao gerar PDF"); }
+      const url = URL.createObjectURL(file); 
+      
+      // Abre via link a para evitar bloqueio de pop-ups no navegador
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.download = `grade_horaria_${cursoId}_${anoId}.pdf`; 
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success({ content: "PDF gerado com sucesso!", key: "pdfLoading" });
+    } catch (err) { 
+      console.error("Erro PDF:", err);
+      message.error({ content: "Erro ao gerar PDF. Certifique-se de que há dados salvos.", key: "pdfLoading" }); 
+    }
   };
 
   const columns = [
@@ -198,14 +229,14 @@ export default function GradeTabela() {
                   <span style={{ fontWeight: 600 }}>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
                 </div>
                 
-                {/* ✅ NOVO SELECT DE TURMA */}
-                <Select
-                  size="middle" allowClear showSearch placeholder="Turma"
-                  value={item.turma_id}
+                {/* Alterado de <Select> para <Input /> para permitir escrita de texto livre livre */}
+                <Input
+                  size="middle" 
+                  placeholder="Escreva a Turma (Ex: TURMA A)"
+                  value={item.turma}
                   disabled={!canEdit}
-                  onChange={(v) => updateSlot(record.id, dia.id, "turma_id", v)}
+                  onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())} // Força maiúsculas de forma organizada
                   style={{ width: "100%", fontSize: "13px" }}
-                  options={turmas.map((t) => ({ value: t.id, label: t.nome || t.descricao }))}
                 />
 
                 <Select

@@ -9,7 +9,7 @@ sequelize.sync()
   .then(() => {
     console.log('✔ Tabelas criadas / atualizadas com sucesso');
 
-    app.listen(3001, () => {
+    app.listen(3001, '0.0.0.0', () => {
       console.log('🚀 API rodando em http://localhost:3001');
     });
   })
