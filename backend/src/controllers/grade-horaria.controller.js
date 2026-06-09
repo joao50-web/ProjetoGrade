@@ -18,9 +18,10 @@ const {
 /* ======================================================
    BUSCAR GRADE
 ====================================================== */
-
 exports.findByContext = async (req, res) => {
   try {
+    console.log("\n[DEBUG] 1. Recebido no req.query:", req.query);
+
     const {
       curso_id,
       ano_id,
@@ -50,6 +51,8 @@ exports.findByContext = async (req, res) => {
       where.departamento_id = departamento_id;
     }
 
+    console.log("[DEBUG] 2. Cláusula WHERE final:", where);
+
     let disciplinasValidas = [];
 
     if (curso_id) {
@@ -65,6 +68,7 @@ exports.findByContext = async (req, res) => {
       });
 
       disciplinasValidas = curso?.disciplinas?.map((d) => d.id) || [];
+      console.log("[DEBUG] Disciplinas válidas do curso encontradas:", disciplinasValidas.length);
     }
 
     const registros = await GradeHoraria.findAll({
@@ -94,6 +98,8 @@ exports.findByContext = async (req, res) => {
       ],
     });
 
+    console.log(`[DEBUG] 3. GradeHoraria.findAll retornou ${registros.length} registros.`);
+
     const mapaMulticurso = new Map();
 
     registros.forEach((r) => {
@@ -106,8 +112,7 @@ exports.findByContext = async (req, res) => {
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
 
       const disciplinaValida =
-        r.disciplina &&
-        disciplinasValidas.includes(r.disciplina.id);
+        r.disciplina && disciplinasValidas.includes(r.disciplina.id);
 
       return {
         id: r.id,
@@ -120,7 +125,9 @@ exports.findByContext = async (req, res) => {
         professor_id: r.professor_id,
         departamento_id: r.departamento_id,
 
-        disciplina_id: disciplinaValida ? r.disciplina_id : null,
+        // Forçando o ID da disciplina a ser exposto no payload
+        disciplina_id: r.disciplina_id,
+
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
 
@@ -179,7 +186,6 @@ exports.findByContext = async (req, res) => {
 /* ======================================================
    SALVAR GRADE
 ====================================================== */
-
 exports.saveGrade = async (req, res) => {
   const { contexto, slots } = req.body;
 
@@ -255,7 +261,6 @@ exports.saveGrade = async (req, res) => {
 /* ======================================================
    SALVAR SLOT
 ====================================================== */
-
 exports.saveSlot = async (req, res) => {
   try {
     const {
@@ -307,15 +312,9 @@ exports.saveSlot = async (req, res) => {
 /* ======================================================
    DELETE GRADE
 ====================================================== */
-
 exports.deleteGrade = async (req, res) => {
   try {
-    const {
-      curso_id,
-      ano_id,
-      semestre_id,
-      curriculo_id,
-    } = req.body;
+    const { curso_id, ano_id, semestre_id, curriculo_id } = req.body;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
       return res.status(400).json({

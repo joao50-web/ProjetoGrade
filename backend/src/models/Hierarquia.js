@@ -1,10 +1,15 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const Hierarquia = sequelize.define('Tb_Hierarquia', {
-  descricao: DataTypes.STRING
+const Hierarquia = sequelize.define("Hierarquia", {
+  descricao: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
 }, {
-  tableName: 'Tb_Hierarquia'
+  tableName: "tb_hierarquia", // ✅ Corrigido para minúsculo
+  freezeTableName: true,
+  timestamps: true
 });
 
 module.exports = Hierarquia;

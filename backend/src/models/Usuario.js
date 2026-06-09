@@ -1,19 +1,30 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const Pessoa = require('./Pessoa');
-const Hierarquia = require('./Hierarquia');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const Usuario = sequelize.define('Tb_Usuario', {
+const Usuario = sequelize.define("Usuario", {
   login: {
     type: DataTypes.STRING,
+    allowNull: false,
     unique: true
   },
-  senha: DataTypes.STRING
+  senha: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  pessoa_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: { model: "tb_pessoa", key: "id" }
+  },
+  hierarquia_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: { model: "tb_hierarquia", key: "id" }
+  }
 }, {
-  tableName: 'Tb_Usuario'
+  tableName: "tb_usuario", // ✅ Corrigido para minúsculo
+  freezeTableName: true,
+  timestamps: true
 });
-
-
-
 
 module.exports = Usuario;

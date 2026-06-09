@@ -1,7 +1,7 @@
 const { Sequelize } = require("sequelize");
 const sequelize = require("../config/database");
 
-// Importa os modelos (cada um já está definido via sequelize.define)
+// Importa os modelos
 const Curso = require("./Curso");
 const Disciplina = require("./Disciplina");
 const DisciplinaCurso = require("./DisciplinaCurso");
@@ -38,33 +38,39 @@ const models = {
   Departamento,
   Log,
   Turma,
-  sequelize,
-  Sequelize,
 };
 
 // ================= ASSOCIAÇÕES =================
 
-// 1. Pessoa ↔ Cargo
+// Executa as associações de cada modelo
+Object.values(models).forEach((model) => {
+  if (model && typeof model.associate === "function") {
+    model.associate(models);
+  }
+});
+
+// Associações manuais (caso não estejam dentro dos arquivos dos modelos)
+// Pessoa ↔ Cargo
 Pessoa.belongsTo(Cargo, { foreignKey: "cargo_id", as: "cargo" });
 Cargo.hasMany(Pessoa, { foreignKey: "cargo_id", as: "pessoas" });
 
-// 2. Pessoa ↔ Usuario
+// Pessoa ↔ Usuario
 Pessoa.hasOne(Usuario, { foreignKey: "pessoa_id", as: "usuario" });
 Usuario.belongsTo(Pessoa, { foreignKey: "pessoa_id", as: "pessoa" });
 
-// 3. Usuario ↔ Hierarquia
+// Usuario ↔ Hierarquia
 Usuario.belongsTo(Hierarquia, { foreignKey: "hierarquia_id", as: "hierarquia" });
 Hierarquia.hasMany(Usuario, { foreignKey: "hierarquia_id", as: "usuarios" });
 
-// 4. Curso ↔ Departamento
+// Curso ↔ Departamento
 Curso.belongsTo(Departamento, { foreignKey: "departamento_id", as: "departamento" });
 Departamento.hasMany(Curso, { foreignKey: "departamento_id", as: "cursos" });
 
-// 5. Disciplina ↔ Departamento
+// Disciplina ↔ Departamento
 Disciplina.belongsTo(Departamento, { foreignKey: "departamento_id", as: "departamento" });
 Departamento.hasMany(Disciplina, { foreignKey: "departamento_id", as: "disciplinas" });
 
-// 6. Curso ↔ Disciplina (N:N via DisciplinaCurso)
+// Curso ↔ Disciplina (N:N)
 Curso.belongsToMany(Disciplina, {
   through: DisciplinaCurso,
   foreignKey: "curso_id",
@@ -78,7 +84,7 @@ Disciplina.belongsToMany(Curso, {
   as: "cursos",
 });
 
-// 7. Disciplina ↔ Pessoa (professores) (N:N via DisciplinaPessoa)
+// Disciplina ↔ Pessoa (N:N)
 Disciplina.belongsToMany(Pessoa, {
   through: DisciplinaPessoa,
   foreignKey: "disciplina_id",
@@ -92,20 +98,13 @@ Pessoa.belongsToMany(Disciplina, {
   as: "disciplinas",
 });
 
-// 8. Log ↔ Usuario
+// Log ↔ Usuario
 Log.belongsTo(Usuario, { foreignKey: "usuario_id", as: "usuario" });
 Usuario.hasMany(Log, { foreignKey: "usuario_id", as: "logs_atividades" });
 
-// 9. GradeHoraria (associações definidas no próprio modelo)
-if (typeof GradeHoraria.associate === "function") {
-  GradeHoraria.associate(models);
-}
-
-// Caso outros modelos tenham associate, chame também
-Object.values(models).forEach((model) => {
-  if (model && typeof model.associate === "function" && model !== GradeHoraria) {
-    model.associate(models);
-  }
-});
-
-module.exports = models;
+// Exporta o sequelize e os modelos
+module.exports = {
+  ...models,
+  sequelize,
+  Sequelize,
+};

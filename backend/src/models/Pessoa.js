@@ -11,7 +11,7 @@ const Pessoa = sequelize.define(
 
     email: {
       type: DataTypes.STRING,
-      allowNull: true, // ✅ AGORA É OPCIONAL
+      allowNull: true,
       unique: true,
       validate: {
         isEmailOrNull(value) {
@@ -26,6 +26,16 @@ const Pessoa = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+
+    // 🔗 Adicionando a FK para o Cargo (Necessário para o Admin)
+    cargo_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'tb_cargo', // Nome da tabela no banco
+        key: 'id'
+      }
+    }
   },
   {
     tableName: "tb_pessoa",

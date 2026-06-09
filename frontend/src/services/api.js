@@ -4,16 +4,27 @@ export const api = axios.create({
   baseURL: 'http://localhost:3001'
 });
 
-// 🔐 INTERCEPTOR CORRIGIDO
+// 🔐 INTERCEPTOR DEBUGGER
 api.interceptors.request.use(config => {
-  const usuario = localStorage.getItem('usuario');
+  const usuarioString = localStorage.getItem('usuario');
+  
+  console.log("🔍 [Interceptor] LocalStorage 'usuario':", usuarioString);
 
-  if (usuario) {
-    const { token } = JSON.parse(usuario);
+  if (usuarioString) {
+    const usuarioObj = JSON.parse(usuarioString);
+    console.log("🔍 [Interceptor] Objeto parseado:", usuarioObj);
+
+    const token = usuarioObj.token;
 
     if (token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("✅ [Interceptor] Token anexado com sucesso!");
+    } else {
+      console.warn("⚠️ [Interceptor] Usuário logado, mas o 'token' não foi encontrado direto na raiz do objeto!");
     }
+  } else {
+    console.warn("⚠️ [Interceptor] Nenhum usuário no LocalStorage!");
   }
 
   return config;

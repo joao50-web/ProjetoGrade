@@ -1,13 +1,10 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const Cargo = sequelize.define('Tb_Cargo', {
-  descricao: {
-    type: DataTypes.STRING,
-    allowNull: false
-  }
+const Cargo = sequelize.define("Tb_Cargo", {
+  descricao: DataTypes.STRING
 }, {
-  tableName: 'Tb_Cargo'
+  tableName: "Tb_Cargo"
 });
 
 module.exports = Cargo;

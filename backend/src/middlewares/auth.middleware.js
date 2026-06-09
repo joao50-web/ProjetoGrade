@@ -1,22 +1,22 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
 module.exports = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ error: 'Token não informado' });
+    return res.status(401).json({ error: "Token não informado" });
   }
 
-  const parts = authHeader.split(' ');
+  const parts = authHeader.split(" ");
 
   if (parts.length !== 2) {
-    return res.status(401).json({ error: 'Token mal formatado' });
+    return res.status(401).json({ error: "Token mal formatado" });
   }
 
   const [scheme, token] = parts;
 
   if (!/^Bearer$/i.test(scheme)) {
-    return res.status(401).json({ error: 'Token mal formatado' });
+    return res.status(401).json({ error: "Token mal formatado" });
   }
 
   try {
@@ -31,7 +31,7 @@ module.exports = (req, res, next) => {
 
   } catch (err) {
     return res.status(401).json({
-      error: 'Token inválido ou expirado'
+      error: "Token inválido ou expirado"
     });
   }
 };

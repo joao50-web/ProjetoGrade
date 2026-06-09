@@ -1,24 +1,42 @@
 const router = require("express").Router();
 const controller = require("../controllers/grade-horaria.controller");
+const authMiddleware = require("../middlewares/auth.middleware");
+const roleMiddleware = require("../middlewares/role.middleware");
 
 /* ======================================================
-   CONSULTA
+   CONSULTA - Todos os níveis podem ver
 ====================================================== */
-router.get("/", controller.findByContext);
+router.get("/", 
+  authMiddleware, 
+  roleMiddleware(["administrador", "edicao", "visualizacao"]), 
+  controller.findByContext
+);
 
 /* ======================================================
-   SLOT ISOLADO (uso opcional / futuro)
+   SALVAR GRADE COMPLETA - Admin e Edição apenas
 ====================================================== */
-router.post("/", controller.saveSlot);
+router.post("/save", 
+  authMiddleware, 
+  roleMiddleware(["administrador", "edicao"]), 
+  controller.saveGrade
+);
 
 /* ======================================================
-   SALVAR GRADE COMPLETA
+   EXCLUIR GRADE COMPLETA - Apenas Admin
 ====================================================== */
-router.post("/save", controller.saveGrade);
+router.delete("/delete", 
+  authMiddleware, 
+  roleMiddleware(["administrador"]), 
+  controller.deleteGrade
+);
 
 /* ======================================================
-   EXCLUIR GRADE COMPLETA (NOVO)
+   SLOT ISOLADO - Admin e Edição apenas
 ====================================================== */
-router.delete("/delete", controller.deleteGrade);
+router.post("/", 
+  authMiddleware, 
+  roleMiddleware(["administrador", "edicao"]), 
+  controller.saveSlot
+);
 
 module.exports = router;
