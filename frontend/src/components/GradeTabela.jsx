@@ -219,7 +219,7 @@ export default function GradeTabela() {
               value={item.disciplina_id}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
-              style={{ width: "100%", fontSize: "14px" }}
+              style={{ width: "100%", fontSize: "14px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
               options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo} - ${d.nome}` }))}
             />
             {item.disciplina_id && (
@@ -229,14 +229,13 @@ export default function GradeTabela() {
                   <span style={{ fontWeight: 600 }}>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
                 </div>
                 
-                {/* Alterado de <Select> para <Input /> para permitir escrita de texto livre livre */}
                 <Input
                   size="middle" 
                   placeholder="Escreva a Turma (Ex: TURMA A)"
                   value={item.turma}
                   disabled={!canEdit}
-                  onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())} // Força maiúsculas de forma organizada
-                  style={{ width: "100%", fontSize: "13px" }}
+                  onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())}
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
                 />
 
                 <Select
@@ -244,7 +243,7 @@ export default function GradeTabela() {
                   value={item.professor_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
-                  style={{ width: "100%", fontSize: "13px" }}
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
                   options={professores.map((p) => ({ value: p.id, label: p.nome }))}
                 />
                 <Select
@@ -252,7 +251,7 @@ export default function GradeTabela() {
                   value={item.departamento_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
-                  style={{ width: "100%", fontSize: "13px" }}
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
                   options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
                 />
               </>
@@ -264,7 +263,34 @@ export default function GradeTabela() {
   ];
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: THEME.primary, borderRadius: 6, colorBorder: THEME.borderColor }, components: { Table: { headerBg: THEME.bgHeader, headerColor: THEME.textWhite, borderColor: THEME.borderColor, cellPaddingInline: 0, cellPaddingBlock: 0 }, Select: { fontSize: 14 } } }}>
+    <ConfigProvider 
+      theme={{ 
+        token: { 
+          colorPrimary: THEME.primary, 
+          borderRadius: 6, 
+          colorBorder: THEME.borderColor,
+          colorTextDisabled: "#000000", // **MANTÉM O PRETO PARA LEGIBILIDADE**
+        }, 
+        components: { 
+          Table: { 
+            headerBg: THEME.bgHeader, 
+            headerColor: THEME.textWhite, 
+            borderColor: THEME.borderColor, 
+            cellPaddingInline: 0, 
+            cellPaddingBlock: 0 
+          }, 
+          Select: { 
+            fontSize: 14,
+            colorTextDisabled: "#000000",
+            colorBgContainerDisabled: "#f5f5f5"
+          },
+          Input: {
+            colorTextDisabled: "#000000",
+            colorBgContainerDisabled: "#f5f5f5"
+          }
+        } 
+      }}
+    >
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "16px", gap: "16px" }}>
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>

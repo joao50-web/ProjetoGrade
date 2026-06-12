@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Modal, Form, Input, message, Popconfirm, Typography, Card, Spin, Select, Space, Drawer, Tooltip, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, ApartmentOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, message, Popconfirm, Typography, Card, Spin, Select, Space, Drawer, Tooltip } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, ApartmentOutlined, CalendarOutlined, EyeOutlined } from '@ant-design/icons';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
@@ -32,8 +32,8 @@ const horarioCellStyle = { backgroundColor: "#f9fafb", color: THEME.primary, fon
 /* =========================================
    COMPONENTE MINI GRADE (DENTRO DO DRAWER)
 ========================================= */
-function MiniGradeContent({ departamentos }) {
-  const [departamentoId, setDepartamentoId] = useState(null);
+function MiniGradeContent({ departamentos, initialDeptId }) {
+  const [departamentoId, setDepartamentoId] = useState(initialDeptId);
   const [horarios, setHorarios] = useState([]);
   const [grade, setGrade] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,10 @@ function MiniGradeContent({ departamentos }) {
       setHorarios((res.data || []).sort((a, b) => a.id - b.id));
     }).catch(() => message.error("Erro ao carregar horários"));
   }, []);
+
+  useEffect(() => {
+    setDepartamentoId(initialDeptId);
+  }, [initialDeptId]);
 
   useEffect(() => {
     if (departamentoId) {
@@ -72,64 +76,23 @@ function MiniGradeContent({ departamentos }) {
 
   const columns = [
     {
-      title: "HORA", dataIndex: "descricao", width: 85, fixed: "left", align: "center",
+      title: "HORA", dataIndex: "descricao", width: 80, fixed: "left", align: "center",
       onHeaderCell: () => ({ style: miniGradeHeaderStyle }),
       onCell: () => ({ style: horarioCellStyle }),
     },
     ...diasFixos.map((dia) => ({
-      title: dia.nome, width: 160, align: "center",
+      title: dia.nome, width: 150, align: "center",
       onHeaderCell: () => ({ style: miniGradeHeaderStyle }),
       render: (_, record) => {
         const items = gradeMap[`${record.id}-${dia.id}`] || [];
         return (
-          <div style={{ minHeight: "60px", padding: "2px", display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div style={{ minHeight: "70px", padding: "4px", display: "flex", flexDirection: "column", gap: "4px", fontSize: "11px" }}>
             {items.map((item, idx) => (
-              <Tooltip 
-                key={idx} 
-                title={
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>{item.disciplina?.nome}</div>
-                    <div>Curso: {item.curso}</div>
-                    {item.turma && <div>Turma: {item.turma}</div>}
-                  </div>
-                }
-                placement="topLeft"
-              >
-                <div 
-                  style={{ 
-                    backgroundColor: "#ffffff", 
-                    border: "1px solid #d1d5db", 
-                    borderLeft: `4px solid ${THEME.primary}`,
-                    borderRadius: "4px", 
-                    padding: "4px 6px",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                    overflow: "hidden"
-                  }}
-                >
-                  <div style={{ 
-                    fontWeight: "700", 
-                    color: "#1f2937", 
-                    fontSize: "11px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    lineHeight: "1.2"
-                  }}>
-                    {item.disciplina?.nome}
-                  </div>
-                  <div style={{ 
-                    fontSize: "10px", 
-                    color: "#6b7280", 
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                  }}>
-                    {item.curso}
-                  </div>
-                </div>
-              </Tooltip>
+              <div key={idx} style={{ backgroundColor: "#e6f7ff", border: "1px solid #91d5ff", borderRadius: "4px", padding: "4px", textAlign: "left" }}>
+                <div style={{ fontWeight: "bold", color: THEME.primary }}>{item.Disciplina?.nome || item.disciplina_nome || "Disciplina"}</div>
+                <div style={{ fontSize: "10px", color: "#555" }}>{item.Curso?.nome || item.curso_nome || "Curso"}</div>
+                <div style={{ fontSize: "10px", fontStyle: "italic" }}>{item.turma || ""}</div>
+              </div>
             ))}
           </div>
         );
@@ -139,20 +102,20 @@ function MiniGradeContent({ departamentos }) {
 
   return (
     <div style={{ padding: '10px' }}>
-      <div style={{ marginBottom: 20, background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 15 }}>
-        <Text strong style={{ color: THEME.primary }}>Departamento:</Text>
+      <div style={{ marginBottom: 20, background: '#f9fafb', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb' }}>
+        <Text strong style={{ display: 'block', marginBottom: 8, color: THEME.primary }}>Filtrar por Departamento:</Text>
         <Select
-          placeholder="Selecione para visualizar o quadro"
-          style={{ width: 400 }}
+          placeholder="Selecione um Departamento para visualizar o quadro"
+          style={{ width: '100%', maxWidth: 400 }}
           allowClear
+          value={departamentoId}
           onChange={setDepartamentoId}
           options={departamentos.map(d => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
         />
-        <Tag color="blue" style={{ marginLeft: 'auto' }}>Passe o mouse sobre as aulas para ver detalhes</Tag>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "100px" }}><Spin size="large" tip="Organizando Grade..." /></div>
+        <div style={{ textAlign: "center", padding: "100px" }}><Spin size="large" tip="Carregando Quadro..." /></div>
       ) : (
         <Table
           rowKey="id"
@@ -160,9 +123,9 @@ function MiniGradeContent({ departamentos }) {
           columns={columns}
           pagination={false}
           bordered
-          size="small"
-          scroll={{ x: 800, y: 'calc(100vh - 280px)' }}
-          locale={{ emptyText: departamentoId ? "Nenhuma aula agendada" : "Selecione um departamento" }}
+          size="middle"
+          scroll={{ x: 800 }}
+          locale={{ emptyText: departamentoId ? "Nenhuma aula agendada para este departamento" : "Selecione um departamento acima" }}
         />
       )}
     </div>
@@ -176,6 +139,7 @@ export default function Departamentos() {
   const [departamentos, setDepartamentos] = useState([]);
   const [open, setOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedDeptId, setSelectedDeptId] = useState(null); // ID do depto para a grade
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -192,6 +156,11 @@ export default function Departamentos() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const openGrade = (id = null) => {
+    setSelectedDeptId(id);
+    setDrawerOpen(true);
+  };
 
   const save = async () => {
     try {
@@ -239,7 +208,7 @@ export default function Departamentos() {
           <Button 
             type="default"
             icon={<CalendarOutlined />} 
-            onClick={() => setDrawerOpen(true)} 
+            onClick={() => openGrade()} 
             style={{ height: 42, color: '#093e5e', borderColor: '#093e5e', fontWeight: 600 }}
           >
             Quadro de Horários
@@ -265,6 +234,14 @@ export default function Departamentos() {
         columns={[
           { title: 'Departamento', dataIndex: 'nome', onHeaderCell: () => ({ style: headerCellStyle }), render: (t) => <div style={{ padding: '8px 16px', fontSize: 16, fontWeight: 600 }}>{t}</div> },
           { title: 'Sigla', dataIndex: 'sigla', align: 'center', onHeaderCell: () => ({ style: headerCellStyle }), render: (t) => <div style={{ padding: '8px 16px', fontSize: 16 }}>{t}</div> },
+          {
+            title: 'Ver Grade', align: 'center', width: 120, onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (_, r) => (
+              <Tooltip title="Visualizar quadro semanal deste departamento">
+                <Button icon={<EyeOutlined />} onClick={() => openGrade(r.id)} style={{ color: '#093e5e' }} />
+              </Tooltip>
+            )
+          },
           {
             title: 'Editar', align: 'center', width: 120, onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => <Button icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setOpen(true); }} />
@@ -294,13 +271,13 @@ export default function Departamentos() {
       <Drawer
         title={<Title level={4} style={{ margin: 0, color: '#fff' }}>Quadro Semanal por Departamento</Title>}
         placement="right"
-        width="90%"
+        width="85%"
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
         headerStyle={{ background: '#093e5e', color: '#fff' }}
-        bodyStyle={{ background: '#f5f7fa', padding: '10px' }}
+        bodyStyle={{ background: '#f5f7fa' }}
       >
-        <MiniGradeContent departamentos={departamentos} />
+        <MiniGradeContent departamentos={departamentos} initialDeptId={selectedDeptId} />
       </Drawer>
     </AppLayout>
   );

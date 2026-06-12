@@ -89,7 +89,6 @@ exports.findByContext = async (req, res) => {
         { model: Ano, as: "ano", required: false },
         { model: Curriculo, as: "curriculo", required: false },
         { model: Semestre, as: "semestre", required: false },
-        // Removido o include de Turma daqui
       ],
       order: [
         [{ model: DiaSemana, as: "diaSemana" }, "id", "ASC"],
@@ -110,8 +109,13 @@ exports.findByContext = async (req, res) => {
       const chave = `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
 
-      const disciplinaValida =
-        r.disciplina && disciplinasValidas.includes(r.disciplina.id);
+      /* 
+         MUDANÇA CIRÚRGICA: 
+         Se houver filtro por departamento (Mini Grade) e NÃO houver filtro por curso, 
+         consideramos a disciplina como válida para que os dados apareçam.
+      */
+      const isDeptFilterOnly = !!departamento_id && !curso_id;
+      const disciplinaValida = isDeptFilterOnly || (r.disciplina && (!curso_id || disciplinasValidas.includes(r.disciplina.id)));
 
       return {
         id: r.id,
@@ -128,7 +132,6 @@ exports.findByContext = async (req, res) => {
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
 
-        // Agora retorna a String direto da coluna 'turma' do banco de dados
         turma: r.turma || "", 
 
         curso: r.curso?.nome || "-",
@@ -138,7 +141,7 @@ exports.findByContext = async (req, res) => {
         horario: r.horario?.descricao || "-",
         diaSemana: r.diaSemana?.nome || "-",
 
-        disciplina: disciplinaValida
+        disciplina: (disciplinaValida && r.disciplina)
           ? {
               id: r.disciplina.id,
               nome: r.disciplina.nome,
@@ -232,7 +235,7 @@ exports.saveGrade = async (req, res) => {
       horario_id: slot.horario_id,
       dia_semana_id: slot.dia_semana_id,
       disciplina_id: slot.disciplina_id,
-      turma: slot.turma || null, // Alterado para receber a string do texto puro
+      turma: slot.turma || null, 
     }));
 
     await GradeHoraria.bulkCreate(registros, { transaction });
@@ -266,7 +269,7 @@ exports.saveSlot = async (req, res) => {
       horario_id,
       dia_semana_id,
       disciplina_id,
-      turma, // Alterado de turma_id para turma
+      turma,
     } = req.body;
 
     if (
@@ -284,14 +287,14 @@ exports.saveSlot = async (req, res) => {
       curso_id,
       coordenador_id: coordenador_id || null,
       professor_id: professor_id || null,
-      departamento_id: departmento_id || null,
+      departamento_id: departamento_id || null, // Corrigido de departmento_id para departamento_id
       ano_id,
       semestre_id,
       curriculo_id,
       horario_id,
       dia_semana_id,
       disciplina_id: disciplina_id || null,
-      turma: turma || null, // Salvando texto puro
+      turma: turma || null,
     });
 
     return res.json(registro);
