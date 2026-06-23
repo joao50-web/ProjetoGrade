@@ -35,10 +35,8 @@ export default function GradeTabela() {
   const [professores, setProfessores] = useState([]);
   const [coordenadores, setCoordenadores] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);
-  // Removido o estado de turmas estáticas
   const [grade, setGrade] = useState([]);
   const [saving, setSaving] = useState(false);
-  
   const [cursoId, setCursoId] = useState(null);
   const [anoId, setAnoId] = useState(null);
   const [semestreId, setSemestreId] = useState(null);
@@ -57,7 +55,6 @@ export default function GradeTabela() {
       ] = await Promise.all([
         api.get("/cursos"), api.get("/anos"), api.get("/semestres"), api.get("/curriculos"), api.get("/horarios"), 
         api.get("/pessoas/professores"), api.get("/pessoas/coordenadores"), api.get("/departamentos")
-        // Removido o endpoint de buscar turmas
       ]);
       
       setCursos(cursosRes.data || []); 
@@ -108,7 +105,6 @@ export default function GradeTabela() {
     if (!canEdit) return;
     setGrade((prev) => {
       const exists = prev.find((g) => g.horario_id === horarioId && g.dia_semana_id === diaId);
-      // Alterado de turma_id: null para turma: "" para acomodar a string
       if (!exists) return [...prev, { horario_id: horarioId, dia_semana_id: diaId, disciplina_id: null, professor_id: null, departamento_id: null, turma: "", [field]: value }];
       return prev.map((g) => g.horario_id === horarioId && g.dia_semana_id === diaId ? { ...g, [field]: value } : g);
     });
@@ -153,7 +149,6 @@ export default function GradeTabela() {
     } catch { message.error("Erro ao excluir"); }
   };
 
-  // ✅ FUNÇÃO DE PDF CORRIGIDA (Com /api/ e criação de link dinâmico)
   const handlePDF = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
       return message.warning("Selecione todos os filtros superiores antes de gerar o PDF");
@@ -176,7 +171,6 @@ export default function GradeTabela() {
       const file = new Blob([response.data], { type: "application/pdf" });
       const url = URL.createObjectURL(file); 
       
-      // Abre via link a para evitar bloqueio de pop-ups no navegador
       const link = document.createElement("a");
       link.href = url;
       link.target = "_blank";
@@ -219,7 +213,7 @@ export default function GradeTabela() {
               value={item.disciplina_id}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
-              style={{ width: "100%", fontSize: "14px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
+              style={{ width: "100%", fontSize: "14px", fontWeight: isVisualizador ? 400 : 400 }} 
               options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo} - ${d.nome}` }))}
             />
             {item.disciplina_id && (
@@ -235,7 +229,7 @@ export default function GradeTabela() {
                   value={item.turma}
                   disabled={!canEdit}
                   onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
                 />
 
                 <Select
@@ -243,7 +237,7 @@ export default function GradeTabela() {
                   value={item.professor_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
                   options={professores.map((p) => ({ value: p.id, label: p.nome }))}
                 />
                 <Select
@@ -251,7 +245,7 @@ export default function GradeTabela() {
                   value={item.departamento_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 600 : 400 }} // **PESO AJUSTADO PARA 600 (Semi-bold)**
+                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
                   options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
                 />
               </>
@@ -269,7 +263,7 @@ export default function GradeTabela() {
           colorPrimary: THEME.primary, 
           borderRadius: 6, 
           colorBorder: THEME.borderColor,
-          colorTextDisabled: "#000000", // **MANTÉM O PRETO PARA LEGIBILIDADE**
+          colorTextDisabled: "#000000", 
         }, 
         components: { 
           Table: { 

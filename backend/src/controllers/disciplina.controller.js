@@ -6,9 +6,7 @@ const {
   GradeHoraria,
 } = require("../models");
 
-/* ======================================================
-   CRIAR DISCIPLINA
-====================================================== */
+/* ====== CRIAR DISCIPLINA ===== */
 
 exports.create = async (req, res) => {
   try {
@@ -33,9 +31,7 @@ exports.create = async (req, res) => {
   }
 };
 
-/* ======================================================
-   LISTAR TODAS
-====================================================== */
+/* ======= LISTAR TODAS ========= */
 
 exports.findAll = async (req, res) => {
   try {
@@ -76,9 +72,7 @@ exports.findAll = async (req, res) => {
   }
 };
 
-/* ======================================================
-   BUSCAR POR ID
-====================================================== */
+/* ======= BUSCAR POR ID ======== */
 
 exports.findById = async (
   req,
@@ -130,9 +124,7 @@ exports.findById = async (
   }
 };
 
-/* ======================================================
-   ATUALIZAR
-====================================================== */
+/* ==ATUALIZAR == */
 
 exports.update = async (
   req,
@@ -171,9 +163,7 @@ exports.update = async (
   }
 };
 
-/* ======================================================
-   REMOVER
-====================================================== */
+/* ===REMOVER==== */
 
 exports.remove = async (
   req,
@@ -193,9 +183,7 @@ exports.remove = async (
       });
     }
 
-    /* =========================================
-       VERIFICA SE ESTÁ EM USO NA GRADE
-    ========================================= */
+    /* ========= VERIFICA SE ESTÁ EM USO NA GRADE ======= */
 
     const vinculada =
       await GradeHoraria.findOne({
@@ -226,9 +214,7 @@ exports.remove = async (
       err
     );
 
-    /* =========================================
-       TRATAMENTO MYSQL FK
-    ========================================= */
+    /* ======TRATAMENTO MYSQL FK====== */
 
     if (
       err.name ===
@@ -249,9 +235,7 @@ exports.remove = async (
   }
 };
 
-/* ======================================================
-   RELAÇÕES
-====================================================== */
+/* ======RELAÇÕES ======== */
 
 exports.findRelations =
   async (req, res) => {
@@ -326,9 +310,7 @@ exports.findRelations =
     }
   };
 
-/* ======================================================
-   ATUALIZAR RELAÇÕES
-====================================================== */
+/* =========== ATUALIZAR RELAÇÕES =========== */
 
 exports.updateRelations =
   async (req, res) => {

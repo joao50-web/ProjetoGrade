@@ -22,7 +22,7 @@ const Usuario = sequelize.define("Usuario", {
     references: { model: "tb_hierarquia", key: "id" }
   }
 }, {
-  tableName: "tb_usuario", // ✅ Corrigido para minúsculo
+  tableName: "tb_usuario", 
   freezeTableName: true,
   timestamps: true
 });

@@ -7,7 +7,7 @@ const Hierarquia = sequelize.define("Hierarquia", {
     allowNull: false
   }
 }, {
-  tableName: "tb_hierarquia", // ✅ Corrigido para minúsculo
+  tableName: "tb_hierarquia", 
   freezeTableName: true,
   timestamps: true
 });

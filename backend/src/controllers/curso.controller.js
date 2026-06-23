@@ -1,9 +1,7 @@
 const { Curso, Disciplina, Pessoa, GradeHoraria } = require("../models");
 const { Sequelize } = require("sequelize");
 
-/* ===============================
-   CREATE
-=============================== */
+/* ===CREATE === */
 exports.create = async (req, res) => {
   try {
     const curso = await Curso.create({
@@ -21,9 +19,7 @@ exports.create = async (req, res) => {
   }
 };
 
-/* ===============================
-   LISTAR TODOS
-=============================== */
+/* ===== LISTAR TODOS ===== */
 exports.findAll = async (req, res) => {
   try {
     const cursos = await Curso.findAll({
@@ -49,9 +45,7 @@ exports.findAll = async (req, res) => {
   }
 };
 
-/* ===============================
-   BUSCAR POR ID
-=============================== */
+/* ===BUSCAR POR ID ==== */
 exports.findById = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id);
@@ -73,9 +67,7 @@ exports.findById = async (req, res) => {
   }
 };
 
-/* ===============================
-   UPDATE
-=============================== */
+/* ==== UPDATE ===== */
 exports.update = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id);
@@ -101,9 +93,6 @@ exports.update = async (req, res) => {
   }
 };
 
-/* ===============================
-   DELETE (100% SEGURO)
-=============================== */
 exports.remove = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id);
@@ -114,7 +103,7 @@ exports.remove = async (req, res) => {
       });
     }
 
-    // 🔥 CHECAGEM ANTES DE DELETAR (EVITA ERRO 1451)
+    //  CHECAGEM ANTES DE DELETAR (EVITA ERRO 1451)
     const usadoNaGrade = await GradeHoraria.count({
       where: {
         curso_id: curso.id,
@@ -135,7 +124,6 @@ exports.remove = async (req, res) => {
   } catch (error) {
     console.error("Erro ao remover curso:", error);
 
-    // 🔥 FALLBACK CASO FK AINDA PASSE (SEGURANÇA DUPLA)
     if (
       error instanceof Sequelize.ForeignKeyConstraintError ||
       error.name === "SequelizeForeignKeyConstraintError" ||

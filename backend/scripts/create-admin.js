@@ -14,9 +14,9 @@ const Hierarquia = require("../src/models/Hierarquia");
     await sequelize.authenticate();
     console.log("✔ Conectado ao banco");
 
-    // pegar hierarquia administrador (corrigido para minúsculas)
+    // hierarquia administrador (corrigido para minúsculas)
     const hierarquia = await Hierarquia.findOne({
-      where: { descricao: "administrador" } // Corrigido aqui
+      where: { descricao: "administrador" } 
     });
 
     if (!hierarquia) {
@@ -56,7 +56,7 @@ const Hierarquia = require("../src/models/Hierarquia");
       console.log("Login: admin");
       console.log("Senha: admin123");
     } else {
-      console.log("ℹ️ ADMIN já existe. Ignorando criação.");
+      console.log("ℹ️ ADMIN já existe.");
     }
 
     process.exit();

@@ -24,10 +24,6 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* =========================================
-   HEADER STYLE (AZUL PADRÃO SISTEMA)
-========================================= */
-
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
@@ -37,7 +33,6 @@ const headerCellStyle = {
   textAlign: 'center'
 };
 
-// Paleta de cores para hierarquias
 const hierarquiaColors = {
   Administrador: { bg: '#f5f4f0', color: '#093e5e' },
   'Secretario de curso': { bg: '#f5f4f0', color: '#093e5e' },

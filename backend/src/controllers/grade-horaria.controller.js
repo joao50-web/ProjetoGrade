@@ -11,7 +11,7 @@ const {
   Ano,
   Curriculo,
   Semestre,
-  sequelize, // Removido Turma daqui, pois não faremos mais o include relacional
+  sequelize,
 } = require("../models");
 
 /* ======================================================
@@ -110,7 +110,6 @@ exports.findByContext = async (req, res) => {
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
 
       /* 
-         MUDANÇA CIRÚRGICA: 
          Se houver filtro por departamento (Mini Grade) e NÃO houver filtro por curso, 
          consideramos a disciplina como válida para que os dados apareçam.
       */
@@ -287,7 +286,7 @@ exports.saveSlot = async (req, res) => {
       curso_id,
       coordenador_id: coordenador_id || null,
       professor_id: professor_id || null,
-      departamento_id: departamento_id || null, // Corrigido de departmento_id para departamento_id
+      departamento_id: departamento_id || null,
       ano_id,
       semestre_id,
       curriculo_id,

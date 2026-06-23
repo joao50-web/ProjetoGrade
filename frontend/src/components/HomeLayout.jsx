@@ -11,7 +11,6 @@ export default function HomeLayout({ children }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // 🔥 mantém consistência com AppLayout (zera tudo)
     localStorage.clear();
     navigate("/login");
   };

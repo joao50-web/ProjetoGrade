@@ -24,7 +24,7 @@ const relatorioProfessor = async (req, res) => {
       semestre_id,
       curriculo_id,
       coordenador_id,
-      carga_horaria, // Novo filtro
+      carga_horaria, 
     } = req.query;
 
     const where = {};
@@ -61,7 +61,6 @@ const relatorioProfessor = async (req, res) => {
       where.coordenador_id = coordenador_id;
     }
 
-    // Lógica para filtrar por carga horária através da associação
     const includeDisciplina = {
       model: Disciplina,
       as: "disciplina",
@@ -71,7 +70,7 @@ const relatorioProfessor = async (req, res) => {
 
     if (carga_horaria && carga_horaria !== "null") {
       includeDisciplina.where = { carga_horaria: Number(carga_horaria) };
-      includeDisciplina.required = true; // Força o filtro
+      includeDisciplina.required = true; 
     }
 
     const registros = await GradeHoraria.findAll({

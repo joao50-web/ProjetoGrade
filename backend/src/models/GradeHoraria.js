@@ -49,14 +49,13 @@ const GradeHoraria = sequelize.define(
       type: DataTypes.INTEGER, 
       allowNull: false 
     },
-    // ✅ Ajustado e centralizado como STRING para texto livre (Ex: "TURMA A")
     turma: { 
       type: DataTypes.STRING, 
       allowNull: true 
     },
   },
   {
-    tableName: "tb_grade_horaria", // ✅ Mantido exatamente como no DBeaver
+    tableName: "tb_grade_horaria", 
     freezeTableName: true,
     timestamps: true,
   },

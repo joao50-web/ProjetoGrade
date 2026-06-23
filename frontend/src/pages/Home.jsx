@@ -66,7 +66,7 @@ export default function Home() {
               Cursos e disciplinas.
             </Text>
 
-            {/* 🔥 SOMENTE ROTAS AJUSTADAS */}
+            {/* SOMENTE ROTAS AJUSTADAS */}
             <Button
               type="primary"
               onClick={() => navigate('/academico/cursos')}

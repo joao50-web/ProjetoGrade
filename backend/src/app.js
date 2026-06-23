@@ -6,9 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ MIDDLEWARES
+// MIDDLEWARES
 const auditMiddleware = require("./middlewares/audit.middleware");
-app.use(auditMiddleware); // registra ações no banco (opcional)
+app.use(auditMiddleware); 
 
 // ======================================================
 // ROTAS
@@ -33,7 +33,7 @@ const logRoutes = require("./routes/log.routes");
 const departamentoRoutes = require("./routes/departamento.routes");
 const relatorioGradeRoutes = require("./routes/relatorio-grade.routes");
 
-// ⭐ NOVO: TURMAS
+// NOVO: TURMAS
 const turmaRoutes = require("./routes/turma.routes");
 
 // ======================================================
@@ -60,20 +60,13 @@ app.use("/relatorios", relatorioRoutes);
 app.use("/logs", logRoutes);
 app.use("/departamentos", departamentoRoutes);
 
-// ⭐ TURMAS
+//  TURMAS
 app.use("/turmas", turmaRoutes);
 
 // PDF / RELATÓRIO DA GRADE
-app.use("/api/relatorio-grade", relatorioGradeRoutes);
+app.use("/api/relatorio-grade", relatorioGradeRoutes)
 
-// ======================================================
-// CURSO-DISCIPLINA (mantido como root route)
-// ======================================================
 app.use("/", cursoDisciplinaRoutes);
-
-// ======================================================
-// ERROR HANDLER GLOBAL
-// ======================================================
 
 app.use((err, req, res, next) => {
   console.error("Erro não tratado:", err.stack);

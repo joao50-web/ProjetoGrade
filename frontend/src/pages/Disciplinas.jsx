@@ -21,10 +21,6 @@ import {
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
 
-/* =========================================
-   HEADER STYLE (AZUL PADRÃO SISTEMA)
-========================================= */
-
 const headerCellStyle = {
   backgroundColor: '#093e5e',
   color: '#ffffff',
@@ -112,7 +108,7 @@ export default function Disciplinas() {
     form.setFieldsValue({
       codigo: disciplina.codigo,
       nome: disciplina.nome,
-      carga_horaria: disciplina.carga_horaria, // ✅ agora funciona
+      carga_horaria: disciplina.carga_horaria, 
     });
 
     setOpen(true);

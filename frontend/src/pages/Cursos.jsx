@@ -21,10 +21,6 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
-/* =========================================
-   HEADER STYLE (AZUL PADRÃO SISTEMA)
-========================================= */
-
 const headerCellStyle = {
   backgroundColor: "#093e5e",
   color: "#ffffff",

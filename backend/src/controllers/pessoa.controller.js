@@ -12,7 +12,7 @@ exports.create = async (req, res) => {
   try {
     const data = {
       ...req.body,
-      email: tratarEmail(req.body.email), // ✅ CORREÇÃO
+      email: tratarEmail(req.body.email), 
     };
 
     const pessoa = await Pessoa.create(data);
@@ -98,7 +98,7 @@ exports.update = async (req, res) => {
 
     const data = {
       ...req.body,
-      email: tratarEmail(req.body.email), // ✅ CORREÇÃO
+      email: tratarEmail(req.body.email), 
     };
 
     await pessoa.update(data);

@@ -86,7 +86,7 @@ export default function App() {
           }
         />
 
-        {/* ================= ACADÊMICO (ORDEM CORRETA) ================= */}
+        {/* ================= ACADÊMICO ================= */}
 
         <Route
           path="/academico/departamentos"

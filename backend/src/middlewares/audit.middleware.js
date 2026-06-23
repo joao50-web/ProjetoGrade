@@ -8,8 +8,6 @@ const auditMiddleware = async (req, res, next) => {
     }
 
     const usuarioId = req.user?.id;
-
-    // 🚨 REGRA IMPORTANTE:
     // Se não tem usuário logado, NÃO tenta salvar log
     if (!usuarioId) {
       return next();
@@ -36,7 +34,7 @@ const auditMiddleware = async (req, res, next) => {
 
   } catch (error) {
     console.error("Erro no middleware de auditoria:", error);
-    return next(); // nunca quebra API
+    return next();
   }
 };
 

@@ -11,17 +11,16 @@ const Curso = sequelize.define('Tb_Curso', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  // ✅ ADICIONADO: Chave estrangeira para o Departamento
   departamento_id: {
     type: DataTypes.INTEGER,
     allowNull: true, // Permite nulo caso existam cursos sem departamento definido
     references: {
-      model: 'tb_departamento', // Nome da tabela de departamentos no banco
+      model: 'tb_departamento', 
       key: 'id'
     }
   }
 }, {
-  tableName: 'tb_curso', // Recomendo usar letras minúsculas para evitar problemas em Linux/Docker
+  tableName: 'tb_curso', 
   timestamps: false
 });
 

@@ -3,11 +3,11 @@ const router = express.Router();
 
 const pessoaController = require("../controllers/pessoa.controller");
 
-// 🔥 ROTAS ESPECÍFICAS PRIMEIRO
+//  ROTAS ESPECÍFICAS PRIMEIRO
 router.get("/professores", pessoaController.findProfessores);
 router.get("/coordenadores", pessoaController.findCoordenadores);
 
-// 🔥 DEPOIS AS GENÉRICAS
+// DEPOIS AS GENÉRICAS
 router.get("/", pessoaController.findAll);
 router.get("/:id", pessoaController.findById);
 router.post("/", pessoaController.create);

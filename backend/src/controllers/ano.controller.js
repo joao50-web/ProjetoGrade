@@ -1,9 +1,6 @@
 const { Ano } = require("../models");
 
-/* ======================================================
-   CRIAR ANO LETIVO
-====================================================== */
-
+/* ====CRIAR ANO LETIVO======= */
 exports.getOrCreate = async (
   req,
   res
@@ -14,12 +11,8 @@ exports.getOrCreate = async (
     const { descricao } =
       req.body;
 
-    /* =========================================
-       VALIDAÇÃO
-    ========================================= */
-
+    /* ====== VALIDAÇÃO ==== */
     // FORMATO: 2026/1 ou 2026/2
-
     if (
       !/^\d{4}\/[12]$/.test(
         descricao
@@ -51,9 +44,7 @@ exports.getOrCreate = async (
   }
 };
 
-/* ======================================================
-   LISTAR ANOS
-====================================================== */
+/* === LISTAR ANOS === */
 
 exports.findAll = async (
   req,

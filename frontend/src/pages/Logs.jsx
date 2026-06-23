@@ -43,7 +43,7 @@ export default function Logs() {
   const loadLogs = async () => {
     setLoading(true);
     try {
-      // 🔥 LIMITA PRA NÃO TRAVAR
+      // LIMITA PRA NÃO TRAVAR
       const response = await api.get('/logs?limit=50');
       setLogs(response.data);
     } catch {

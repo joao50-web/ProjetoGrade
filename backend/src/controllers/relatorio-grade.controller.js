@@ -79,10 +79,6 @@ exports.gerarPDF = async (req, res) => {
       coordenadorNome = gradeCoordenador.coordenador.nome;
     }
 
-    /* ======================================================
-        BUSCA DISCIPLINAS VÁLIDAS DO CURSO
-        ISSO REMOVE DISCIPLINAS ÓRFÃS DO PDF
-      ====================================================== */
 
     const cursoCompleto = await Curso.findByPk(curso_id, {
       include: [

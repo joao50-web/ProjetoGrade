@@ -123,10 +123,6 @@ const buscarDados = async (query) => {
   return Array.from(mapa.values());
 };
 
-/* =======================================================
-   PDF (MANTÉM ORDEM: DISCIPLINA, CURSO, DEPARTAMENTO...)
-======================================================= */
-
 const exportRelatorioPDF = async (req, res) => {
   try {
     const dados = await buscarDados(req.query);
@@ -177,7 +173,6 @@ const exportRelatorioPDF = async (req, res) => {
         .strokeColor("#E5E7EB")
         .stroke();
 
-      // ORDEM: Disciplina, Curso, Departamento, Professor, Coordenador, Carga, Ano, Semestre
       write(`Disciplina: ${d.disciplina} (${d.codigo})`, colLeft, y + 8);
       write(`Curso: ${d.cursos.join(", ") || "-"}`, colLeft, y + 28);
       write(`Departamento: ${d.departamento}`, colLeft, y + 48);
@@ -205,9 +200,6 @@ const exportRelatorioPDF = async (req, res) => {
   }
 };
 
-/* =======================================================
-   EXCEL (ORDEM: Disciplina, Curso, Departamento, Professor, Coordenador, Carga, Ano, Semestre)
-======================================================= */
 
 const exportRelatorioExcel = async (req, res) => {
   try {

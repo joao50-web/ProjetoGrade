@@ -20,16 +20,15 @@ export default function Login() {
       // Salva o token isolado (mantido por segurança caso outras telas usem)
       localStorage.setItem("token", res.data.token);
       
-      // 👇 INÍCIO DA ATUALIZAÇÃO 
+      // INÍCIO DA ATUALIZAÇÃO 
       // Criamos um objeto novo juntando as informações do usuário e o token
       const dadosCompletos = {
         ...res.data.usuario, 
         token: res.data.token 
       };
 
-      // Agora salvamos tudo junto no localStorage na chave 'usuario'
       localStorage.setItem("usuario", JSON.stringify(dadosCompletos));
-      // 👆 FIM DA ATUALIZAÇÃO
+      //  FIM DA ATUALIZAÇÃO
 
       const role = res.data.usuario.role;
       let redirect = "/home";

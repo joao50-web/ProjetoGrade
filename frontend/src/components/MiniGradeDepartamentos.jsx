@@ -150,6 +150,7 @@ export default function Departamentos() {
     try {
       const res = await api.get('/departamentos');
       setDepartamentos(Array.isArray(res.data) ? res.data : []);
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
       message.error('Erro ao carregar departamentos.');
     } finally { setLoading(false); }
@@ -185,6 +186,7 @@ export default function Departamentos() {
       await api.delete(`/departamentos/${id}`);
       message.success('Departamento removido com sucesso');
       load();
+    // eslint-disable-next-line no-unused-vars
     } catch (error) {
       message.error('Não é possível excluir este departamento pois ele já está sendo utilizado no sistema.');
     }

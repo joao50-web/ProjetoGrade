@@ -27,12 +27,12 @@ const Pessoa = sequelize.define(
       allowNull: true,
     },
 
-    // 🔗 Adicionando a FK para o Cargo (Necessário para o Admin)
+    // Adicionando a FK para o Cargo (Necessário para o Admin)
     cargo_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: 'tb_cargo', // Nome da tabela no banco
+        model: 'tb_cargo',
         key: 'id'
       }
     }

@@ -14,7 +14,7 @@ exports.exportarExcel = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
-      professor_id, // 🔥 opcional
+      professor_id, 
     } = req.query;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
@@ -52,7 +52,6 @@ exports.exportarExcel = async (req, res) => {
       ],
     });
 
-    // HEADER
     sheet.addRow(["Horário", ...dias.map((d) => d.descricao)]);
 
     horarios.forEach((h) => {

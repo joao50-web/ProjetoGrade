@@ -6,9 +6,6 @@ import { api } from '../services/api';
 
 const { Text, Title } = Typography;
 
-/* =========================================
-   ESTILOS GERAIS
-========================================= */
 const headerCellStyle = { 
   backgroundColor: '#093e5e', 
   color: '#ffffff', 
@@ -30,7 +27,7 @@ const miniGradeHeaderStyle = { backgroundColor: THEME.bgHeader, color: THEME.tex
 const horarioCellStyle = { backgroundColor: "#f9fafb", color: THEME.primary, fontWeight: "700", textAlign: "center", fontSize: "13px", padding: "4px", borderRight: `2px solid ${THEME.separatorColor}` };
 
 /* =========================================
-   COMPONENTE MINI GRADE (DENTRO DO DRAWER)
+   COMPONENTE MINI GRADE
 ========================================= */
 function MiniGradeContent({ departamentos }) {
   const [departamentoId, setDepartamentoId] = useState(null);
@@ -50,6 +47,7 @@ function MiniGradeContent({ departamentos }) {
 
   useEffect(() => {
     if (departamentoId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       api.get("/grade-horaria", { params: { departamento_id: departamentoId } })
         .then(res => setGrade(res.data || []))
@@ -186,6 +184,7 @@ export default function Departamentos() {
     try {
       const res = await api.get('/departamentos');
       setDepartamentos(Array.isArray(res.data) ? res.data : []);
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
       message.error('Erro ao carregar departamentos.');
     } finally { setLoading(false); }
@@ -216,6 +215,7 @@ export default function Departamentos() {
       await api.delete(`/departamentos/${id}`);
       message.success('Departamento removido com sucesso');
       load();
+    // eslint-disable-next-line no-unused-vars
     } catch (error) {
       message.error('Não é possível excluir este departamento pois ele já está sendo utilizado no sistema.');
     }
