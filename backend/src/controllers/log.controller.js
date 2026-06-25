@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const Log = require("../models/Log");
+const Log = require("../models/log");
 const Usuario = require("../models/Usuario");
 const Pessoa = require("../models/Pessoa");
 
