@@ -17,7 +17,7 @@ const Semestre = require("./Semestre");
 const Curriculo = require("./Curriculo");
 const GradeHoraria = require("./GradeHoraria");
 const Departamento = require("./Departamento");
-const Log = require("./Log");
+const Log = require("./log");
 const Turma = require("./Turma");
 
 const models = {
