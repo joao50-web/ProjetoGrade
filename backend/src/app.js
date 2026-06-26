@@ -5,14 +5,7 @@ const app = express();
 
 
 app.use(cors({
-  origin: [
-    'https://projeto-grade-v1fw.vercel.app', // O link do seu Vercel (SEM a barra / no final)
-    'http://localhost:5173', // Para você continuar testando localmente (mude a porta se usar outra)
-    'http://localhost:3000'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200 // Adicione essa linha para responder requisições OPTIONS com status 200
+  origin: '*' // Permite qualquer origem temporariamente apenas para testar
 }));
 
 
