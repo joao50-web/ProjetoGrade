@@ -3,7 +3,18 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    'https://projeto-grade-v1fw.vercel.app', // O link do seu Vercel (SEM a barra / no final)
+    'http://localhost:5173', // Para você continuar testando localmente (mude a porta se usar outra)
+    'http://localhost:3000'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+
 app.use(express.json());
 
 // MIDDLEWARES
