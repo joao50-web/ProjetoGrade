@@ -22,9 +22,9 @@ async function startDatabase() {
         await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
         console.log('--- Verificação de FK ligada ---');
 
-        // 4. Só agora subimos o servidor!
-        app.listen(PORT, () => {
-            console.log(`Servidor rodando na porta ${PORT}`);
+        // 4. Só agora subimos o servidor vinculando ao host '0.0.0.0'
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Servidor rodando na porta ${PORT} e acessível externamente`);
         });
         
     } catch (error) {
