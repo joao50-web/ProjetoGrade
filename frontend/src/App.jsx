@@ -23,7 +23,10 @@ function PrivateRoute({ children, roles }) {
 
   if (!usuario) return <Navigate to="/login" />;
 
-  if (roles && !roles.includes(usuario.role)) {
+  // Pega a role do usuário e transforma tudo em minúsculo para garantir a comparação
+  const roleUsuario = String(usuario.role).toLowerCase();
+
+  if (roles && !roles.includes(roleUsuario)) {
     return <Navigate to="/grade-horaria" />;
   }
 
