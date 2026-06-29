@@ -17,7 +17,7 @@ const Semestre = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Semestre',
+    tableName: 'tb_semestre',
     timestamps: true
   }
 );

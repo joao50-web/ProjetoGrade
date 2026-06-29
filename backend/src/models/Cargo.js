@@ -1,10 +1,10 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Cargo = sequelize.define("Tb_Cargo", {
+const Cargo = sequelize.define("tb_cargo", {
   descricao: DataTypes.STRING
 }, {
-  tableName: "Tb_Cargo"
+  tableName: "tb_cargo"
 });
 
 module.exports = Cargo;

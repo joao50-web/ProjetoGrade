@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Disciplina = sequelize.define('Tb_Disciplina', {
+const Disciplina = sequelize.define('tb_disciplina', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -25,7 +25,7 @@ const Disciplina = sequelize.define('Tb_Disciplina', {
   }
 
 }, {
-  tableName: 'Tb_Disciplina',
+  tableName: 'tb_disciplina',
   timestamps: false,
   createdAt: false,
   updatedAt: false

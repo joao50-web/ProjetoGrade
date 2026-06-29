@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Horario = sequelize.define(
-  'Tb_Horario',
+  'tb_horario',
   {
     id: {
       type: DataTypes.INTEGER,
@@ -16,7 +16,7 @@ const Horario = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Horario',
+    tableName: 'tb_horario',
     timestamps: true
   }
 );

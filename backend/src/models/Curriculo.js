@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Curriculo = sequelize.define(
-  'Tb_Curriculo',
+  'tb_curriculo',
   {
     id: {
       type: DataTypes.INTEGER,
@@ -21,7 +21,7 @@ const Curriculo = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Curriculo',
+    tableName: 'tb_curriculo',
     timestamps: true
   }
 );

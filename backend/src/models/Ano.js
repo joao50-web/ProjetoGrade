@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Ano = sequelize.define(
-  'Tb_Ano',
+  'tb_ano',
   {
     id: {
       type: DataTypes.INTEGER,
@@ -17,7 +17,7 @@ const Ano = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Ano',
+    tableName: 'tb_ano',
     timestamps: true
   }
 );

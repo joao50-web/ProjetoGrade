@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const DiaSemana = sequelize.define(
-  'Tb_Dia_Semana',
+  'tb_dia_semana',
   {
     id: {
       type: DataTypes.INTEGER,
@@ -16,7 +16,7 @@ const DiaSemana = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Dia_Semana',
+    tableName: 'tb_dia_semana',
     timestamps: true
   }
 );

@@ -18,8 +18,16 @@ exports.create = async (req, res) => {
     const pessoa = await Pessoa.create(data);
     return res.status(201).json(pessoa);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Erro ao criar pessoa" });
+    // Adicione este log para ver o erro detalhado no seu terminal
+    console.log("--- DETALHE DO ERRO ---");
+    console.log(error); 
+    
+    // Retorne o erro real para o frontend durante o desenvolvimento
+    return res.status(500).json({ 
+        error: "Erro ao criar pessoa", 
+        details: error.message, // Isso ajudará a ver o erro na rede do navegador
+        validation: error.errors ? error.errors.map(e => e.message) : null 
+    });
   }
 };
 

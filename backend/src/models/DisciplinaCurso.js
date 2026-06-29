@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const DisciplinaCurso = sequelize.define(
-  'Tb_Disciplina_Curso',
+  'tb_disciplina_curso',
   {
     curso_id: {
       type: DataTypes.INTEGER,
@@ -14,7 +14,7 @@ const DisciplinaCurso = sequelize.define(
     }
   },
   {
-    tableName: 'Tb_Disciplina_Curso',
+    tableName: 'tb_disciplina_curso',
     timestamps: false
   }
 );
