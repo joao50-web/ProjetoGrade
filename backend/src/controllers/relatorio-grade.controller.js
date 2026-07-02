@@ -14,6 +14,12 @@ const {
   Departamento,
 } = require("../models");
 
+// Função utilitária para limpar parâmetros de query string inválidos vindos do front-end
+const parseQueryParam = (param) => {
+  if (!param || param === "null" || param === "undefined") return null;
+  return param;
+};
+
 exports.gerarPDF = async (req, res) => {
   try {
     const {
@@ -27,9 +33,8 @@ exports.gerarPDF = async (req, res) => {
     } = req.query;
 
     /* ======================================================
-        VALIDAÇÕES
-      ====================================================== */
-
+        VALIDAÇÕES INICIAIS
+       ====================================================== */
     if (!curso_id || !ano_id || !curriculo_id) {
       return res.status(400).json({
         error: "curso_id, ano_id e curriculo_id são obrigatórios",
@@ -37,34 +42,42 @@ exports.gerarPDF = async (req, res) => {
     }
 
     /* ======================================================
-        DADOS BASE
-      ====================================================== */
+        BUSCA PARALELA DE DADOS BASE (Otimização de Performance)
+       ====================================================== */
+    const [cursoCompleto, ano, curriculo, horarios, dias] = await Promise.all([
+      Curso.findByPk(curso_id, {
+        include: [
+          {
+            model: Disciplina,
+            as: "disciplinas",
+            attributes: ["id"],
+            through: { attributes: [] },
+          },
+        ],
+      }),
+      Ano.findByPk(ano_id),
+      Curriculo.findByPk(curriculo_id),
+      Horario.findAll({ order: [["id", "ASC"]] }),
+      DiaSemana.findAll({ order: [["id", "ASC"]] }),
+    ]);
 
-    const curso = await Curso.findByPk(curso_id);
-
-    const ano = await Ano.findByPk(ano_id);
-
-    const curriculo = await Curriculo.findByPk(curriculo_id);
-
-    if (!curso || !ano || !curriculo) {
+    if (!cursoCompleto || !ano || !curriculo) {
       return res.status(404).json({
         error: "Curso, ano ou currículo não encontrado",
       });
     }
 
+    // Mapeia as disciplinas válidas vinculadas ao curso
+    const disciplinasValidas = (cursoCompleto.disciplinas || []).map((d) =>
+      Number(d.id),
+    );
+
     /* ======================================================
-        COORDENADOR
-      ====================================================== */
-
+        COORDENADOR (Busca dedicada)
+       ====================================================== */
     let coordenadorNome = "Não informado";
-
     const gradeCoordenador = await GradeHoraria.findOne({
-      where: {
-        curso_id,
-        ano_id,
-        curriculo_id,
-      },
-
+      where: { curso_id, ano_id, curriculo_id },
       include: [
         {
           model: Pessoa,
@@ -79,104 +92,63 @@ exports.gerarPDF = async (req, res) => {
       coordenadorNome = gradeCoordenador.coordenador.nome;
     }
 
-
-    const cursoCompleto = await Curso.findByPk(curso_id, {
-      include: [
-        {
-          model: Disciplina,
-          as: "disciplinas",
-          attributes: ["id"],
-          through: {
-            attributes: [],
-          },
-        },
-      ],
-    });
-
-    const disciplinasValidas = (cursoCompleto?.disciplinas || []).map((d) =>
-      Number(d.id),
-    );
-
-    console.log("DISCIPLINAS VÁLIDAS:", disciplinasValidas);
-
     /* ======================================================
-        FILTRO DA GRADE
-      ====================================================== */
-
+        CONSTRUÇÃO DO FILTRO DA GRADE
+       ====================================================== */
     const whereGrade = {
       curso_id,
       ano_id,
       curriculo_id,
+      disciplina_id: disciplinasValidas, // Otimização: Filtro direto no Banco de Dados
     };
 
-    if (
-      professor_id &&
-      professor_id !== "null" &&
-      professor_id !== "undefined"
-    ) {
-      whereGrade.professor_id = professor_id;
-    }
+    const pId = parseQueryParam(professor_id);
+    if (pId) whereGrade.professor_id = pId;
 
-    if (
-      coordenador_id &&
-      coordenador_id !== "null" &&
-      coordenador_id !== "undefined"
-    ) {
-      whereGrade.coordenador_id = coordenador_id;
-    }
+    const cId = parseQueryParam(coordenador_id);
+    if (cId) whereGrade.coordenador_id = cId;
 
-    if (
-      semestre_id &&
-      semestre_id !== "null" &&
-      semestre_id !== "undefined" &&
-      todos !== "true"
-    ) {
-      whereGrade.semestre_id = semestre_id;
+    const sId = parseQueryParam(semestre_id);
+    if (sId && todos !== "true") {
+      whereGrade.semestre_id = sId;
     }
 
     /* ======================================================
-        BUSCA GRADE
-      ====================================================== */
-
-    let grades = await GradeHoraria.findAll({
+        BUSCA DAS GRADES HORÁRIAS
+       ====================================================== */
+    const grades = await GradeHoraria.findAll({
       where: whereGrade,
-
       include: [
         {
           model: Disciplina,
           as: "disciplina",
-          required: false,
+          required: true, // Garante que traga apenas se a relação existir de fato
           attributes: ["id", "codigo", "nome", "carga_horaria"],
         },
-
         {
           model: Departamento,
           as: "departamento",
           required: false,
           attributes: ["id", "nome", "sigla"],
         },
-
         {
           model: Horario,
           as: "horario",
           required: false,
           attributes: ["id", "descricao"],
         },
-
         {
           model: DiaSemana,
           as: "diaSemana",
           required: false,
           attributes: ["id", "descricao"],
         },
-
         {
           model: Semestre,
           as: "semestre",
           required: false,
           attributes: ["id", "descricao"],
         },
-
         {
           model: Pessoa,
           as: "professor",
@@ -184,86 +156,21 @@ exports.gerarPDF = async (req, res) => {
           attributes: ["id", "nome"],
         },
       ],
-
       order: [
-        [
-          {
-            model: DiaSemana,
-            as: "diaSemana",
-          },
-          "id",
-          "ASC",
-        ],
-
-        [
-          {
-            model: Horario,
-            as: "horario",
-          },
-          "id",
-          "ASC",
-        ],
+        [{ model: DiaSemana, as: "diaSemana" }, "id", "ASC"],
+        [{ model: Horario, as: "horario" }, "id", "ASC"],
       ],
     });
 
     /* ======================================================
-        REMOVE DISCIPLINAS INVÁLIDAS
-        NÃO EXISTE MAIS NO CURSO
-      ====================================================== */
-
-    grades = grades.filter((g) => {
-      /* sem disciplina */
-      if (!g.disciplina_id) {
-        return false;
-      }
-
-      /* disciplina removida */
-      if (!disciplinasValidas.includes(Number(g.disciplina_id))) {
-        console.log("DISCIPLINA REMOVIDA DO PDF:", g.disciplina_id);
-
-        return false;
-      }
-
-      /* disciplina deletada */
-      if (!g.disciplina) {
-        console.log("DISCIPLINA ÓRFÃ:", g.disciplina_id);
-
-        return false;
-      }
-
-      return true;
-    });
-
-    console.log("GRADES VÁLIDAS:", grades.length);
-
-    /* ======================================================
-        HORÁRIOS E DIAS
-      ====================================================== */
-
-    const horarios = await Horario.findAll({
-      order: [["id", "ASC"]],
-    });
-
-    const dias = await DiaSemana.findAll({
-      order: [["id", "ASC"]],
-    });
-
-    /* ======================================================
-        SEMESTRES
-      ====================================================== */
-
+        IDENTIFICAÇÃO DOS SEMESTRES ALVO
+       ====================================================== */
     let semestresBanco = [];
-
     if (todos === "true") {
-      semestresBanco = await Semestre.findAll({
-        order: [["id", "ASC"]],
-      });
+      semestresBanco = await Semestre.findAll({ order: [["id", "ASC"]] });
     } else {
-      const semestre = await Semestre.findByPk(semestre_id);
-
-      if (semestre) {
-        semestresBanco.push(semestre);
-      }
+      const semestre = sId ? await Semestre.findByPk(sId) : null;
+      if (semestre) semestresBanco.push(semestre);
     }
 
     if (semestresBanco.length === 0) {
@@ -273,103 +180,79 @@ exports.gerarPDF = async (req, res) => {
     }
 
     /* ======================================================
-        MONTA TEMPLATE
-      ====================================================== */
-
+        MONTAGEM DO MAPA PARA O TEMPLATE (Otimização O(1))
+       ====================================================== */
     const semestresRender = semestresBanco.map((sem) => {
-      const registrosSemestre = grades.filter((g) => {
-        return g.semestre && Number(g.semestre.id) === Number(sem.id);
-      });
+      const registrosSemestre = grades.filter(
+        (g) => g.semestre && Number(g.semestre.id) === Number(sem.id)
+      );
+
+      // Criação de um dicionário (chave/valor) para busca instantânea por célula
+      const slotMap = new Map();
+      for (const slot of registrosSemestre) {
+        const key = `${slot.horario_id}_${slot.dia_semana_id}`;
+        slotMap.set(key, slot);
+      }
 
       const linhas = horarios.map((horario) => {
         const celulas = dias.map((dia) => {
-          const slot = registrosSemestre.find((g) => {
-            return (
-              Number(g.horario_id) === Number(horario.id) &&
-              Number(g.dia_semana_id) === Number(dia.id)
-            );
-          });
+          const slot = slotMap.get(`${horario.id}_${dia.id}`);
 
-          /* =========================================
-                    CÉLULA VAZIA
-                  ========================================= */
-
+          // Célula vazia
           if (!slot || !slot.disciplina) {
             return {};
           }
 
-          /* =========================================
-                    CÉLULA
-                  ========================================= */
-
+          // Célula preenchida
           return {
-            codigo: slot.disciplina?.codigo || "",
-
-            nome: slot.disciplina?.nome || "",
-
+            codigo: slot.disciplina.codigo || "",
+            nome: slot.disciplina.nome || "",
             cargaHoraria:
-              slot.disciplina?.carga_horaria ||
-              slot.disciplina?.cargaHoraria ||
+              slot.disciplina.carga_horaria ||
+              slot.disciplina.cargaHoraria ||
               "",
-
             professor: slot.professor?.nome || "",
-
             departamento:
-              slot?.departamento?.sigla || slot?.departamento?.nome || "",
+              slot.departamento?.sigla || slot.departamento?.nome || "",
           };
         });
 
         return {
           horario: horario.descricao,
-
           celulas,
         };
       });
 
       return {
         descricao: sem.descricao || `Semestre ${sem.id}`,
-
         dias: dias.map((d) => d.descricao),
-
         linhas,
       };
     });
 
     /* ======================================================
-        HTML
-      ====================================================== */
-
+        GERAÇÃO E RETORNO DO ARQUIVO PDF
+       ====================================================== */
     const html = renderTemplate({
       universidade: "Universidade Federal de Ciências da Saúde de Porto Alegre",
-
-      curso: curso.nome,
-
+      curso: cursoCompleto.nome,
       curriculo: curriculo.descricao || curriculo.nome,
-
       coordenador: coordenadorNome,
-
       anoLetivo: ano.descricao || ano.ano,
-
       semestres: semestresRender,
     });
-
-    /* ======================================================
-        PDF
-      ====================================================== */
 
     const pdf = await generatePDF(html);
 
     res.setHeader("Content-Type", "application/pdf");
-
     res.setHeader(
       "Content-Disposition",
-      `inline; filename=grade-${curso.nome}.pdf`,
+      `inline; filename=grade-${encodeURIComponent(cursoCompleto.nome)}.pdf`,
     );
 
     return res.end(pdf);
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
-
     return res.status(500).json({
       error: "Erro interno: " + error.message,
     });

@@ -1,5 +1,4 @@
 const { Op } = require("sequelize");
-
 const {
   Curso,
   GradeHoraria,
@@ -109,10 +108,6 @@ exports.findByContext = async (req, res) => {
       const chave = `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
 
-      /* 
-         Se houver filtro por departamento (Mini Grade) e NÃO houver filtro por curso, 
-         consideramos a disciplina como válida para que os dados apareçam.
-      */
       const isDeptFilterOnly = !!departamento_id && !curso_id;
       const disciplinaValida = isDeptFilterOnly || (r.disciplina && (!curso_id || disciplinasValidas.includes(r.disciplina.id)));
 
@@ -140,7 +135,9 @@ exports.findByContext = async (req, res) => {
         horario: r.horario?.descricao || "-",
         diaSemana: r.diaSemana?.nome || "-",
 
-        disciplina: (disciplinaValida && r.disciplina)
+        // CORREÇÃO 3: Retorna a disciplina sempre que ela vier do banco,
+        // para não quebrar o Select no frontend
+        disciplina: r.disciplina
           ? {
               id: r.disciplina.id,
               nome: r.disciplina.nome,
@@ -209,10 +206,11 @@ exports.saveGrade = async (req, res) => {
   });
 
   const slotsValidos = Array.from(mapa.values());
-
   const transaction = await sequelize.transaction();
 
   try {
+    // CORREÇÃO CRÍTICA: Apaga toda a grade antiga deste contexto (Curso, Ano, Semestre, Currículo)
+    // INDEPENDENTE de qual coordenador estava associado antes, evitando duplicados.
     await GradeHoraria.destroy({
       where: {
         curso_id,
@@ -228,7 +226,7 @@ exports.saveGrade = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
-      coordenador_id: coordenador_id || null,
+      coordenador_id: coordenador_id || null, // Atribui corretamente o novo coordenador selecionado
       professor_id: slot.professor_id || null,
       departamento_id: slot.departamento_id || null,
       horario_id: slot.horario_id,
@@ -238,7 +236,6 @@ exports.saveGrade = async (req, res) => {
     }));
 
     await GradeHoraria.bulkCreate(registros, { transaction });
-
     await transaction.commit();
 
     return res.json({
@@ -251,7 +248,6 @@ exports.saveGrade = async (req, res) => {
     return res.status(500).json({ error: "Erro ao salvar grade" });
   }
 };
-
 /* ======================================================
    SALVAR SLOT
 ====================================================== */

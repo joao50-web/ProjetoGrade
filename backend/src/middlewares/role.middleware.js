@@ -8,7 +8,14 @@ module.exports = (rolesPermitidos = []) => {
       });
     }
 
-    if (!rolesPermitidos.includes(req.user.role)) {
+    // CORREÇÃO ESSENCIAL: Transforma todas as roles permitidas em minúsculo
+    const rolesLower = rolesPermitidos.map(role => role.toLowerCase());
+    
+    // Transforma a role do usuário logado em minúsculo também
+    const userRoleLower = req.user.role ? req.user.role.toLowerCase() : '';
+
+    // Agora a comparação ignora se começou com letra maiúscula ou minúscula
+    if (!rolesLower.includes(userRoleLower)) {
       return res.status(403).json({
         error: 'Acesso negado'
       });

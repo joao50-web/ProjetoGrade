@@ -15,6 +15,7 @@ import {
   BarChartOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  AppstoreOutlined
 } from "@ant-design/icons";
 
 import { useNavigate, useLocation } from "react-router-dom";
@@ -37,8 +38,6 @@ function AppLayout({ children }) {
   // Lógica de permissões baseada na hierarquia
   const role = usuario?.role?.toLowerCase();
   const isAdmin = role === "administrador";
-  const isEditor = role === "edicao";
-  const isVisualizador = role === "visualizacao";
 
   const handleLogout = () => {
     localStorage.clear();
@@ -55,6 +54,7 @@ function AppLayout({ children }) {
     "/academico/disciplinas": "Disciplinas",
     "/academico/cursos": "Cursos",
     "/grade-horaria": "Grade Horária",
+    "/grade-semanal": "Quadro Semanal", // <--- Nova Rota Adicionada
     "/relatorios": "Relatórios",
   };
 
@@ -78,6 +78,7 @@ function AppLayout({ children }) {
     if (!isAdmin) {
       return [
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
+        { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" }, // <--- Menu Básico
         { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
       ];
     }
@@ -107,6 +108,7 @@ function AppLayout({ children }) {
       },
       { type: "divider" },
       { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
+      { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" }, // <--- Menu Completo
       { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
     ];
   }, [isAdmin]);

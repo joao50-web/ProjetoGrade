@@ -34,9 +34,14 @@ module.exports = function renderGradeHTML({
 
 <style>
 
+/* Garante cálculo exato de alturas e larguras incluindo paddings/borders */
+* {
+  box-sizing: border-box;
+}
+
 @page {
   size: A4 landscape;
-  margin: 2.5mm;
+  margin: 4mm 4mm;
 }
 
 body {
@@ -84,21 +89,6 @@ body {
   font-size: 7.5px;
 }
 
-/* ======================================================
-   SEMESTRE
-====================================================== */
-
-.semester {
-  margin-bottom: 4px;
-  page-break-inside: avoid;
-}
-
-.semester-title {
-  font-weight: bold;
-  margin-bottom: 2px;
-  font-size: 8px;
-  color: #093e5e;
-}
 
 /* ======================================================
    TABELA
@@ -144,23 +134,21 @@ td.horario {
 }
 
 /* ======================================================
-   DISCIPLINA
+   DISCIPLINA (Ajustado para 37px para forçar caber em 1 página)
 ====================================================== */
 
 td.disciplina {
-  height: 30px;
-  min-height: 30px;
-  max-height: 30px;
+  height: 37px;
+  min-height: 37px;
+  max-height: 37px;
 
-  /* Alterado para centralizar verticalmente o conteúdo */
   vertical-align: middle; 
-
   line-height: 1.1;
 
   word-break: break-word;
   overflow-wrap: break-word;
 
-  padding: 2px;
+  padding: 1px 2px;
 }
 
 /* Container flex para centralizar conteúdo */
@@ -178,19 +166,19 @@ td.disciplina {
 
 .linha1 {
   font-weight: bold;
-  font-size: 7.8px;
+  font-size: 7.5px;
   color: #000;
   margin-bottom: 1px;
 }
 
 .linha2 {
-  font-size: 7.8px;
+  font-size: 7.5px;
   color: #1f2937;
   margin-bottom: 1px;
 }
 
 .linha3 {
-  font-size: 7px;
+  font-size: 6.8px;
   color: #4b5563;
   font-weight: bold;
 }
@@ -200,7 +188,7 @@ td.disciplina {
 ====================================================== */
 
 footer {
-  margin-top: 2px;
+  margin-top: 5px;
   text-align: center;
   font-size: 6px;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Table, Select, Input, Button, message, ConfigProvider, Typography } from "antd"; // Importado o Input do antd
+import { Table, Select, Input, Button, message, ConfigProvider, Typography } from "antd";
 import { SaveOutlined, FilePdfOutlined, ReloadOutlined } from "@ant-design/icons";
 import { api, getUsuarioLogado } from "../services/api";
 
@@ -58,7 +58,7 @@ export default function GradeTabela() {
       ]);
       
       setCursos(cursosRes.data || []); 
-      setAnos(anosRes.data || []); 
+      anosRes.data && setAnos(anosRes.data || []); 
       setSemestres(semestresRes.data || []); 
       setCurriculos(curriculosRes.data || []);
       setProfessores(professoresRes.data || []); 
@@ -76,6 +76,7 @@ export default function GradeTabela() {
     api.get(`/cursos/${cursoId}/disciplinas`).then((res) => setDisciplinas(res.data || [])).catch(() => setDisciplinas([]));
   }, [cursoId]);
 
+  // CORREÇÃO 1: Removido coordenadorId daqui para evitar que mude o combo e limpe a tela inteira
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); return; }
     loadGrade();
@@ -83,10 +84,25 @@ export default function GradeTabela() {
 
   const loadGrade = async () => {
     try {
-      const response = await api.get("/grade-horaria", { params: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId } });
+      const response = await api.get("/grade-horaria", { 
+        params: { 
+          curso_id: cursoId, 
+          ano_id: anoId, 
+          semestre_id: semestreId, 
+          curriculo_id: curriculoId
+          // Não filtramos por coordenador_id no GET para não sumir com os horários da tela
+        } 
+      });
       setGrade(response.data || []);
-      if (response.data?.length > 0) setCoordenadorId(response.data[0].coordenador_id);
-    } catch { setGrade([]); message.error("Erro ao carregar grade"); }
+      
+      // Carrega o coordenador que já estava salvo no banco de dados para essa grade
+      if (response.data?.length > 0) {
+        setCoordenadorId(response.data[0].coordenador_id);
+      }
+    } catch { 
+      setGrade([]); 
+      message.error("Erro ao carregar grade"); 
+    }
   };
 
   const gradeMap = useMemo(() => {
@@ -157,13 +173,18 @@ export default function GradeTabela() {
     try {
       message.loading({ content: "Gerando documento...", key: "pdfLoading" });
       
+      // CORREÇÃO: Pegamos o nome textual do coordenador para enviar como garantia ao PDF
+      const coordObj = coordenadores.find(c => c.id === coordenadorId);
+      const coordenadorNome = coordObj ? coordObj.nome : "-";
+      
       const response = await api.get("/api/relatorio-grade/pdf", { 
         params: { 
           curso_id: cursoId, 
           ano_id: anoId, 
           semestre_id: semestreId, 
           curriculo_id: curriculoId,
-          coordenador_id: coordenadorId
+          coordenador_id: coordenadorId,
+          coordenador_nome: coordenadorNome // Parâmetro extra enviado para o backend
         }, 
         responseType: "blob" 
       });
@@ -213,7 +234,7 @@ export default function GradeTabela() {
               value={item.disciplina_id}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
-              style={{ width: "100%", fontSize: "14px", fontWeight: isVisualizador ? 400 : 400 }} 
+              style={{ width: "100%", fontSize: "14px" }} 
               options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo} - ${d.nome}` }))}
             />
             {item.disciplina_id && (
@@ -229,7 +250,7 @@ export default function GradeTabela() {
                   value={item.turma}
                   disabled={!canEdit}
                   onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
+                  style={{ width: "100%", fontSize: "13px" }} 
                 />
 
                 <Select
@@ -237,7 +258,7 @@ export default function GradeTabela() {
                   value={item.professor_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
+                  style={{ width: "100%", fontSize: "13px" }} 
                   options={professores.map((p) => ({ value: p.id, label: p.nome }))}
                 />
                 <Select
@@ -245,7 +266,7 @@ export default function GradeTabela() {
                   value={item.departamento_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
-                  style={{ width: "100%", fontSize: "13px", fontWeight: isVisualizador ? 400 : 400 }} 
+                  style={{ width: "100%", fontSize: "13px" }} 
                   options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
                 />
               </>

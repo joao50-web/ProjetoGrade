@@ -14,6 +14,7 @@ import Cursos from "./pages/Cursos";
 import CursoDisciplinas from "./pages/CursoDisciplinas";
 
 import GradeHoraria from "./pages/GradeHoraria";
+import GradeSemanal from "./pages/GradeSemanal"; // <--- Importação da nova página
 import Logs from "./pages/Logs";
 import Relatorios from "./pages/Relatorios";
 
@@ -133,6 +134,16 @@ export default function App() {
           element={
             <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
               <GradeHoraria />
+            </PrivateRoute>
+          }
+        />
+
+        {/* <--- Nova Rota Adicionada ---> */}
+        <Route
+          path="/grade-semanal"
+          element={
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
+              <GradeSemanal />
             </PrivateRoute>
           }
         />
