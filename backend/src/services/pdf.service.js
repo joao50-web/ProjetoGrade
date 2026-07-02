@@ -7,7 +7,16 @@ exports.generatePDF = async (html) => {
 
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // Esta é a linha mágica. Tenta usar a variável de ambiente, se não achar, usa o padrão.
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    args: [
+      "--no-sandbox", 
+      "--disable-setuid-sandbox", 
+      "--disable-dev-shm-usage", 
+      "--disable-gpu",
+      "--single-process", // Essencial para ambientes serverless/nuvem com pouca memória
+      "--no-zygote"       // Trabalha junto com o single-process para evitar processos zumbis
+    ],
   });
 
   const page = await browser.newPage();
