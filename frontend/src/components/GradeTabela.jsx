@@ -21,8 +21,13 @@ const filtroLabelStyle = { fontSize: "12px", fontWeight: 700, color: THEME.prima
 export default function GradeTabela() {
   const usuario = getUsuarioLogado();
   const role = usuario?.role?.toLowerCase();
+  
   const isAdmin = role === "administrador";
-  const canEdit = isAdmin || role === "edicao" || "chefe de departamento";
+  const canEdit = isAdmin || role === "edicao" || role === "chefe de departamento";
+  
+  // NOVA REGRA: Permite que Administradores e Editores excluam a grade
+  const canDelete = isAdmin || role === "edicao"; 
+  
   const isVisualizador = role === "visualizacao";
 
   const [cursos, setCursos] = useState([]);
@@ -76,7 +81,6 @@ export default function GradeTabela() {
     api.get(`/cursos/${cursoId}/disciplinas`).then((res) => setDisciplinas(res.data || [])).catch(() => setDisciplinas([]));
   }, [cursoId]);
 
-  // CORREÇÃO 1: Removido coordenadorId daqui para evitar que mude o combo e limpe a tela inteira
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); return; }
     loadGrade();
@@ -90,12 +94,10 @@ export default function GradeTabela() {
           ano_id: anoId, 
           semestre_id: semestreId, 
           curriculo_id: curriculoId
-          // Não filtramos por coordenador_id no GET para não sumir com os horários da tela
         } 
       });
       setGrade(response.data || []);
       
-      // Carrega o coordenador que já estava salvo no banco de dados para essa grade
       if (response.data?.length > 0) {
         setCoordenadorId(response.data[0].coordenador_id);
       }
@@ -173,7 +175,6 @@ export default function GradeTabela() {
     try {
       message.loading({ content: "Gerando documento...", key: "pdfLoading" });
       
-      // CORREÇÃO: Pegamos o nome textual do coordenador para enviar como garantia ao PDF
       const coordObj = coordenadores.find(c => c.id === coordenadorId);
       const coordenadorNome = coordObj ? coordObj.nome : "-";
       
@@ -184,7 +185,7 @@ export default function GradeTabela() {
           semestre_id: semestreId, 
           curriculo_id: curriculoId,
           coordenador_id: coordenadorId,
-          coordenador_nome: coordenadorNome // Parâmetro extra enviado para o backend
+          coordenador_nome: coordenadorNome
         }, 
         responseType: "blob" 
       });
@@ -320,7 +321,9 @@ export default function GradeTabela() {
               {canEdit && <Button size="middle" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ fontWeight: 600 }}>Salvar</Button>}
               <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>PDF</Button>
               {canEdit && <Button size="middle" icon={<ReloadOutlined />} onClick={handleReset}>Redefinir</Button>}
-              {isAdmin && <Button size="middle" danger onClick={handleDeleteGrade}>Excluir</Button>}
+              
+              {/* O BOTÃO AGORA VALIDA PELA VARIÁVEL 'canDelete' */}
+              {canDelete && <Button size="middle" danger onClick={handleDeleteGrade}>Excluir</Button>}
             </div>
           </div>
         </div>

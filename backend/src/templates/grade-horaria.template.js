@@ -46,7 +46,7 @@ module.exports = function renderGradeHTML({
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 8.5px;
+  font-size: 9.5px; /* Aumentado de 8.5px */
   color: #1f2d3d;
   margin: 0;
   padding: 0;
@@ -63,13 +63,13 @@ body {
 
 .header h1 {
   margin: 0;
-  font-size: 11px;
+  font-size: 13px; /* Aumentado de 11px */
   color: #093e5e;
 }
 
 .header h2 {
   margin: 1px 0 0 0;
-  font-size: 9px;
+  font-size: 10.5px; /* Aumentado de 9px */
 }
 
 /* ======================================================
@@ -86,7 +86,7 @@ body {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px 6px;
-  font-size: 7.5px;
+  font-size: 8.5px; /* Aumentado de 7.5px */
 }
 
 
@@ -112,8 +112,8 @@ td {
 thead th {
   background: #093e5e;
   color: #fff;
-  font-size: 7.8px;
-  padding: 3px 1px;
+  font-size: 9px; /* Aumentado de 7.8px */
+  padding: 4px 1px;
 }
 
 /* ======================================================
@@ -130,17 +130,17 @@ td.horario {
   color: #fff;
 
   font-weight: bold;
-  font-size: 7px;
+  font-size: 8px; /* Aumentado de 7px */
 }
 
 /* ======================================================
-   DISCIPLINA (Ajustado para 37px para forçar caber em 1 página)
+   DISCIPLINA
 ====================================================== */
 
 td.disciplina {
-  height: 37px;
-  min-height: 37px;
-  max-height: 37px;
+  height: 40px; /* Aumentado de 37px para comportar fonte maior */
+  min-height: 40px;
+  max-height: 40px;
 
   vertical-align: middle; 
   line-height: 1.1;
@@ -166,19 +166,19 @@ td.disciplina {
 
 .linha1 {
   font-weight: bold;
-  font-size: 7.5px;
+  font-size: 8.5px; /* Aumentado de 7.5px */
   color: #000;
   margin-bottom: 1px;
 }
 
 .linha2 {
-  font-size: 7.5px;
+  font-size: 8.5px; /* Aumentado de 7.5px */
   color: #1f2937;
   margin-bottom: 1px;
 }
 
 .linha3 {
-  font-size: 6.8px;
+  font-size: 7.8px; /* Aumentado de 6.8px */
   color: #4b5563;
   font-weight: bold;
 }
@@ -190,7 +190,7 @@ td.disciplina {
 footer {
   margin-top: 5px;
   text-align: center;
-  font-size: 6px;
+  font-size: 7.5px; /* Aumentado de 6px */
 }
 
 </style>
@@ -261,7 +261,7 @@ ${HORARIOS.map((horario) => {
       const celula = linha?.celulas?.[colIndex] || {};
 
       /* =========================================
-       IGNORA DISCIPLINA INVÁLIDA
+        IGNORA DISCIPLINA INVÁLIDA
     ========================================= */
 
       const disciplinaValida =

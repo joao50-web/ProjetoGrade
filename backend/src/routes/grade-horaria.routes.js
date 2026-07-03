@@ -26,7 +26,7 @@ router.post("/save",
 ====================================================== */
 router.delete("/delete", 
   authMiddleware, 
-  roleMiddleware(["administrador"]), 
+  roleMiddleware(["administrador","edicao"]), 
   controller.deleteGrade
 );
 

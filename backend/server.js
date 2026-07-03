@@ -14,8 +14,8 @@ async function startDatabase() {
         await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
         console.log('--- Verificação de FK desligada ---');
 
-        // 2. Sincroniza as tabelas
-        await sequelize.sync({ alter: true });
+        // 2. Sincroniza as tabelas (CORRIGIDO: Removido o { alter: true })
+        await sequelize.sync();
         console.log('--- Tabelas sincronizadas com sucesso ---');
 
         // 3. Liga a verificação de Foreign Keys novamente
