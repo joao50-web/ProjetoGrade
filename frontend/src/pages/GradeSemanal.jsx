@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Spin, Select, Typography, message, Tooltip, Button, Space } from 'antd';
+import { Table, Select, Typography, message, Tooltip, Button, Space } from 'antd';
 import { useLocation } from 'react-router-dom';
 import { FilePdfOutlined } from '@ant-design/icons';
 import AppLayout from '../components/AppLayout';
@@ -42,6 +42,7 @@ export default function GradeSemanal() {
   const location = useLocation();
   const initialDeptId = location.state?.departamentoId || null;
 
+  // Estados principais
   const [departamentos, setDepartamentos] = useState([]);
   const [departamentoId, setDepartamentoId] = useState(initialDeptId);
   const [horarios, setHorarios] = useState([]);
@@ -49,10 +50,15 @@ export default function GradeSemanal() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // Novos estados para os filtros adicionais
+  const [filtroCurso, setFiltroCurso] = useState(null);
+  const [filtroProfessor, setFiltroProfessor] = useState(null);
+
   const diasFixos = [
     { id: 1, nome: "SEG" }, { id: 2, nome: "TER" }, { id: 3, nome: "QUA" }, { id: 4, nome: "QUI" }, { id: 5, nome: "SEX" }
   ];
 
+  // Busca dados base (Departamentos e Horários)
   useEffect(() => {
     api.get('/departamentos')
       .then(res => setDepartamentos(Array.isArray(res.data) ? res.data : []))
@@ -63,34 +69,73 @@ export default function GradeSemanal() {
       .catch(() => message.error("Erro ao carregar horários"));
   }, []);
 
+  // Busca a grade sempre que o departamento mudar
   useEffect(() => {
     if (departamentoId) {
       setLoading(true);
+      // Sempre que mudar o departamento, limpa os filtros secundários
+      setFiltroCurso(null);
+      setFiltroProfessor(null);
+
       api.get("/grade-horaria", { params: { departamento_id: departamentoId } })
         .then(res => setGrade(res.data || []))
         .catch(() => message.error("Erro ao carregar grade"))
         .finally(() => setLoading(false));
     } else {
       setGrade([]);
+      setFiltroCurso(null);
+      setFiltroProfessor(null);
     }
   }, [departamentoId]);
 
+  // Departamento selecionado (para cabeçalho e PDF)
   const deptoSelecionado = useMemo(() => {
     return departamentos.find(d => d.id === departamentoId);
   }, [departamentos, departamentoId]);
 
+  /* ======================================================
+     OPÇÕES DOS NOVOS FILTROS (Extraídos da grade atual)
+  ====================================================== */
+  const opcoesCursos = useMemo(() => {
+    const cursosSet = new Set();
+    grade.forEach(item => {
+      const cNome = item.curso?.nome || item.curso_nome || item.curso;
+      if (cNome) cursosSet.add(cNome);
+    });
+    return Array.from(cursosSet).sort().map(curso => ({ value: curso, label: curso }));
+  }, [grade]);
+
+  const opcoesProfessores = useMemo(() => {
+    const professoresSet = new Set();
+    grade.forEach(item => {
+      const pNome = item.professor?.nome || item.professor_nome || item.professor;
+      if (pNome) professoresSet.add(pNome);
+    });
+    return Array.from(professoresSet).sort().map(prof => ({ value: prof, label: prof }));
+  }, [grade]);
+
+  /* ======================================================
+     MAPEAMENTO DA GRADE COM OS FILTROS APLICADOS
+  ====================================================== */
   const gradeMap = useMemo(() => {
     const map = {};
     grade.forEach((g) => {
+      const cNome = g.curso?.nome || g.curso_nome || g.curso || "Curso";
+      const pNome = g.professor?.nome || g.professor_nome || g.professor || "Professor";
+
+      // Verifica se a aula passa nos filtros secundários
+      if (filtroCurso && cNome !== filtroCurso) return;
+      if (filtroProfessor && pNome !== filtroProfessor) return;
+
       const key = `${g.horario_id}-${g.dia_semana_id}`;
       if (!map[key]) map[key] = [];
       map[key].push(g);
     });
     return map;
-  }, [grade]);
+  }, [grade, filtroCurso, filtroProfessor]);
 
   /* ======================================================
-     GERAÇÃO DO HTML BASEADO NA INSPIRAÇÃO EM 1 PÁGINA
+     GERAÇÃO DO PDF
   ====================================================== */
   const handleExportPDF = () => {
     if (!departamentoId) {
@@ -106,18 +151,23 @@ export default function GradeSemanal() {
         <div style="text-align: center; margin-bottom: 4px;">
           <h1 style="margin: 0; font-size: 11px; color: #093e5e;">GRADE HORÁRIA SEMANAL</h1>
           <h2 style="margin: 1px 0 0 0; font-size: 9px;">${deptoSelecionado?.nome || '-'} (${deptoSelecionado?.sigla || '-'})</h2>
+          ${filtroCurso || filtroProfessor ? `
+            <p style="margin: 3px 0 0 0; font-size: 8px; color: #555;">
+              Filtros: ${[filtroCurso, filtroProfessor].filter(Boolean).join(' | ')}
+            </p>
+          ` : ''}
         </div>
 
         <div style="margin-bottom: 18px;"></div>
 
-        <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #000;">
+        <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 0.1pt solid #000;">
           <thead>
             <tr>
-              <th style="width: 60px; min-width: 60px; max-width: 60px; background: #093e5e; color: #fff; font-weight: bold; font-size: 7px; border: 1px solid #444; text-align: center; padding: 3px 1px;">
+              <th style="width: 60px; min-width: 60px; max-width: 60px; background: #093e5e; color: #fff; font-weight: bold; font-size: 7px; border: 0.1pt solid #000; text-align: center; padding: 3px 1px;">
                 Horário
               </th>
               ${diasFixos.map(d => `
-                <th style="background: #093e5e; color: #fff; font-size: 7.8px; padding: 3px 1px; border: 1px solid #444; text-align: center;">
+                <th style="background: #093e5e; color: #fff; font-size: 7.8px; padding: 3px 1px; border: 0.1pt solid #000; text-align: center;">
                   ${d.nome}
                 </th>
               `).join('')}
@@ -126,13 +176,13 @@ export default function GradeSemanal() {
           <tbody>
             ${horarios.map(horario => `
               <tr>
-                <td style="width: 60px; min-width: 60px; max-width: 60px; background: #093e5e; color: #fff; font-weight: bold; font-size: 7px; border: 1px solid #444; text-align: center; padding: 1px;">
+                <td style="width: 60px; min-width: 60px; max-width: 60px; background: #093e5e; color: #fff; font-weight: bold; font-size: 7px; border: 0.1pt solid #000; text-align: center; padding: 1px;">
                   ${horario.descricao}
                 </td>
                 ${diasFixos.map(dia => {
                   const items = gradeMap[`${horario.id}-${dia.id}`] || [];
                   return `
-                    <td style="border: 1px solid #444; text-align: center; padding: 1px 2px; vertical-align: middle; height: 37px; min-height: 37px; max-height: 37px; overflow: hidden; word-break: break-word;">
+                    <td style="border: 0.1pt solid #000; text-align: center; padding: 1px 2px; vertical-align: middle; height: 37px; min-height: 37px; max-height: 37px; overflow: hidden; word-break: break-word;">
                       <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
                         ${items.map(item => {
                           const dNome = item.disciplina?.nome || item.disciplina_nome || "Disciplina";
@@ -200,7 +250,7 @@ export default function GradeSemanal() {
   };
 
   /* =========================================
-     COLUNAS DO ANT DESIGN (PROSEGUIMENTO TELA)
+     COLUNAS DO ANT DESIGN
   ========================================= */
   const columns = [
     {
@@ -214,7 +264,7 @@ export default function GradeSemanal() {
       render: (_, record) => {
         const items = gradeMap[`${record.id}-${dia.id}`] || [];
         return (
-          <div style={{ minHeight: "70px", padding: "2px", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div style={{ minHeight: "70px", maxHeight: "150px", overflowY: "auto", padding: "2px", display: "flex", flexDirection: "column", gap: "4px" }}>
             {items.map((item, idx) => {
               const dNome = item.disciplina?.nome || item.disciplina_nome || "Disciplina";
               const cNome = item.curso?.nome || item.curso_nome || item.curso || "Curso";
@@ -252,16 +302,48 @@ export default function GradeSemanal() {
   return (
     <AppLayout>
       <div style={{ marginBottom: 15, background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between', gap: 15 }}>
+        
+        {/* Painel de Filtros */}
         <Space size="middle" style={{ flexWrap: 'wrap' }}>
-          <Text strong style={{ color: THEME.primary }}>Filtrar por Departamento:</Text>
-          <Select
-            placeholder="Selecione um Departamento para visualizar o quadro"
-            style={{ width: 350 }}
-            allowClear
-            value={departamentoId}
-            onChange={setDepartamentoId}
-            options={departamentos.map(d => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
-          />
+          
+          <Space direction="vertical" size={2}>
+            <Text strong style={{ color: THEME.primary, fontSize: '12px' }}>Departamento</Text>
+            <Select
+              placeholder="Selecione um Departamento"
+              style={{ width: 280 }}
+              allowClear
+              value={departamentoId}
+              onChange={setDepartamentoId}
+              options={departamentos.map(d => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
+            />
+          </Space>
+
+          <Space direction="vertical" size={2}>
+            <Text strong style={{ color: THEME.primary, fontSize: '12px' }}>Curso</Text>
+            <Select
+              placeholder="Todos os Cursos"
+              style={{ width: 200 }}
+              allowClear
+              value={filtroCurso}
+              onChange={setFiltroCurso}
+              options={opcoesCursos}
+              disabled={!departamentoId || loading}
+            />
+          </Space>
+
+          <Space direction="vertical" size={2}>
+            <Text strong style={{ color: THEME.primary, fontSize: '12px' }}>Professor(a)</Text>
+            <Select
+              placeholder="Todos os Professores"
+              style={{ width: 200 }}
+              allowClear
+              value={filtroProfessor}
+              onChange={setFiltroProfessor}
+              options={opcoesProfessores}
+              disabled={!departamentoId || loading}
+            />
+          </Space>
+
         </Space>
         
         <Space>
@@ -277,20 +359,17 @@ export default function GradeSemanal() {
         </Space>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "100px" }}><Spin size="large" tip="Carregando Quadro..." /></div>
-      ) : (
-        <Table
-          rowKey="id"
-          dataSource={horarios}
-          columns={columns}
-          pagination={false}
-          bordered
-          size="middle"
-          scroll={{ x: 800 }}
-          locale={{ emptyText: departamentoId ? "Nenhuma aula agendada para este departamento" : "Selecione um departamento acima para visualizar a grade" }}
-        />
-      )}
+      <Table
+        loading={loading}
+        rowKey="id"
+        dataSource={horarios}
+        columns={columns}
+        pagination={false}
+        bordered
+        size="middle"
+        scroll={{ x: 800 }}
+        locale={{ emptyText: departamentoId ? "Nenhuma aula agendada (ou compatível com os filtros)." : "Selecione um departamento acima para visualizar a grade" }}
+      />
     </AppLayout>
   );
 }

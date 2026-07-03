@@ -138,11 +138,11 @@ export default function App() {
           }
         />
 
-        {/* <--- Nova Rota Adicionada ---> */}
+        {/*  ================= GRADE SEMANAL (DEPARTAMENTO) ================= */}
         <Route
           path="/grade-semanal"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
+            <PrivateRoute roles={["visualizacao","edicao", "administrador","chefe de departamento"]}>
               <GradeSemanal />
             </PrivateRoute>
           }

@@ -2,13 +2,29 @@ import { Layout, Button } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
+// IMPORTAÇÃO NOVA PARA PEGAR O USUÁRIO LOGADO AQUI TAMBÉM
+import { getUsuarioLogado } from "../services/api";
+
 import logoBranco from "../imagens/logo_branco.png";
 import logoCentral from "../imagens/titulo_branco_2.png";
 
 const { Header, Content, Footer } = Layout;
 
+// Função auxiliar para deixar o nome do cargo mais amigável
+const formatarRole = (role) => {
+  if (!role) return "";
+  switch (role.toLowerCase()) {
+    case "administrador": return "Administrador";
+    case "edicao": return "Editor";
+    case "visualizacao": return "Visualizador";
+    case "chefe de departamento": return "Chefe de Departamento";
+    default: return role;
+  }
+};
+
 export default function HomeLayout({ children }) {
   const navigate = useNavigate();
+  const usuario = getUsuarioLogado(); // Busca o usuário
 
   const handleLogout = () => {
     localStorage.clear();
@@ -51,32 +67,37 @@ export default function HomeLayout({ children }) {
           />
         </div>
 
-        {/* BOTÃO SAIR */}
-        <Button
-          size="small"
-          icon={<LogoutOutlined />}
-          onClick={handleLogout}
-          style={{
-            background: "rgba(255,255,255,0.12)",
-            color: "#fff",
-            border: "1px solid rgba(255,255,255,0.25)",
-            borderRadius: 8,
-            height: 28,
-            padding: "0 10px",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            fontSize: 12,
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.22)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.12)")
-          }
-        >
-          Sair
-        </Button>
+        {/* --- ALTERAÇÃO AQUI: Perfil + Botão de Sair agrupados --- */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, letterSpacing: 0.5 }}>
+            {formatarRole(usuario?.role)}
+          </span>
+          <Button
+            size="small"
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.25)",
+              borderRadius: 8,
+              height: 28,
+              padding: "0 10px",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.22)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.12)")
+            }
+          >
+            Sair
+          </Button>
+        </div>
       </Header>
 
       {/* ================= CONTENT ================= */}

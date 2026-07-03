@@ -17,7 +17,6 @@ const {
 /* =======================================================
    BUSCAR DADOS
 ======================================================= */
-
 const buscarDados = async (query) => {
   const {
     departamento_id,
@@ -75,8 +74,7 @@ const buscarDados = async (query) => {
   grades.forEach((g) => {
     if (!g.disciplina) return;
 
-    const chave =
-      `${g.disciplina_id}-${g.curso_id}-${g.professor_id}-${g.ano_id}-${g.semestre_id}-${g.curriculo_id}-${g.coordenador_id}`;
+    const chave = `${g.disciplina_id}-${g.curso_id}-${g.professor_id}-${g.ano_id}-${g.semestre_id}-${g.curriculo_id}-${g.coordenador_id}`;
 
     if (!mapa.has(chave)) {
       mapa.set(chave, {
@@ -108,8 +106,7 @@ const buscarDados = async (query) => {
       item.professores.push(g.professor.nome);
     }
 
-    const descHorario =
-      `${g.diaSemana?.descricao || "-"} - ${g.horario?.descricao || "-"}`;
+    const descHorario = `${g.diaSemana?.descricao || "-"} - ${g.horario?.descricao || "-"}`;
 
     if (!item.horarios.find((h) => h.descricao === descHorario)) {
       item.horarios.push({
@@ -123,75 +120,131 @@ const buscarDados = async (query) => {
   return Array.from(mapa.values());
 };
 
+/* =======================================================
+   EXPORTAÇÃO: PDF (Layout Institucional)
+======================================================= */
 const exportRelatorioPDF = async (req, res) => {
   try {
     const dados = await buscarDados(req.query);
 
+    // Ajuste as margens zerando top e bottom para impedir a quebra de página automática do PDFKit
     const doc = new PDFDocument({
       size: "A4",
       layout: "landscape",
-      margin: 25,
+      margins: { top: 0, bottom: 0, left: 40, right: 40 },
     });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="relatorio.pdf"'
-    );
+    res.setHeader("Content-Disposition", 'attachment; filename="relatorio_academico.pdf"');
 
     doc.pipe(res);
 
-    doc
-      .fontSize(16)
-      .fillColor("#093E5E")
-      .font("Helvetica-Bold")
-      .text("RELATÓRIO ACADÊMICO", { align: "center" });
+    let pageNum = 1;
+    const pageWidth = 841.89; 
+    const pageHeight = 595.28;
+    const marginLeft = 40;
+    const usableWidth = pageWidth - (marginLeft * 2); // 761.89
+    
+    // Função para desenhar Cabeçalho e Rodapé
+    const drawHeaderAndFooter = (pageNumber) => {
+      // Diminuída a altura do Header (de 55 para 35)
+      doc.rect(0, 0, pageWidth, 35).fill("#093E5E");
+      
+      // Diminuído o tamanho do Título do Header (de 14 para 11)
+      doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11)
+         .text("RELATÓRIO ACADÊMICO - GRADE HORÁRIA", 40, 12);
 
-    doc.moveDown(1);
-
-    let y = 60;
-    const boxHeight = 118;
-    const colLeft = 30;
-    const colRight = 420;
-
-    const write = (text, x, y, width = 360) => {
-      doc.fontSize(10).fillColor("#111827");
-      doc.text(text || "-", x, y, {
-        width,
-        lineGap: 3,
-      });
+      // Rodapé 
+      const footerY = pageHeight - 30;
+      doc.moveTo(40, footerY - 5).lineTo(pageWidth - 40, footerY - 5)
+         .lineWidth(0.5).strokeColor("#CBD5E1").stroke();
+      
+      doc.fillColor("#6B7280").font("Helvetica").fontSize(8)
+         .text("Universidade Federal de Ciências da Saúde de Porto Alegre - Documento Gerado Via Sistema", 40, footerY, { align: "left", width: 500 });
+      
+      doc.text(`Página ${pageNumber}`, 40, footerY, { align: "right", width: usableWidth });
     };
 
-    dados.forEach((d, index) => {
-      const horarios =
-        d.horarios.length
-          ? d.horarios.map((h) => `${h.dia} - ${h.horario}`).join(" | ")
-          : "-";
-
-      doc
-        .roundedRect(25, y, 760, boxHeight, 6)
-        .strokeColor("#E5E7EB")
-        .stroke();
-
-      write(`Disciplina: ${d.disciplina} (${d.codigo})`, colLeft, y + 8);
-      write(`Curso: ${d.cursos.join(", ") || "-"}`, colLeft, y + 28);
-      write(`Departamento: ${d.departamento}`, colLeft, y + 48);
-      write(`Professor: ${d.professores.join(", ") || "-"}`, colLeft, y + 68);
-      write(`Coordenador: ${d.coordenador}`, colLeft, y + 88);
+    // Função ajustada para evitar uso de "continued: true" que costuma causar bugs de rendering e invisibilidade
+    const drawLabelValue = (label, value, x, y, width) => {
+      doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#6B7280");
+      doc.text(`${label}: `, x, y, { lineBreak: false });
       
-      write(`Carga Horária: ${d.carga_horaria}h`, colRight, y + 8);
-      write(`Ano: ${d.ano}`, colRight, y + 28);
-      write(`Semestre: ${d.semestre}`, colRight, y + 48);
-      write(`Currículo: ${d.curriculo}`, colRight, y + 68);
-      write(`Horários: ${horarios}`, colRight, y + 88);
+      const labelWidth = doc.widthOfString(`${label}: `);
+      doc.font("Helvetica").fillColor("#111827");
+      
+      // height: 12 e ellipsis limitam visualmente para não descer quebrando o layout da div principal
+      doc.text(value || "-", x + labelWidth, y, { width: width - labelWidth, height: 12, ellipsis: true });
+    };
 
-      y += boxHeight + 10;
+    drawHeaderAndFooter(pageNum);
+    
+    // A posição inicial foi reduzida devido à diminuição do cabeçalho
+    let currentY = 55; 
+    const boxHeight = 125; 
 
-      if (y > 520 && index < dados.length - 1) {
-        doc.addPage({ layout: "landscape", margin: 25 });
-        y = 60;
-      }
-    });
+    if (dados.length === 0) {
+      doc.fillColor("#6B7280").font("Helvetica").fontSize(12)
+         .text("Nenhum dado encontrado para os filtros selecionados.", 0, pageHeight / 2, { align: "center", width: pageWidth });
+    } else {
+      dados.forEach((d) => {
+        // Verifica se extrapola. Limite puxado ligeiramente pra cima para bater certo.
+        if (currentY + boxHeight > pageHeight - 45) {
+          // Assegure-se de usar `margins` também na nova página, senão o PDFKit volta pro margin 40 padrão e quebra
+          doc.addPage({ size: "A4", layout: "landscape", margins: { top: 0, bottom: 0, left: 40, right: 40 } });
+          pageNum++;
+          drawHeaderAndFooter(pageNum);
+          currentY = 55;
+        }
+
+        const horarios = d.horarios.length 
+          ? d.horarios.map((h) => `${h.dia} (${h.horario})`).join(" | ") 
+          : "-";
+        
+        const cursosList = d.cursos.join(", ") || "-";
+        const professoresList = d.professores.join(", ") || "-";
+
+        // 1. Desenha o Card
+        doc.roundedRect(marginLeft, currentY, usableWidth, boxHeight, 6)
+           .fillAndStroke("#F9FAFB", "#E5E7EB");
+
+        // 2. Título do Card
+        const innerX = marginLeft + 15;
+        doc.fillColor("#093E5E").font("Helvetica-Bold").fontSize(11)
+           .text(`Disciplina: ${d.disciplina} (${d.codigo})`, innerX, currentY + 12, { width: usableWidth - 30 });
+
+        // 3. Linha Divisória interna
+        doc.moveTo(marginLeft, currentY + 32).lineTo(marginLeft + usableWidth, currentY + 32)
+           .lineWidth(0.5).strokeColor("#E5E7EB").stroke();
+
+        // 4. Colunas de Informação
+        let textY = currentY + 45;
+        const lineSpacing = 16;
+        const colLeftX = innerX;
+        const colRightX = pageWidth / 2 + 10; 
+        const colWidth = 350;
+
+        drawLabelValue("Curso(s)", cursosList, colLeftX, textY, colWidth);
+        drawLabelValue("Carga Horária", `${d.carga_horaria}h`, colRightX, textY, colWidth);
+        
+        textY += lineSpacing;
+        drawLabelValue("Departamento", d.departamento, colLeftX, textY, colWidth);
+        drawLabelValue("Ano Letivo", d.ano, colRightX, textY, colWidth);
+
+        textY += lineSpacing;
+        drawLabelValue("Professor(es)", professoresList, colLeftX, textY, colWidth);
+        drawLabelValue("Semestre", d.semestre, colRightX, textY, colWidth);
+
+        textY += lineSpacing;
+        drawLabelValue("Coordenador", d.coordenador, colLeftX, textY, colWidth);
+        drawLabelValue("Currículo", d.curriculo, colRightX, textY, colWidth);
+
+        textY += lineSpacing + 4; 
+        drawLabelValue("Horários Agendados", horarios, colLeftX, textY, usableWidth - 30);
+
+        currentY += boxHeight + 15; 
+      });
+    }
 
     doc.end();
   } catch (err) {
@@ -200,7 +253,9 @@ const exportRelatorioPDF = async (req, res) => {
   }
 };
 
-
+/* =======================================================
+   EXPORTAÇÃO: EXCEL
+======================================================= */
 const exportRelatorioExcel = async (req, res) => {
   try {
     const dados = await buscarDados(req.query);

@@ -26,6 +26,18 @@ import logoCentral from "../imagens/titulo_branco_2.png";
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
 
+// Função auxiliar para deixar o nome do cargo mais amigável
+const formatarRole = (role) => {
+  if (!role) return "";
+  switch (role.toLowerCase()) {
+    case "administrador": return "Administrador";
+    case "edicao": return "Editor";
+    case "visualizacao": return "Visualizador";
+    case "chefe de departamento": return "Chefe de Departamento";
+    default: return role;
+  }
+};
+
 function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,7 +66,7 @@ function AppLayout({ children }) {
     "/academico/disciplinas": "Disciplinas",
     "/academico/cursos": "Cursos",
     "/grade-horaria": "Grade Horária",
-    "/grade-semanal": "Quadro Semanal", // <--- Nova Rota Adicionada
+    "/grade-semanal": "Quadro Semanal",
     "/relatorios": "Relatórios",
   };
 
@@ -74,16 +86,14 @@ function AppLayout({ children }) {
   }, [location.pathname]);
 
   const menuItems = useMemo(() => {
-    // Se não for admin, vê apenas o básico
     if (!isAdmin) {
       return [
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
-        { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" }, // <--- Menu Básico
+        { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" },
         { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
       ];
     }
 
-    // Admin vê tudo
     return [
       { key: "/home", icon: <HomeOutlined />, label: "Início" },
       { type: "divider" },
@@ -108,7 +118,7 @@ function AppLayout({ children }) {
       },
       { type: "divider" },
       { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
-      { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" }, // <--- Menu Completo
+      { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" },
       { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
     ];
   }, [isAdmin]);
@@ -129,12 +139,21 @@ function AppLayout({ children }) {
           <Button type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setCollapsed(!collapsed)} style={{ color: "#fff" }} />
           <img src={logoBranco} alt="logo" style={{ height: 38 }} />
         </div>
+        
         <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
           <img src={logoCentral} alt="titulo" style={{ height: 18 }} />
         </div>
-        <Button size="small" icon={<LogoutOutlined />} onClick={handleLogout} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", borderRadius: 6, height: 26, fontSize: 12 }}>
-          Sair
-        </Button>
+
+        {/* --- ALTERAÇÃO AQUI: Exibição do cargo ao lado do botão Sair --- */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, letterSpacing: 0.5 }}>
+            {formatarRole(usuario?.role)}
+          </span>
+          <Button size="small" icon={<LogoutOutlined />} onClick={handleLogout} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 6, height: 26, fontSize: 12 }}>
+            Sair
+          </Button>
+        </div>
+
       </Header>
       <Layout>
         <Sider collapsible collapsed={collapsed} trigger={null} width={200} collapsedWidth={65} style={{ background: "#ffffff", borderRight: "1px solid #e5e7eb" }}>

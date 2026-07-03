@@ -22,7 +22,7 @@ export default function GradeTabela() {
   const usuario = getUsuarioLogado();
   const role = usuario?.role?.toLowerCase();
   const isAdmin = role === "administrador";
-  const canEdit = isAdmin || role === "edicao";
+  const canEdit = isAdmin || role === "edicao" || "chefe de departamento";
   const isVisualizador = role === "visualizacao";
 
   const [cursos, setCursos] = useState([]);

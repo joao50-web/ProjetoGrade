@@ -53,3 +53,7 @@ build/config\.gypi
 .npmrc
 pnpm-lock.yaml
 /.history
+
+# Cache do Puppeteer e outros caches locais
+.cache/
+backend/.cache/
