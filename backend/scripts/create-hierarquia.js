@@ -10,7 +10,8 @@ async function seedHierarquia() {
     const hierarquias = [
       'visualizacao',
       'edicao',
-      'administrador'
+      'administrador',
+      'chefe de departamento'
     ];
 
     for (const descricao of hierarquias) {

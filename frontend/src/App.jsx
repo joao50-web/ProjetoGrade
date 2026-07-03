@@ -132,7 +132,7 @@ export default function App() {
         <Route
           path="/grade-horaria"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
               <GradeHoraria />
             </PrivateRoute>
           }
@@ -142,7 +142,7 @@ export default function App() {
         <Route
           path="/grade-semanal"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
               <GradeSemanal />
             </PrivateRoute>
           }
@@ -152,7 +152,7 @@ export default function App() {
         <Route
           path="/relatorios"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
               <Relatorios />
             </PrivateRoute>
           }
