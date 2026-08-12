@@ -1,0 +1,33 @@
+{
+"tb_dia_semana": [
+	{
+		"id" : 1,
+		"descricao" : "2ª feira",
+		"createdAt" : "2026-01-26 18:48:43",
+		"updatedAt" : "2026-01-26 18:48:43"
+	},
+	{
+		"id" : 2,
+		"descricao" : "3ª feira",
+		"createdAt" : "2026-01-26 18:48:43",
+		"updatedAt" : "2026-01-26 18:48:43"
+	},
+	{
+		"id" : 3,
+		"descricao" : "4ª feira",
+		"createdAt" : "2026-01-26 18:48:43",
+		"updatedAt" : "2026-01-26 18:48:43"
+	},
+	{
+		"id" : 4,
+		"descricao" : "5ª feira",
+		"createdAt" : "2026-01-26 18:48:43",
+		"updatedAt" : "2026-01-26 18:48:43"
+	},
+	{
+		"id" : 5,
+		"descricao" : "6ª feira",
+		"createdAt" : "2026-01-26 18:48:43",
+		"updatedAt" : "2026-01-26 18:48:43"
+	}
+]}

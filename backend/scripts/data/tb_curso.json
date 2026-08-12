@@ -1,0 +1,129 @@
+{
+"tb_curso": [
+	{
+		"id" : 6,
+		"nome" : "Enfermagem ",
+		"createdAt" : "2026-02-06 14:21:52",
+		"updatedAt" : "2026-02-06 14:21:52",
+		"departamento_id" : 3
+	},
+	{
+		"id" : 7,
+		"nome" : "Farmácia",
+		"createdAt" : "2026-02-06 14:22:07",
+		"updatedAt" : "2026-02-06 14:22:07",
+		"departamento_id" : 9
+	},
+	{
+		"id" : 8,
+		"nome" : "Física Médica",
+		"createdAt" : "2026-02-06 14:22:17",
+		"updatedAt" : "2026-02-06 14:22:17",
+		"departamento_id" : 1
+	},
+	{
+		"id" : 9,
+		"nome" : "Medicina",
+		"createdAt" : "2026-02-06 18:35:26",
+		"updatedAt" : "2026-02-06 18:35:26",
+		"departamento_id" : 1
+	},
+	{
+		"id" : 18,
+		"nome" : "Quimica Medicinal",
+		"createdAt" : "2026-05-15 19:11:00",
+		"updatedAt" : "2026-05-15 19:11:00",
+		"departamento_id" : null
+	},
+	{
+		"id" : 19,
+		"nome" : "Biomedicina - diurno",
+		"createdAt" : "2026-05-15 19:11:22",
+		"updatedAt" : "2026-05-15 19:11:22",
+		"departamento_id" : null
+	},
+	{
+		"id" : 20,
+		"nome" : "Biomedicina - noturno",
+		"createdAt" : "2026-05-15 19:11:28",
+		"updatedAt" : "2026-05-15 19:11:28",
+		"departamento_id" : null
+	},
+	{
+		"id" : 22,
+		"nome" : "Fisioterapia",
+		"createdAt" : "2026-05-15 19:11:48",
+		"updatedAt" : "2026-05-15 19:11:48",
+		"departamento_id" : null
+	},
+	{
+		"id" : 23,
+		"nome" : "Fonoaudiologia",
+		"createdAt" : "2026-05-15 19:11:56",
+		"updatedAt" : "2026-05-15 19:11:56",
+		"departamento_id" : null
+	},
+	{
+		"id" : 24,
+		"nome" : "Gastronomia - Bacharelado",
+		"createdAt" : "2026-05-15 19:12:03",
+		"updatedAt" : "2026-05-15 19:12:03",
+		"departamento_id" : null
+	},
+	{
+		"id" : 25,
+		"nome" : "Gastronomia - Tecnólogo",
+		"createdAt" : "2026-05-15 19:12:10",
+		"updatedAt" : "2026-05-15 19:12:10",
+		"departamento_id" : null
+	},
+	{
+		"id" : 26,
+		"nome" : "Gestão em Saúde",
+		"createdAt" : "2026-05-15 19:12:17",
+		"updatedAt" : "2026-05-15 19:12:17",
+		"departamento_id" : null
+	},
+	{
+		"id" : 27,
+		"nome" : "Informática Biomédica",
+		"createdAt" : "2026-05-15 19:12:28",
+		"updatedAt" : "2026-05-15 19:12:28",
+		"departamento_id" : null
+	},
+	{
+		"id" : 28,
+		"nome" : "Nutrição",
+		"createdAt" : "2026-05-15 19:12:39",
+		"updatedAt" : "2026-05-15 19:12:39",
+		"departamento_id" : null
+	},
+	{
+		"id" : 29,
+		"nome" : "Psicologia",
+		"createdAt" : "2026-05-15 19:12:43",
+		"updatedAt" : "2026-05-15 19:12:43",
+		"departamento_id" : null
+	},
+	{
+		"id" : 30,
+		"nome" : "Tecnologia em Alimentos",
+		"createdAt" : "2026-05-15 19:12:51",
+		"updatedAt" : "2026-05-15 19:12:51",
+		"departamento_id" : null
+	},
+	{
+		"id" : 31,
+		"nome" : "Toxicologia Analítica",
+		"createdAt" : "2026-05-15 19:12:56",
+		"updatedAt" : "2026-05-15 19:12:56",
+		"departamento_id" : null
+	},
+	{
+		"id" : 32,
+		"nome" : "Toxicologia - Bacharelado",
+		"createdAt" : "2026-05-15 19:13:00",
+		"updatedAt" : "2026-05-15 19:13:00",
+		"departamento_id" : null
+	}
+]}

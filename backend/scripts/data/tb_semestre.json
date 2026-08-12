@@ -1,0 +1,63 @@
+{
+"tb_semestre": [
+	{
+		"id" : 1,
+		"descricao" : "1º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 2,
+		"descricao" : "2º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 3,
+		"descricao" : "3º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 4,
+		"descricao" : "4º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 5,
+		"descricao" : "5º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 6,
+		"descricao" : "6º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 7,
+		"descricao" : "7º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 8,
+		"descricao" : "8º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 9,
+		"descricao" : "9º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	},
+	{
+		"id" : 10,
+		"descricao" : "10º Semestre",
+		"createdAt" : "2026-01-26 18:48:19",
+		"updatedAt" : "2026-01-26 18:48:19"
+	}
+]}

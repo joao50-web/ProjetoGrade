@@ -1,0 +1,21 @@
+{
+"tb_hierarquia": [
+	{
+		"id" : 1,
+		"descricao" : "visualizacao",
+		"createdAt" : "2026-01-26 18:47:43",
+		"updatedAt" : "2026-01-26 18:47:43"
+	},
+	{
+		"id" : 2,
+		"descricao" : "edicao",
+		"createdAt" : "2026-01-26 18:47:43",
+		"updatedAt" : "2026-01-26 18:47:43"
+	},
+	{
+		"id" : 3,
+		"descricao" : "administrador",
+		"createdAt" : "2026-01-26 18:47:43",
+		"updatedAt" : "2026-01-26 18:47:43"
+	}
+]}

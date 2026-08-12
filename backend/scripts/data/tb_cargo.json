@@ -1,0 +1,45 @@
+{
+"tb_cargo": [
+	{
+		"id" : 2,
+		"descricao" : "teste",
+		"createdAt" : "2026-01-26 18:21:34",
+		"updatedAt" : "2026-03-27 16:48:30"
+	},
+	{
+		"id" : 4,
+		"descricao" : "PROGRAD",
+		"createdAt" : "2026-01-26 18:28:15",
+		"updatedAt" : "2026-02-06 13:55:30"
+	},
+	{
+		"id" : 7,
+		"descricao" : "Secretario de Curso",
+		"createdAt" : "2026-02-06 13:55:22",
+		"updatedAt" : "2026-02-06 13:55:43"
+	},
+	{
+		"id" : 10,
+		"descricao" : "Coordenador",
+		"createdAt" : "2026-04-10 16:14:52",
+		"updatedAt" : "2026-04-10 16:14:59"
+	},
+	{
+		"id" : 11,
+		"descricao" : "Departamento",
+		"createdAt" : "2026-04-10 17:03:48",
+		"updatedAt" : "2026-04-10 17:03:48"
+	},
+	{
+		"id" : 12,
+		"descricao" : "Professor",
+		"createdAt" : "2026-04-15 16:42:19",
+		"updatedAt" : "2026-04-15 16:42:19"
+	},
+	{
+		"id" : 13,
+		"descricao" : "Administrador",
+		"createdAt" : "2026-04-28 15:55:19",
+		"updatedAt" : "2026-04-28 15:55:19"
+	}
+]}

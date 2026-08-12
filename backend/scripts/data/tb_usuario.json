@@ -1,0 +1,48 @@
+{
+"tb_usuario": [
+	{
+		"id" : 17,
+		"login" : "joao.marcos",
+		"senha" : "$2b$10$6fl89PvnQoqu131436n\/huqNvcKkQkcZr55aLojvNA5Z1PAV2L5Qi",
+		"createdAt" : "2026-02-06 14:28:33",
+		"updatedAt" : "2026-04-10 16:11:54",
+		"pessoa_id" : 13,
+		"hierarquia_id" : 3
+	},
+	{
+		"id" : 33,
+		"login" : "teste 2",
+		"senha" : "$2a$12$aswBEPlZYqPtkd3lE0u\/Fu7ueR1\/rP8GAUwe\/yXwcDt1avFpVgfPq",
+		"createdAt" : "2026-03-27 17:31:11",
+		"updatedAt" : "2026-08-07 15:14:14",
+		"pessoa_id" : 57,
+		"hierarquia_id" : 1
+	},
+	{
+		"id" : 34,
+		"login" : "teste 3",
+		"senha" : "$2b$10$MJHCiJGdhitr7AT3JoK3PeCkpZY.6v1k79Cl.vZ9zcDVkhTDBa8XW",
+		"createdAt" : "2026-03-27 17:31:31",
+		"updatedAt" : "2026-04-22 17:41:12",
+		"pessoa_id" : 58,
+		"hierarquia_id" : 2
+	},
+	{
+		"id" : 39,
+		"login" : "teste 5",
+		"senha" : "",
+		"createdAt" : "2026-04-14 19:49:00",
+		"updatedAt" : "2026-04-22 17:41:20",
+		"pessoa_id" : 59,
+		"hierarquia_id" : 2
+	},
+	{
+		"id" : 40,
+		"login" : "joao123@ufcspa.edu.br",
+		"senha" : "$2b$10$efftXS4F\/X8b4d8JdVXSlOiUZlmsCXytvOSG98f87tSIVMc.HYuUO",
+		"createdAt" : "2026-04-24 16:09:59",
+		"updatedAt" : "2026-04-24 16:09:59",
+		"pessoa_id" : 63,
+		"hierarquia_id" : 2
+	}
+]}

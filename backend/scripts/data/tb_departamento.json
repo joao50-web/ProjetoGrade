@@ -1,0 +1,88 @@
+{
+"tb_departamento": [
+	{
+		"id" : 1,
+		"nome" : "Departamento Teste",
+		"sigla" : "DPTE"
+	},
+	{
+		"id" : 3,
+		"nome" : "Departamento de Ciências Básicas da Saúde",
+		"sigla" : "DCBS "
+	},
+	{
+		"id" : 4,
+		"nome" : "Departamento de Clínica Cirúrgica",
+		"sigla" : "DCC "
+	},
+	{
+		"id" : 5,
+		"nome" : "Departamento de Clínica Médica",
+		"sigla" : "DCM "
+	},
+	{
+		"id" : 6,
+		"nome" : "Departamento de Ciências Exatas e Sociais Aplicadas",
+		"sigla" : "DECESA "
+	},
+	{
+		"id" : 7,
+		"nome" : "Departamento de Educação e Humanidades",
+		"sigla" : "DEH "
+	},
+	{
+		"id" : 8,
+		"nome" : "Departamento de Enfermagem",
+		"sigla" : "DENF "
+	},
+	{
+		"id" : 9,
+		"nome" : "Departamento de Farmacociências",
+		"sigla" : "DFC "
+	},
+	{
+		"id" : 10,
+		"nome" : "Departamento de Fisioterapia",
+		"sigla" : "DFISIO "
+	},
+	{
+		"id" : 11,
+		"nome" : "Departamento de Fonoaudiologia",
+		"sigla" : "DFONO "
+	},
+	{
+		"id" : 12,
+		"nome" : "Departamento de Ginecologia e Obstetrícia",
+		"sigla" : "DGO "
+	},
+	{
+		"id" : 13,
+		"nome" : "Departamento de Métodos Diagnósticos",
+		"sigla" : "DMD "
+	},
+	{
+		"id" : 14,
+		"nome" : "Departamento de Nutrição",
+		"sigla" : "DNUTRI "
+	},
+	{
+		"id" : 15,
+		"nome" : "Departamento de Pediatria",
+		"sigla" : "DPED "
+	},
+	{
+		"id" : 16,
+		"nome" : "Departamento de Patologia e Medicina Legal",
+		"sigla" : "DPML "
+	},
+	{
+		"id" : 17,
+		"nome" : "Departamento de Psicologia",
+		"sigla" : "DPISC "
+	},
+	{
+		"id" : 18,
+		"nome" : "Departamento de Saúde Coletiva",
+		"sigla" : "DSC "
+	}
+]}
