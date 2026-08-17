@@ -18,8 +18,6 @@ const {
 ====================================================== */
 exports.findByContext = async (req, res) => {
   try {
-    console.log("\n[DEBUG] 1. Recebido no req.query:", req.query);
-
     const {
       curso_id,
       ano_id,
@@ -49,8 +47,6 @@ exports.findByContext = async (req, res) => {
       where.departamento_id = departamento_id;
     }
 
-    console.log("[DEBUG] 2. Cláusula WHERE final:", where);
-
     let disciplinasValidas = [];
 
     if (curso_id) {
@@ -60,13 +56,12 @@ exports.findByContext = async (req, res) => {
             model: Disciplina,
             as: "disciplinas",
             attributes: ["id"],
-            through: { attributes: [] },
+            // REMOVIDO: through: { attributes: [] } - Previne o crash se a relação for 1:N
           },
         ],
       });
 
       disciplinasValidas = curso?.disciplinas?.map((d) => d.id) || [];
-      console.log("[DEBUG] Disciplinas válidas do curso encontradas:", disciplinasValidas.length);
     }
 
     const registros = await GradeHoraria.findAll({
@@ -89,13 +84,13 @@ exports.findByContext = async (req, res) => {
         { model: Curriculo, as: "curriculo", required: false },
         { model: Semestre, as: "semestre", required: false },
       ],
+      // ORDENAÇÃO CORRIGIDA: Utilizando as chaves estrangeiras da própria tabela.
+      // Isso elimina as chances de erro de Join/Alias e otimiza a busca.
       order: [
-        [{ model: DiaSemana, as: "diaSemana" }, "id", "ASC"],
-        [{ model: Horario, as: "horario" }, "id", "ASC"],
+        ["dia_semana_id", "ASC"],
+        ["horario_id", "ASC"],
       ],
     });
-
-    console.log(`[DEBUG] 3. GradeHoraria.findAll retornou ${registros.length} registros.`);
 
     const mapaMulticurso = new Map();
 
@@ -135,8 +130,6 @@ exports.findByContext = async (req, res) => {
         horario: r.horario?.descricao || "-",
         diaSemana: r.diaSemana?.nome || "-",
 
-        // CORREÇÃO 3: Retorna a disciplina sempre que ela vier do banco,
-        // para não quebrar o Select no frontend
         disciplina: r.disciplina
           ? {
               id: r.disciplina.id,
@@ -173,7 +166,6 @@ exports.findByContext = async (req, res) => {
     return res.status(500).json({ error: "Erro ao buscar grade" });
   }
 };
-
 /* ======================================================
    SALVAR GRADE
 ====================================================== */

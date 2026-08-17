@@ -152,7 +152,7 @@ export default function App() {
         <Route
           path="/relatorios"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
               <Relatorios />
             </PrivateRoute>
           }

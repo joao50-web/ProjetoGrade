@@ -7,6 +7,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Select,
   Popconfirm,
   message,
 } from 'antd';
@@ -32,6 +33,7 @@ const headerCellStyle = {
 
 export default function Disciplinas() {
   const [disciplinas, setDisciplinas] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,11 +46,16 @@ export default function Disciplinas() {
 
   const load = async () => {
     try {
-      const res = await api.get('/disciplinas');
-      setDisciplinas(res.data || []);
+      const [resDisciplinas, resDepartamentos] = await Promise.all([
+        api.get('/disciplinas'),
+        api.get('/departamentos') 
+      ]);
+
+      setDisciplinas(resDisciplinas.data || []);
+      setDepartamentos(resDepartamentos.data || []);
     } catch (err) {
       console.error(err);
-      message.error('Erro ao carregar disciplinas');
+      message.error('Erro ao carregar os dados');
     }
   };
 
@@ -64,6 +71,11 @@ export default function Disciplinas() {
     try {
       const values = await form.validateFields();
       setLoading(true);
+
+      // Se o usuário selecionou "Sem departamento", garantimos que o valor vá como nulo pro backend
+      if (values.departamento_id === "") {
+        values.departamento_id = null;
+      }
 
       if (editing) {
         await api.put(`/disciplinas/${editing.id}`, values);
@@ -109,6 +121,7 @@ export default function Disciplinas() {
       codigo: disciplina.codigo,
       nome: disciplina.nome,
       carga_horaria: disciplina.carga_horaria, 
+      departamento_id: disciplina.departamento_id || disciplina.departamento?.id || null, 
     });
 
     setOpen(true);
@@ -184,6 +197,13 @@ export default function Disciplinas() {
             render: (t) => renderText(`${t || 0}h`),
           },
           {
+            title: 'Departamento',
+            dataIndex: 'departamento',
+            align: 'center',
+            onHeaderCell: () => ({ style: headerCellStyle }),
+            render: (dept) => renderText(dept ? dept.nome : '-'), // <-- Exibe '-' caso não tenha departamento
+          },
+          {
             title: 'Editar',
             align: 'center',
             onHeaderCell: () => ({ style: headerCellStyle }),
@@ -231,6 +251,24 @@ export default function Disciplinas() {
             rules={[{ required: true, message: 'Informe a carga horária' }]}
           >
             <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+
+          {/* <-- CAMPO DE DEPARTAMENTO ATUALIZADO */}
+          <Form.Item
+            name="departamento_id"
+            label="Departamento"
+            // Removi a regra de 'required: true' para tornar o campo opcional
+          >
+            <Select placeholder="Selecione um departamento" allowClear>
+              {/* Adicionando a opção explícita de "Sem departamento" */}
+              <Select.Option value={null}>Sem departamento</Select.Option>
+              
+              {departamentos.map((dep) => (
+                <Select.Option key={dep.id} value={dep.id}>
+                  {dep.sigla ? `${dep.sigla} - ${dep.nome}` : dep.nome}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

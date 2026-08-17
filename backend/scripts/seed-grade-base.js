@@ -14,6 +14,7 @@ async function seedGradeBase() {
       '4ª feira',
       '5ª feira',
       '6ª feira'
+      `Sábado`
     ];
 
     for (const descricao of dias) {

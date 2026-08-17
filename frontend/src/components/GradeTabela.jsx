@@ -13,10 +13,30 @@ const THEME = {
   separatorColor: "#cbd5e1",
 };
 
-const headerStyle = { backgroundColor: THEME.bgHeader, color: THEME.textWhite, fontWeight: "700", fontSize: "13px", textAlign: "center", padding: "12px 4px", textTransform: "uppercase", letterSpacing: "0.5px" };
-const horarioCellStyle = { backgroundColor: "#f9fafb", color: THEME.primary, fontWeight: "700", textAlign: "center", fontSize: "14px", padding: "8px 4px", borderRight: `2px solid ${THEME.separatorColor}`, borderBottom: `1px solid ${THEME.separatorColor}` };
-const filtroContainerStyle = { display: "flex", flexDirection: "column", gap: 2 };
-const filtroLabelStyle = { fontSize: "12px", fontWeight: 700, color: THEME.primary, marginBottom: "1px" };
+const headerStyle = { 
+  backgroundColor: THEME.bgHeader, 
+  color: THEME.textWhite, 
+  fontWeight: "700", 
+  fontSize: "12px", 
+  textAlign: "center", 
+  padding: "8px 2px", 
+  textTransform: "uppercase", 
+  letterSpacing: "0.5px" 
+};
+
+const horarioCellStyle = { 
+  backgroundColor: "#f9fafb", 
+  color: THEME.primary, 
+  fontWeight: "700", 
+  textAlign: "center", 
+  fontSize: "13px", 
+  padding: "4px 2px", 
+  borderRight: `2px solid ${THEME.separatorColor}`, 
+  borderBottom: `1px solid ${THEME.separatorColor}` 
+};
+
+const filtroContainerStyle = { display: "flex", flexDirection: "column", gap: 1 };
+const filtroLabelStyle = { fontSize: "11px", fontWeight: 700, color: THEME.primary, marginBottom: "1px" };
 
 export default function GradeTabela() {
   const usuario = getUsuarioLogado();
@@ -24,11 +44,7 @@ export default function GradeTabela() {
   
   const isAdmin = role === "administrador";
   const canEdit = isAdmin || role === "edicao" || role === "chefe de departamento";
-  
-  // NOVA REGRA: Permite que Administradores e Editores excluam a grade
   const canDelete = isAdmin || role === "edicao"; 
-  
-  const isVisualizador = role === "visualizacao";
 
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
@@ -48,7 +64,14 @@ export default function GradeTabela() {
   const [curriculoId, setCurriculoId] = useState(null);
   const [coordenadorId, setCoordenadorId] = useState(null);
 
-  const diasFixos = [{ id: 1, nome: "SEGUNDA" }, { id: 2, nome: "TERÇA" }, { id: 3, nome: "QUARTA" }, { id: 4, nome: "QUINTA" }, { id: 5, nome: "SEXTA" }];
+  const diasFixos = [
+    { id: 1, nome: "SEGUNDA" },
+    { id: 2, nome: "TERÇA" },
+    { id: 3, nome: "QUARTA" },
+    { id: 4, nome: "QUINTA" },
+    { id: 5, nome: "SEXTA" },
+    { id: 6, nome: "SÁBADO" }
+  ];
 
   useEffect(() => { loadInitialData(); }, []);
 
@@ -63,7 +86,7 @@ export default function GradeTabela() {
       ]);
       
       setCursos(cursosRes.data || []); 
-      anosRes.data && setAnos(anosRes.data || []); 
+      setAnos(anosRes.data || []); 
       setSemestres(semestresRes.data || []); 
       setCurriculos(curriculosRes.data || []);
       setProfessores(professoresRes.data || []); 
@@ -73,12 +96,16 @@ export default function GradeTabela() {
       const horariosOrdenados = (horariosRes.data || []).sort((a, b) => a.id - b.id);
       setHorarios(horariosOrdenados); 
       setHorariosOriginais(JSON.parse(JSON.stringify(horariosOrdenados)));
-    } catch { message.error("Erro ao carregar dados"); }
+    } catch { 
+      message.error("Erro ao carregar dados iniciais"); 
+    }
   };
 
   useEffect(() => {
     if (!cursoId) { setDisciplinas([]); return; }
-    api.get(`/cursos/${cursoId}/disciplinas`).then((res) => setDisciplinas(res.data || [])).catch(() => setDisciplinas([]));
+    api.get(`/cursos/${cursoId}/disciplinas`)
+      .then((res) => setDisciplinas(res.data || []))
+      .catch(() => setDisciplinas([]));
   }, [cursoId]);
 
   useEffect(() => {
@@ -121,19 +148,53 @@ export default function GradeTabela() {
 
   const updateSlot = (horarioId, diaId, field, value) => {
     if (!canEdit) return;
+
     setGrade((prev) => {
-      const exists = prev.find((g) => g.horario_id === horarioId && g.dia_semana_id === diaId);
-      if (!exists) return [...prev, { horario_id: horarioId, dia_semana_id: diaId, disciplina_id: null, professor_id: null, departamento_id: null, turma: "", [field]: value }];
-      return prev.map((g) => g.horario_id === horarioId && g.dia_semana_id === diaId ? { ...g, [field]: value } : g);
+      const exists = prev.find(
+        (g) => Number(g.horario_id) === Number(horarioId) && Number(g.dia_semana_id) === Number(diaId)
+      );
+      
+      let novoSlot = exists 
+        ? { ...exists, [field]: value } 
+        : { 
+            horario_id: horarioId, 
+            dia_semana_id: diaId, 
+            disciplina_id: null, 
+            professor_id: null, 
+            departamento_id: null, 
+            turma: "", 
+            [field]: value 
+          };
+
+      if (field === "disciplina_id") {
+        if (value) {
+          const disciplinaSelecionada = disciplinas.find((d) => Number(d.id) === Number(value));
+          
+          if (disciplinaSelecionada) {
+            novoSlot.departamento_id = 
+              disciplinaSelecionada.departamento_id || 
+              disciplinaSelecionada.departamento?.id || 
+              null;
+          }
+        } else {
+          novoSlot.departamento_id = null;
+        }
+      }
+
+      if (!exists) return [...prev, novoSlot];
+      return prev.map((g) => 
+        Number(g.horario_id) === Number(horarioId) && Number(g.dia_semana_id) === Number(diaId) ? novoSlot : g
+      );
     });
   };
 
   const updateHorario = (oldHorarioId, newHorarioId) => {
     if (!canEdit || oldHorarioId === newHorarioId) return;
     const horariosAtualizados = [...horarios];
-    const oldIndex = horariosAtualizados.findIndex((h) => h.id === oldHorarioId);
-    const newIndex = horariosAtualizados.findIndex((h) => h.id === newHorarioId);
+    const oldIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(oldHorarioId));
+    const newIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(newHorarioId));
     if (oldIndex === -1 || newIndex === -1) return;
+    
     const temp = horariosAtualizados[oldIndex];
     horariosAtualizados[oldIndex] = horariosAtualizados[newIndex];
     horariosAtualizados[newIndex] = temp;
@@ -155,16 +216,32 @@ export default function GradeTabela() {
     if (!slots.length) return message.warning("Nenhuma disciplina selecionada");
     setSaving(true);
     try {
-      await api.post("/grade-horaria/save", { contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId }, slots });
-      message.success("Grade salva com sucesso"); loadGrade();
-    } catch { message.error("Erro ao salvar"); } finally { setSaving(false); }
+      await api.post("/grade-horaria/save", { 
+        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId }, 
+        slots 
+      });
+      message.success("Grade salva com sucesso"); 
+      loadGrade();
+    } catch { 
+      message.error("Erro ao salvar"); 
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const handleDeleteGrade = async () => {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
+      return message.warning("Selecione todos os filtros antes de excluir");
+    }
     try {
-      await api.delete("/grade-horaria/delete", { data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId } });
-      setGrade([]); message.success("Grade excluída");
-    } catch { message.error("Erro ao excluir"); }
+      await api.delete("/grade-horaria/delete", { 
+        data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId } 
+      });
+      setGrade([]); 
+      message.success("Grade excluída");
+    } catch { 
+      message.error("Erro ao excluir"); 
+    }
   };
 
   const handlePDF = async () => {
@@ -175,7 +252,7 @@ export default function GradeTabela() {
     try {
       message.loading({ content: "Gerando documento...", key: "pdfLoading" });
       
-      const coordObj = coordenadores.find(c => c.id === coordenadorId);
+      const coordObj = coordenadores.find(c => Number(c.id) === Number(coordenadorId));
       const coordenadorNome = coordObj ? coordObj.nome : "-";
       
       const response = await api.get("/api/relatorio-grade/pdf", { 
@@ -210,48 +287,48 @@ export default function GradeTabela() {
 
   const columns = [
     {
-      title: "HORÁRIO", dataIndex: "descricao", width: 130, fixed: "left", align: "center",
+      title: "HORÁRIO", dataIndex: "descricao", width: 110, fixed: "left", align: "center",
       onHeaderCell: () => ({ style: { ...headerStyle, borderRight: `2px solid ${THEME.separatorColor}` } }),
       onCell: () => ({ style: horarioCellStyle }),
       render: (_, record) => (
         <Select
           size="middle" variant="borderless" value={record.id}
           disabled={!canEdit}
-          style={{ width: "100%", fontSize: "14px", fontWeight: "700" }}
+          style={{ width: "100%", fontSize: "13px", fontWeight: "700" }}
           onChange={(v) => updateHorario(record.id, v)}
           options={horarios.map((h) => ({ value: h.id, label: h.descricao }))}
         />
       ),
     },
     ...diasFixos.map((dia) => ({
-      title: dia.nome, width: 300, align: "center",
+      title: dia.nome, width: 240, align: "center",
       onHeaderCell: () => ({ style: { ...headerStyle, borderRight: `1px solid ${THEME.separatorColor}` } }),
       render: (_, record) => {
         const item = gradeMap[`${record.id}-${dia.id}`] || { horario_id: record.id, dia_semana_id: dia.id };
         return (
-          <div style={{ padding: "12px 8px", display: "flex", flexDirection: "column", gap: 6, minHeight: 160, backgroundColor: item.disciplina_id ? "#fff" : "transparent", borderRight: `1px solid ${THEME.separatorColor}`, borderBottom: `1px solid ${THEME.separatorColor}` }}>
+          <div style={{ padding: "8px 5px", display: "flex", flexDirection: "column", gap: 4, minHeight: 145, backgroundColor: item.disciplina_id ? "#fff" : "transparent", borderRight: `1px solid ${THEME.separatorColor}`, borderBottom: `1px solid ${THEME.separatorColor}` }}>
             <Select
               size="middle" allowClear showSearch optionFilterProp="label" placeholder="Disciplina"
               value={item.disciplina_id}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
-              style={{ width: "100%", fontSize: "14px" }} 
-              options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo} - ${d.nome}` }))}
+              style={{ width: "100%", fontSize: "12px" }} 
+              options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo || ''} - ${d.nome}` }))}
             />
             {item.disciplina_id && (
               <>
-                <div style={{ height: 32, width: "100%", border: `1px solid ${THEME.borderColor}`, borderRadius: 4, backgroundColor: "#f9fafb", padding: "0 11px", display: "flex", alignItems: "center", boxSizing: "border-box", fontSize: "13px", color: "rgba(0,0,0,0.88)" }}>
+                <div style={{ height: 28, width: "100%", border: `1px solid ${THEME.borderColor}`, borderRadius: 4, backgroundColor: "#f9fafb", padding: "0 8px", display: "flex", alignItems: "center", boxSizing: "border-box", fontSize: "12px", color: "rgba(0,0,0,0.88)" }}>
                   <span style={{ color: "rgba(0,0,0,0.45)", marginRight: 4 }}>Carga Horária:</span>
                   <span style={{ fontWeight: 600 }}>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
                 </div>
                 
                 <Input
                   size="middle" 
-                  placeholder="Escreva a Turma (Ex: TURMA A)"
+                  placeholder="Escreva a Turma (Ex: A)"
                   value={item.turma}
                   disabled={!canEdit}
                   onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())}
-                  style={{ width: "100%", fontSize: "13px" }} 
+                  style={{ width: "100%", fontSize: "12px" }} 
                 />
 
                 <Select
@@ -259,7 +336,7 @@ export default function GradeTabela() {
                   value={item.professor_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
-                  style={{ width: "100%", fontSize: "13px" }} 
+                  style={{ width: "100%", fontSize: "12px" }} 
                   options={professores.map((p) => ({ value: p.id, label: p.nome }))}
                 />
                 <Select
@@ -267,8 +344,8 @@ export default function GradeTabela() {
                   value={item.departamento_id}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
-                  style={{ width: "100%", fontSize: "13px" }} 
-                  options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla} - ${d.nome}` }))}
+                  style={{ width: "100%", fontSize: "12px" }} 
+                  options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla || ''} - ${d.nome}` }))}
                 />
               </>
             )}
@@ -296,39 +373,38 @@ export default function GradeTabela() {
             cellPaddingBlock: 0 
           }, 
           Select: { 
-            fontSize: 14,
+            fontSize: 12,
             colorTextDisabled: "#000000",
             colorBgContainerDisabled: "#f5f5f5"
           },
           Input: {
+            fontSize: 12,
             colorTextDisabled: "#000000",
             colorBgContainerDisabled: "#f5f5f5"
           }
         } 
       }}
     >
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "16px", gap: "16px" }}>
-        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "12px", gap: "12px" }}>
+        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURSO</span><Select size="middle" value={cursoId} onChange={setCursoId} style={{ width: 220 }} options={cursos.map((c) => ({ value: c.id, label: c.nome }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId} onChange={setCurriculoId} style={{ width: 220 }} options={curriculos.map((c) => ({ value: c.id, label: c.descricao }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId} onChange={setAnoId} style={{ width: 100 }} options={anos.map((a) => ({ value: a.id, label: a.descricao }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId} onChange={setSemestreId} placeholder="Selecione" style={{ width: 200 }} options={semestres.map((s) => ({ value: s.id, label: s.descricao }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>COORDENADOR</span><Select size="middle" allowClear showSearch value={coordenadorId} onChange={setCoordenadorId} placeholder="Selecione o Coordenador" style={{ width: 240 }} options={coordenadores.map((c) => ({ value: c.id, label: c.nome }))} /></div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURSO</span><Select size="middle" value={cursoId} onChange={setCursoId} style={{ width: 180 }} options={cursos.map((c) => ({ value: c.id, label: c.nome }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId} onChange={setCurriculoId} style={{ width: 170 }} options={curriculos.map((c) => ({ value: c.id, label: c.descricao || c.nome }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId} onChange={setAnoId} style={{ width: 90 }} options={anos.map((a) => ({ value: a.id, label: a.descricao || a.ano }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId} onChange={setSemestreId} placeholder="Selecione" style={{ width: 150 }} options={semestres.map((s) => ({ value: s.id, label: s.descricao || s.nome }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>COORDENADOR</span><Select size="middle" allowClear showSearch value={coordenadorId} onChange={setCoordenadorId} placeholder="Selecione o Coordenador" style={{ width: 200 }} options={coordenadores.map((c) => ({ value: c.id, label: c.nome }))} /></div>
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               {canEdit && <Button size="middle" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ fontWeight: 600 }}>Salvar</Button>}
               <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>PDF</Button>
               {canEdit && <Button size="middle" icon={<ReloadOutlined />} onClick={handleReset}>Redefinir</Button>}
-              
-              {/* O BOTÃO AGORA VALIDA PELA VARIÁVEL 'canDelete' */}
               {canDelete && <Button size="middle" danger onClick={handleDeleteGrade}>Excluir</Button>}
             </div>
           </div>
         </div>
         <div style={{ flex: 1, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, overflow: "hidden" }}>
-          <Table rowKey={(record) => record.id} dataSource={horarios} columns={columns} pagination={false} bordered size="middle" sticky scroll={{ x: 1600, y: "calc(100vh - 200px)" }} />
+          <Table rowKey={(record) => record.id} dataSource={horarios} columns={columns} pagination={false} bordered size="middle" sticky scroll={{ x: 1550, y: "calc(100vh - 180px)" }} />
         </div>
       </div>
     </ConfigProvider>
