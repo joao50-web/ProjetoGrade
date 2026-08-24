@@ -30,37 +30,34 @@ exports.findByContext = async (req, res) => {
 
     const where = {};
 
-    if (curso_id) where.curso_id = curso_id;
-    if (ano_id) where.ano_id = ano_id;
-    if (semestre_id) where.semestre_id = semestre_id;
-    if (curriculo_id) where.curriculo_id = curriculo_id;
+    // CORREÇÃO: Evitando que a string literal "null" e "undefined" quebre o filtro
+    if (curso_id && curso_id !== "null" && curso_id !== "undefined") where.curso_id = curso_id;
+    if (ano_id && ano_id !== "null" && ano_id !== "undefined") where.ano_id = ano_id;
+    if (semestre_id && semestre_id !== "null" && semestre_id !== "undefined") where.semestre_id = semestre_id;
+    if (curriculo_id && curriculo_id !== "null" && curriculo_id !== "undefined") where.curriculo_id = curriculo_id;
 
-    if (coordenador_id && coordenador_id !== "null") {
+    if (coordenador_id && coordenador_id !== "null" && coordenador_id !== "undefined") {
       where.coordenador_id = coordenador_id;
     }
-
-    if (professor_id && professor_id !== "null") {
+    if (professor_id && professor_id !== "null" && professor_id !== "undefined") {
       where.professor_id = professor_id;
     }
-
-    if (departamento_id && departamento_id !== "null") {
+    if (departamento_id && departamento_id !== "null" && departamento_id !== "undefined") {
       where.departamento_id = departamento_id;
     }
 
     let disciplinasValidas = [];
 
-    if (curso_id) {
-      const curso = await Curso.findByPk(curso_id, {
+    if (where.curso_id) {
+      const curso = await Curso.findByPk(where.curso_id, {
         include: [
           {
             model: Disciplina,
             as: "disciplinas",
             attributes: ["id"],
-            // REMOVIDO: through: { attributes: [] } - Previne o crash se a relação for 1:N
           },
         ],
       });
-
       disciplinasValidas = curso?.disciplinas?.map((d) => d.id) || [];
     }
 
@@ -68,12 +65,7 @@ exports.findByContext = async (req, res) => {
       where,
       distinct: true,
       include: [
-        {
-          model: Disciplina,
-          as: "disciplina",
-          required: false,
-          attributes: ["id", "nome", "codigo", "carga_horaria"],
-        },
+        { model: Disciplina, as: "disciplina", required: false, attributes: ["id", "nome", "codigo", "carga_horaria"] },
         { model: Departamento, as: "departamento", required: false },
         { model: Curso, as: "curso", required: false },
         { model: Pessoa, as: "professor", required: false },
@@ -84,8 +76,6 @@ exports.findByContext = async (req, res) => {
         { model: Curriculo, as: "curriculo", required: false },
         { model: Semestre, as: "semestre", required: false },
       ],
-      // ORDENAÇÃO CORRIGIDA: Utilizando as chaves estrangeiras da própria tabela.
-      // Isso elimina as chances de erro de Join/Alias e otimiza a busca.
       order: [
         ["dia_semana_id", "ASC"],
         ["horario_id", "ASC"],
@@ -103,12 +93,11 @@ exports.findByContext = async (req, res) => {
       const chave = `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
 
-      const isDeptFilterOnly = !!departamento_id && !curso_id;
-      const disciplinaValida = isDeptFilterOnly || (r.disciplina && (!curso_id || disciplinasValidas.includes(r.disciplina.id)));
+      const isDeptFilterOnly = !!where.departamento_id && !where.curso_id;
+      const disciplinaValida = isDeptFilterOnly || (r.disciplina && (!where.curso_id || disciplinasValidas.includes(r.disciplina.id)));
 
       return {
         id: r.id,
-
         curso_id: r.curso_id,
         ano_id: r.ano_id,
         semestre_id: r.semestre_id,
@@ -116,11 +105,9 @@ exports.findByContext = async (req, res) => {
         coordenador_id: r.coordenador_id,
         professor_id: r.professor_id,
         departamento_id: r.departamento_id,
-
         disciplina_id: r.disciplina_id,
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
-
         turma: r.turma || "", 
 
         curso: r.curso?.nome || "-",
@@ -130,30 +117,10 @@ exports.findByContext = async (req, res) => {
         horario: r.horario?.descricao || "-",
         diaSemana: r.diaSemana?.nome || "-",
 
-        disciplina: r.disciplina
-          ? {
-              id: r.disciplina.id,
-              nome: r.disciplina.nome,
-              codigo: r.disciplina.codigo,
-              carga_horaria: r.disciplina.carga_horaria,
-            }
-          : null,
-
-        professor: r.professor
-          ? { id: r.professor.id, nome: r.professor.nome }
-          : null,
-
-        coordenador: r.coordenador
-          ? { id: r.coordenador.id, nome: r.coordenador.nome }
-          : null,
-
-        departamento: r.departamento
-          ? {
-              id: r.departamento.id,
-              nome: r.departamento.nome,
-              sigla: r.departamento.sigla,
-            }
-          : null,
+        disciplina: r.disciplina ? { id: r.disciplina.id, nome: r.disciplina.nome, codigo: r.disciplina.codigo, carga_horaria: r.disciplina.carga_horaria } : null,
+        professor: r.professor ? { id: r.professor.id, nome: r.professor.nome } : null,
+        coordenador: r.coordenador ? { id: r.coordenador.id, nome: r.coordenador.nome } : null,
+        departamento: r.departamento ? { id: r.departamento.id, nome: r.departamento.nome, sigla: r.departamento.sigla } : null,
 
         disciplinaInvalida: !!r.disciplina && !disciplinaValida,
         multicurso,
@@ -166,6 +133,7 @@ exports.findByContext = async (req, res) => {
     return res.status(500).json({ error: "Erro ao buscar grade" });
   }
 };
+
 /* ======================================================
    SALVAR GRADE
 ====================================================== */
@@ -176,13 +144,7 @@ exports.saveGrade = async (req, res) => {
     return res.status(400).json({ error: "Dados inválidos" });
   }
 
-  const {
-    curso_id,
-    ano_id,
-    semestre_id,
-    curriculo_id,
-    coordenador_id,
-  } = contexto;
+  const { curso_id, ano_id, semestre_id, curriculo_id, coordenador_id } = contexto;
 
   if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
     return res.status(400).json({ error: "Preencha os filtros principais" });
@@ -191,6 +153,7 @@ exports.saveGrade = async (req, res) => {
   const mapa = new Map();
 
   slots.forEach((slot) => {
+    // Apenas monta para inserção os slots que possuem disciplina marcada
     if (slot.disciplina_id && slot.horario_id && slot.dia_semana_id) {
       const chave = `${slot.horario_id}-${slot.dia_semana_id}`;
       mapa.set(chave, slot);
@@ -201,15 +164,9 @@ exports.saveGrade = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // CORREÇÃO CRÍTICA: Apaga toda a grade antiga deste contexto (Curso, Ano, Semestre, Currículo)
-    // INDEPENDENTE de qual coordenador estava associado antes, evitando duplicados.
+    // 1. Apaga a grade antiga inteira vinculada a esses filtros
     await GradeHoraria.destroy({
-      where: {
-        curso_id,
-        ano_id,
-        semestre_id,
-        curriculo_id,
-      },
+      where: { curso_id, ano_id, semestre_id, curriculo_id },
       transaction,
     });
 
@@ -218,7 +175,7 @@ exports.saveGrade = async (req, res) => {
       ano_id,
       semestre_id,
       curriculo_id,
-      coordenador_id: coordenador_id || null, // Atribui corretamente o novo coordenador selecionado
+      coordenador_id: coordenador_id || null,
       professor_id: slot.professor_id || null,
       departamento_id: slot.departamento_id || null,
       horario_id: slot.horario_id,
@@ -227,7 +184,12 @@ exports.saveGrade = async (req, res) => {
       turma: slot.turma || null, 
     }));
 
-    await GradeHoraria.bulkCreate(registros, { transaction });
+    // CORREÇÃO CRÍTICA: Só executa o bulkCreate se existirem registros a serem salvos.
+    // Se o usuário tirou todas as disciplinas no "X", o destroy limpa tudo, e isso previne o crash que desfazia a ação.
+    if (registros.length > 0) {
+      await GradeHoraria.bulkCreate(registros, { transaction });
+    }
+
     await transaction.commit();
 
     return res.json({
@@ -240,33 +202,19 @@ exports.saveGrade = async (req, res) => {
     return res.status(500).json({ error: "Erro ao salvar grade" });
   }
 };
+
 /* ======================================================
    SALVAR SLOT
 ====================================================== */
 exports.saveSlot = async (req, res) => {
   try {
     const {
-      curso_id,
-      coordenador_id,
-      professor_id,
-      departamento_id,
-      ano_id,
-      semestre_id,
-      curriculo_id,
-      horario_id,
-      dia_semana_id,
-      disciplina_id,
-      turma,
+      curso_id, coordenador_id, professor_id, departamento_id,
+      ano_id, semestre_id, curriculo_id, horario_id, dia_semana_id,
+      disciplina_id, turma,
     } = req.body;
 
-    if (
-      !curso_id ||
-      !ano_id ||
-      !semestre_id ||
-      !curriculo_id ||
-      !horario_id ||
-      !dia_semana_id
-    ) {
+    if (!curso_id || !ano_id || !semestre_id || !curriculo_id || !horario_id || !dia_semana_id) {
       return res.status(400).json({ error: "Dados incompletos" });
     }
 
@@ -275,11 +223,7 @@ exports.saveSlot = async (req, res) => {
       coordenador_id: coordenador_id || null,
       professor_id: professor_id || null,
       departamento_id: departamento_id || null,
-      ano_id,
-      semestre_id,
-      curriculo_id,
-      horario_id,
-      dia_semana_id,
+      ano_id, semestre_id, curriculo_id, horario_id, dia_semana_id,
       disciplina_id: disciplina_id || null,
       turma: turma || null,
     });
@@ -299,28 +243,16 @@ exports.deleteGrade = async (req, res) => {
     const { curso_id, ano_id, semestre_id, curriculo_id } = req.body;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
-      return res.status(400).json({
-        error: "Filtros obrigatórios",
-      });
+      return res.status(400).json({ error: "Filtros obrigatórios" });
     }
 
     const deleted = await GradeHoraria.destroy({
-      where: {
-        curso_id,
-        ano_id,
-        semestre_id,
-        curriculo_id,
-      },
+      where: { curso_id, ano_id, semestre_id, curriculo_id },
     });
 
-    return res.json({
-      message: "Grade excluída com sucesso",
-      deletados: deleted,
-    });
+    return res.json({ message: "Grade excluída com sucesso", deletados: deleted });
   } catch (err) {
     console.error("Erro ao deletar grade:", err);
-    return res.status(500).json({
-      error: "Erro ao deletar grade",
-    });
+    return res.status(500).json({ error: "Erro ao deletar grade" });
   }
 };

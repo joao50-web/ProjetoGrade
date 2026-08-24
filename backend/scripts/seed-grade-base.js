@@ -13,7 +13,7 @@ async function seedGradeBase() {
       '3ª feira',
       '4ª feira',
       '5ª feira',
-      '6ª feira'
+      '6ª feira',
       `Sábado`
     ];
 

@@ -1,15 +1,33 @@
-const { Curso, Disciplina, Pessoa, GradeHoraria, Departamento } = require("../models"); // <-- ADICIONADO O DEPARTAMENTO AQUI
+const { Curso, Disciplina, Pessoa, GradeHoraria, Departamento } = require("../models");
 const { Sequelize } = require("sequelize");
 
-/* ===CREATE === */
+/* === CREATE === */
 exports.create = async (req, res) => {
   try {
+    const { nome, coordenador_id } = req.body;
+
+    if (!nome) {
+      return res.status(400).json({ error: "Nome do curso é obrigatório" });
+    }
+
     const curso = await Curso.create({
-      nome: req.body.nome,
+      nome,
+      coordenador_id: coordenador_id || null,
     });
-    res.status(201).json(curso);
+
+    const cursoCriado = await Curso.findByPk(curso.id, {
+      include: [
+        {
+          model: Pessoa,
+          as: "coordenador",
+          attributes: ["id", "nome"],
+        },
+      ],
+    });
+
+    res.status(201).json(cursoCriado);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao criar curso:", error);
     res.status(500).json({ error: "Erro ao criar curso" });
   }
 };
@@ -20,31 +38,51 @@ exports.findAll = async (req, res) => {
     const cursos = await Curso.findAll({
       include: [
         {
+          model: Pessoa,
+          as: "coordenador",
+          attributes: ["id", "nome"],
+        },
+        {
           model: Disciplina,
           as: "disciplinas",
           attributes: ["id", "codigo", "nome"],
-          through: { attributes: [] },
+          // REMOVIDO: through: { attributes: [] } - Para evitar o crash 1:N idêntico ao da Grade
         },
       ],
       order: [["nome", "ASC"]],
     });
     res.json(cursos);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao buscar cursos:", error);
     res.status(500).json({ error: "Erro ao buscar cursos" });
   }
 };
 
-/* ===BUSCAR POR ID ==== */
+/* === BUSCAR POR ID ==== */
 exports.findById = async (req, res) => {
   try {
-    const curso = await Curso.findByPk(req.params.id);
+    const curso = await Curso.findByPk(req.params.id, {
+      include: [
+        {
+          model: Pessoa,
+          as: "coordenador",
+          attributes: ["id", "nome"],
+        },
+        {
+          model: Disciplina,
+          as: "disciplinas",
+          attributes: ["id", "codigo", "nome"],
+          // REMOVIDO: through - Para evitar crash
+        },
+      ],
+    });
+
     if (!curso) {
       return res.status(404).json({ error: "Curso não encontrado" });
     }
     res.json(curso);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao buscar curso:", error);
     res.status(500).json({ error: "Erro ao buscar curso" });
   }
 };
@@ -52,16 +90,31 @@ exports.findById = async (req, res) => {
 /* ==== UPDATE ===== */
 exports.update = async (req, res) => {
   try {
+    const { nome, coordenador_id } = req.body;
     const curso = await Curso.findByPk(req.params.id);
+
     if (!curso) {
       return res.status(404).json({ error: "Curso não encontrado" });
     }
+
     await curso.update({
-      nome: req.body.nome,
+      nome,
+      coordenador_id: coordenador_id || null,
     });
-    res.json(curso);
+
+    const cursoAtualizado = await Curso.findByPk(curso.id, {
+      include: [
+        {
+          model: Pessoa,
+          as: "coordenador",
+          attributes: ["id", "nome"],
+        },
+      ],
+    });
+
+    res.json(cursoAtualizado);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao atualizar curso:", error);
     res.status(500).json({ error: "Erro ao atualizar curso" });
   }
 };
@@ -112,16 +165,15 @@ exports.listDisciplinas = async (req, res) => {
         {
           model: Disciplina,
           as: "disciplinas",
-          attributes: ["id", "nome", "codigo", "carga_horaria", "departamento_id"], // Adicionado departamento_id
-          through: { attributes: [] },
+          attributes: ["id", "nome", "codigo", "carga_horaria", "departamento_id"],
+          // REMOVIDO: through para evitar crash
           include: [
             {
-              // <-- INCLUINDO O DEPARTAMENTO AQUI
               model: Departamento,
               as: "departamento",
               attributes: ["id", "nome", "sigla"],
-            }
-          ]
+            },
+          ],
         },
       ],
     });
@@ -132,7 +184,7 @@ exports.listDisciplinas = async (req, res) => {
 
     res.json(curso.disciplinas || []);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao listar disciplinas:", error);
     res.status(500).json({ error: "Erro ao listar disciplinas" });
   }
 };
@@ -155,7 +207,7 @@ exports.updateDisciplinas = async (req, res) => {
     await curso.setDisciplinas(disciplinas);
     res.json({ message: "Disciplinas associadas com sucesso" });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao associar disciplinas:", error);
     res.status(500).json({ error: "Erro ao associar disciplinas" });
   }
 };
@@ -179,12 +231,11 @@ exports.findDisciplinasComProfessores = async (req, res) => {
             through: { attributes: [] },
           },
           {
-            // <-- INCLUINDO O DEPARTAMENTO AQUI TAMBÉM POR SEGURANÇA
             model: Departamento,
             as: "departamento",
             attributes: ["id", "nome", "sigla"],
-          }
-        ]
+          },
+        ],
       },
     });
 
@@ -194,8 +245,6 @@ exports.findDisciplinasComProfessores = async (req, res) => {
 
     const result = [];
     curso.disciplinas.forEach((disciplina) => {
-      // Caso a disciplina não tenha professores, você pode querer adicionar uma lógica extra, 
-      // mas mantive a sua lógica original.
       disciplina.professores.forEach((professor) => {
         result.push({
           disciplina_id: disciplina.id,
@@ -210,42 +259,40 @@ exports.findDisciplinasComProfessores = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao buscar disciplinas com professores:", error);
     res.status(500).json({ error: "Erro ao buscar disciplinas com professores" });
   }
-}; 
+};
 
 /* ================= LISTAR (Alternativo) ================= */
-// Vi que no seu código tinha essa rota sobrando no final. Ajustei ela também!
 exports.listarPorCurso = async (req, res) => {
   try {
     const curso = await Curso.findByPk(req.params.id, {
       include: [
         {
           model: Disciplina,
-          as: 'disciplinas',
-          attributes: ['id', 'codigo', 'nome', 'carga_horaria', 'departamento_id'],
-          through: { attributes: [] },
+          as: "disciplinas",
+          attributes: ["id", "codigo", "nome", "carga_horaria", "departamento_id"],
+          // REMOVIDO: through para evitar crash
           include: [
             {
-              // <-- INCLUINDO O DEPARTAMENTO AQUI
               model: Departamento,
               as: "departamento",
               attributes: ["id", "nome", "sigla"],
-            }
-          ]
-        }
-      ]
+            },
+          ],
+        },
+      ],
     });
 
     if (!curso) {
-      return res.status(404).json({ error: 'Curso não encontrado' });
+      return res.status(404).json({ error: "Curso não encontrado" });
     }
 
     return res.json(curso.disciplinas || []);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao listar disciplinas' });
+    console.error("Erro ao listar disciplinas por curso:", error);
+    return res.status(500).json({ error: "Erro ao listar disciplinas" });
   }
 };
 
@@ -256,13 +303,13 @@ exports.salvarVinculos = async (req, res) => {
     const curso = await Curso.findByPk(req.params.id);
 
     if (!curso) {
-      return res.status(404).json({ error: 'Curso não encontrado' });
+      return res.status(404).json({ error: "Curso não encontrado" });
     }
-    
+
     await curso.setDisciplinas(disciplinas);
-    return res.json({ message: 'Vínculos atualizados' });
+    return res.json({ message: "Vínculos atualizados" });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao salvar vínculos' });
+    console.error("Erro ao salvar vínculos:", error);
+    return res.status(500).json({ error: "Erro ao salvar vínculos" });
   }
 };

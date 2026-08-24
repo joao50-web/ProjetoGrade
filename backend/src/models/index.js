@@ -50,6 +50,7 @@ Object.values(models).forEach((model) => {
 });
 
 // Associações manuais (caso não estejam dentro dos arquivos dos modelos)
+
 // Pessoa ↔ Cargo
 Pessoa.belongsTo(Cargo, { foreignKey: "cargo_id", as: "cargo" });
 Cargo.hasMany(Pessoa, { foreignKey: "cargo_id", as: "pessoas" });
@@ -65,6 +66,13 @@ Hierarquia.hasMany(Usuario, { foreignKey: "hierarquia_id", as: "usuarios" });
 // Curso ↔ Departamento
 Curso.belongsTo(Departamento, { foreignKey: "departamento_id", as: "departamento" });
 Departamento.hasMany(Curso, { foreignKey: "departamento_id", as: "cursos" });
+
+// ==========================================
+// NOVO: Curso ↔ Coordenador (Pessoa)
+// ==========================================
+Curso.belongsTo(Pessoa, { foreignKey: "coordenador_id", as: "coordenador" });
+Pessoa.hasMany(Curso, { foreignKey: "coordenador_id", as: "cursos_coordenados" });
+
 
 // Disciplina ↔ Departamento
 Disciplina.belongsTo(Departamento, { foreignKey: "departamento_id", as: "departamento" });

@@ -88,11 +88,19 @@ exports.update = async (req, res) => {
       return res.status(404).json({ error: "Disciplina não encontrada" });
     }
 
-    if (!req.body.departamento_id) {
-      req.body.departamento_id = null;
-    }
+    const novoDepartamentoId = req.body.departamento_id || null;
+    req.body.departamento_id = novoDepartamentoId;
 
+    // 1. Atualiza a disciplina
     await disciplina.update(req.body);
+
+    // 2. CORREÇÃO CRÍTICA: Sincroniza a mudança com a Grade Horária
+    // Isso garante que os relatórios e a grade antiga passem a mostrar o departamento novo
+    await GradeHoraria.update(
+      { departamento_id: novoDepartamentoId },
+      { where: { disciplina_id: disciplina.id } }
+    );
+
     return res.json(disciplina);
   } catch (err) {
     console.error(err);

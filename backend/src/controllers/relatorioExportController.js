@@ -160,7 +160,7 @@ const exportRelatorioPDF = async (req, res) => {
          .lineWidth(0.5).strokeColor("#CBD5E1").stroke();
       
       doc.fillColor("#6B7280").font("Helvetica").fontSize(8)
-         .text("Universidade Federal de Ciências da Saúde de Porto Alegre - Documento Gerado Via Sistema", 40, footerY, { align: "left", width: 500 });
+         .text("Universidade Federal de Ciências da Saúde de Porto Alegre ", 40, footerY, { align: "left", width: 500 });
       
       doc.text(`Página ${pageNumber}`, 40, footerY, { align: "right", width: usableWidth });
     };
@@ -240,7 +240,7 @@ const exportRelatorioPDF = async (req, res) => {
         drawLabelValue("Currículo", d.curriculo, colRightX, textY, colWidth);
 
         textY += lineSpacing + 4; 
-        drawLabelValue("Horários Agendados", horarios, colLeftX, textY, usableWidth - 30);
+        drawLabelValue("Horários", horarios, colLeftX, textY, usableWidth - 30);
 
         currentY += boxHeight + 15; 
       });

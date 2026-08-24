@@ -5,6 +5,7 @@ import {
   Modal,
   Form,
   Input,
+  Select,
   Popconfirm,
   message,
 } from "antd";
@@ -15,6 +16,8 @@ import {
   BookOutlined,
   PlusOutlined,
   SearchOutlined,
+  ReadOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 
 import { useNavigate } from "react-router-dom";
@@ -32,19 +35,29 @@ const headerCellStyle = {
 
 export default function Cursos() {
   const [cursos, setCursos] = useState([]);
+  const [pessoas, setPessoas] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
   const navigate = useNavigate();
 
   const load = async () => {
+    setLoading(true);
     try {
-      const resCursos = await api.get("/cursos");
+      const [resCursos, resPessoas] = await Promise.all([
+        api.get("/cursos"),
+        api.get("/pessoas").catch(() => ({ data: [] })),
+      ]);
+
       setCursos(resCursos.data || []);
+      setPessoas(resPessoas.data || []);
     } catch {
-      message.error("Erro ao carregar cursos");
+      message.error("Erro ao carregar dados dos cursos");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,18 +67,21 @@ export default function Cursos() {
 
   const submit = async (values) => {
     try {
+      setLoading(true);
       if (editing) {
         await api.put(`/cursos/${editing.id}`, values);
-        message.success("Curso atualizado");
+        message.success("Curso atualizado com sucesso!");
       } else {
         await api.post("/cursos", values);
-        message.success("Curso criado");
+        message.success("Curso criado com sucesso!");
       }
 
       closeModal();
       load();
     } catch {
       message.error("Erro ao salvar curso");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,7 +99,7 @@ export default function Cursos() {
         error?.response?.status === 500
       ) {
         message.error(
-          "Não é possível excluir este curso pois ele já está sendo utilizado em grades horárias ou registros do sistema."
+          "Não é possível excluir este curso pois ele já está sendo utilizado na grade horária ou sistema."
         );
         return;
       }
@@ -95,6 +111,7 @@ export default function Cursos() {
     setEditing(curso);
     form.setFieldsValue({
       nome: curso.nome,
+      coordenador_id: curso.coordenador_id || curso.coordenador?.id || null,
     });
     setOpen(true);
   };
@@ -106,16 +123,17 @@ export default function Cursos() {
   };
 
   const filtered = cursos.filter((c) =>
-    c.nome?.toLowerCase().includes(search.toLowerCase())
+    [c.nome, c.coordenador?.nome]
+      .some((val) => val?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const renderText = (text, strong = false) => (
-    <div style={{ padding: '8px 16px' }}>
+    <div style={{ padding: "8px 16px" }}>
       <span
         style={{
           fontSize: strong ? 17 : 16,
           fontWeight: strong ? 600 : 400,
-          color: '#111827',
+          color: "#111827",
         }}
       >
         {text}
@@ -131,19 +149,29 @@ export default function Cursos() {
       render: (t) => renderText(t, true),
     },
     {
+      title: "Coordenador",
+      dataIndex: "coordenador",
+      align: "center",
+      onHeaderCell: () => ({ style: headerCellStyle }),
+      render: (coordenador) => renderText(coordenador?.nome || "Sem coordenador"),
+    },
+    {
       title: "Disciplinas",
       dataIndex: "disciplinas",
-      align: 'center',
+      align: "center",
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (disciplinas = []) => renderText(`${disciplinas.length} disciplina${disciplinas.length !== 1 ? "s" : ""}`),
+      render: (disciplinas = []) =>
+        renderText(
+          `${disciplinas.length} disciplina${disciplinas.length !== 1 ? "s" : ""}`
+        ),
     },
     {
       title: "Gerenciar",
-      align: 'center',
+      align: "center",
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
-        <Button 
-          icon={<BookOutlined />} 
+        <Button
+          icon={<BookOutlined />}
           onClick={() => navigate(`/academico/cursos/${record.id}/disciplinas`)}
         >
           Ver Disciplinas
@@ -151,8 +179,9 @@ export default function Cursos() {
       ),
     },
     {
-      title: "Editar Curso",
-      align: 'center',
+      title: "Editar",
+      align: "center",
+      width: 100,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
         <Button icon={<EditOutlined />} onClick={() => edit(record)} />
@@ -160,7 +189,8 @@ export default function Cursos() {
     },
     {
       title: "Excluir",
-      align: 'center',
+      align: "center",
+      width: 100,
       onHeaderCell: () => ({ style: headerCellStyle }),
       render: (_, record) => (
         <Popconfirm
@@ -175,28 +205,37 @@ export default function Cursos() {
 
   return (
     <AppLayout>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+      {/* CABEÇALHO DA PÁGINA COM INPUT NA ESQUERDA E BOTÃO NA DIREITA */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+
         <Input
-          placeholder="Buscar curso..."
+          placeholder="Buscar curso ou coordenador..."
           prefix={<SearchOutlined />}
           allowClear
           value={search}
-          style={{ width: 300, height: 42 }}
+          style={{ width: 320, height: 42 }}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setEditing(null);
+            form.resetFields();
+            setOpen(true);
+          }}
+          style={{ height: 42, fontWeight: 600 }}
         >
           Novo Curso
         </Button>
+
       </div>
 
       <Table
         rowKey="id"
         dataSource={filtered}
+        loading={loading}
         pagination={{ pageSize: 6 }}
         bordered
         columns={columns}
@@ -207,6 +246,7 @@ export default function Cursos() {
         open={open}
         onCancel={closeModal}
         onOk={() => form.submit()}
+        confirmLoading={loading}
         okText="Salvar"
       >
         <Form layout="vertical" form={form} onFinish={submit}>
@@ -215,7 +255,29 @@ export default function Cursos() {
             label="Nome do Curso"
             rules={[{ required: true, message: "Digite o nome do curso" }]}
           >
-            <Input />
+            <Input prefix={<ReadOutlined />} placeholder="Ex: Ciência da Computação" />
+          </Form.Item>
+
+          <Form.Item
+            name="coordenador_id"
+            label="Coordenador do Curso"
+          >
+            <Select
+              placeholder="Selecione o coordenador"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              suffixIcon={<UserOutlined />}
+              filterOption={(input, option) =>
+                (option?.children ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {pessoas.map((pessoa) => (
+                <Select.Option key={pessoa.id} value={pessoa.id}>
+                  {pessoa.nome}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

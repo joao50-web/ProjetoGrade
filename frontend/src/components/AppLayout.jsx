@@ -85,15 +85,23 @@ function AppLayout({ children }) {
     setOpenKeys([]);
   }, [location.pathname]);
 
-  const menuItems = useMemo(() => {
-    if (!isAdmin) {
+ const menuItems = useMemo(() => {
+    // 1. Se for Chefe de Departamento, mostra apenas as grades
+    if (role === "chefe de departamento") {
       return [
         { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
         { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" },
-        { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
       ];
     }
 
+    // 2. Se for outro usuário não-administrador (ex: edicao, visualizacao), mostra os relatórios também
+    if (!isAdmin) {
+      return [
+        { key: "/grade-horaria", icon: <CalendarOutlined />, label: "Grade Horária" },
+      ];
+    }
+
+    // 3. Se for Administrador, mostra tudo
     return [
       { key: "/home", icon: <HomeOutlined />, label: "Início" },
       { type: "divider" },
@@ -121,7 +129,7 @@ function AppLayout({ children }) {
       { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" },
       { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
     ];
-  }, [isAdmin]);
+  }, [isAdmin, role]); // Adicionado o 'role' nas dependências do useMemo
 
   const handleMenuClick = ({ key }) => {
     if (location.pathname !== key) navigate(key);

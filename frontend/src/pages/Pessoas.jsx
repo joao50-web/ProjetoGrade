@@ -1,25 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  message,
-  Popconfirm,
-  Tag,
-  Tooltip
-} from 'antd';
-
-import {
-  CheckCircleTwoTone,
-  CloseCircleTwoTone,
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  SearchOutlined
-} from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Tag, Tooltip } from 'antd';
+import { CheckCircleTwoTone, CloseCircleTwoTone, EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
@@ -230,7 +211,7 @@ export default function Pessoas() {
           {
             title: 'Usuário',
             align: 'center',
-              width: 130,
+            width: 130,
             onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) =>
               r.usuario?.id

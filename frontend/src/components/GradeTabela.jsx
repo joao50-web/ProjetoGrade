@@ -43,7 +43,7 @@ export default function GradeTabela() {
   const role = usuario?.role?.toLowerCase();
   
   const isAdmin = role === "administrador";
-  const canEdit = isAdmin || role === "edicao" || role === "chefe de departamento";
+  const canEdit = isAdmin || role === "edicao";
   const canDelete = isAdmin || role === "edicao"; 
 
   const [cursos, setCursos] = useState([]);
@@ -125,8 +125,8 @@ export default function GradeTabela() {
       });
       setGrade(response.data || []);
       
-      if (response.data?.length > 0) {
-        setCoordenadorId(response.data[0].coordenador_id);
+      if (response.data?.length > 0 && response.data[0].coordenador_id) {
+        setCoordenadorId(Number(response.data[0].coordenador_id));
       }
     } catch { 
       setGrade([]); 
@@ -171,13 +171,14 @@ export default function GradeTabela() {
           const disciplinaSelecionada = disciplinas.find((d) => Number(d.id) === Number(value));
           
           if (disciplinaSelecionada) {
-            novoSlot.departamento_id = 
-              disciplinaSelecionada.departamento_id || 
-              disciplinaSelecionada.departamento?.id || 
-              null;
+            const depId = disciplinaSelecionada.departamento_id || disciplinaSelecionada.departamento?.id || null;
+            novoSlot.departamento_id = depId ? Number(depId) : null; 
           }
         } else {
+          // SE CLICAR NO "X", LIMPA AUTOMATICAMENTE O RESTO DA CÉLULA
           novoSlot.departamento_id = null;
+          novoSlot.professor_id = null;
+          novoSlot.turma = "";
         }
       }
 
@@ -201,6 +202,17 @@ export default function GradeTabela() {
     setHorarios(horariosAtualizados);
   };
 
+  const handleCursoChange = (value) => {
+    setCursoId(value);
+    
+    const cursoSelecionado = cursos.find((c) => c.id === value);
+    if (cursoSelecionado && cursoSelecionado.coordenador_id) {
+      setCoordenadorId(Number(cursoSelecionado.coordenador_id));
+    } else {
+      setCoordenadorId(null);
+    }
+  };
+
   const handleReset = () => {
     setCursoId(null); setAnoId(null); setSemestreId(null); setCurriculoId(null); setCoordenadorId(null);
     setGrade([]); setDisciplinas([]);
@@ -212,8 +224,10 @@ export default function GradeTabela() {
 
   const handleSave = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return message.warning("Selecione os filtros");
-    const slots = grade.filter((g) => g.disciplina_id);
-    if (!slots.length) return message.warning("Nenhuma disciplina selecionada");
+    
+    // ENVIAR AS DELETADAS: Pega slots com disciplina OU slots que vieram do banco (têm ID) mas foram apagados (null)
+    const slots = grade.filter((g) => g.disciplina_id || g.id);
+    
     setSaving(true);
     try {
       await api.post("/grade-horaria/save", { 
@@ -309,11 +323,11 @@ export default function GradeTabela() {
           <div style={{ padding: "8px 5px", display: "flex", flexDirection: "column", gap: 4, minHeight: 145, backgroundColor: item.disciplina_id ? "#fff" : "transparent", borderRight: `1px solid ${THEME.separatorColor}`, borderBottom: `1px solid ${THEME.separatorColor}` }}>
             <Select
               size="middle" allowClear showSearch optionFilterProp="label" placeholder="Disciplina"
-              value={item.disciplina_id}
+              value={item.disciplina_id ? Number(item.disciplina_id) : null}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
               style={{ width: "100%", fontSize: "12px" }} 
-              options={disciplinas.map((d) => ({ value: d.id, label: `${d.codigo || ''} - ${d.nome}` }))}
+              options={disciplinas.map((d) => ({ value: Number(d.id), label: `${d.codigo || ''} - ${d.nome}` }))}
             />
             {item.disciplina_id && (
               <>
@@ -333,19 +347,19 @@ export default function GradeTabela() {
 
                 <Select
                   size="middle" allowClear showSearch placeholder="Professor"
-                  value={item.professor_id}
+                  value={item.professor_id ? Number(item.professor_id) : null}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
                   style={{ width: "100%", fontSize: "12px" }} 
-                  options={professores.map((p) => ({ value: p.id, label: p.nome }))}
+                  options={professores.map((p) => ({ value: Number(p.id), label: p.nome }))}
                 />
                 <Select
                   size="middle" allowClear placeholder="Departamento"
-                  value={item.departamento_id}
+                  value={item.departamento_id ? Number(item.departamento_id) : null}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
                   style={{ width: "100%", fontSize: "12px" }} 
-                  options={departamentos.map((d) => ({ value: d.id, label: `${d.sigla || ''} - ${d.nome}` }))}
+                  options={departamentos.map((d) => ({ value: Number(d.id), label: `${d.sigla || ''} - ${d.nome}` }))}
                 />
               </>
             )}
@@ -389,11 +403,21 @@ export default function GradeTabela() {
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURSO</span><Select size="middle" value={cursoId} onChange={setCursoId} style={{ width: 180 }} options={cursos.map((c) => ({ value: c.id, label: c.nome }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId} onChange={setCurriculoId} style={{ width: 170 }} options={curriculos.map((c) => ({ value: c.id, label: c.descricao || c.nome }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId} onChange={setAnoId} style={{ width: 90 }} options={anos.map((a) => ({ value: a.id, label: a.descricao || a.ano }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId} onChange={setSemestreId} placeholder="Selecione" style={{ width: 150 }} options={semestres.map((s) => ({ value: s.id, label: s.descricao || s.nome }))} /></div>
-              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>COORDENADOR</span><Select size="middle" allowClear showSearch value={coordenadorId} onChange={setCoordenadorId} placeholder="Selecione o Coordenador" style={{ width: 200 }} options={coordenadores.map((c) => ({ value: c.id, label: c.nome }))} /></div>
+              
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>CURSO</span>
+                <Select 
+                  size="middle" 
+                  value={cursoId ? Number(cursoId) : null} 
+                  onChange={handleCursoChange} 
+                  style={{ width: 180 }} 
+                  options={cursos.map((c) => ({ value: Number(c.id), label: c.nome }))} 
+                />
+              </div>
+
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId ? Number(curriculoId) : null} onChange={setCurriculoId} style={{ width: 170 }} options={curriculos.map((c) => ({ value: Number(c.id), label: c.descricao || c.nome }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId ? Number(anoId) : null} onChange={setAnoId} style={{ width: 90 }} options={anos.map((a) => ({ value: Number(a.id), label: a.descricao || a.ano }))} /></div>
+              <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId ? Number(semestreId) : null} onChange={setSemestreId} placeholder="Selecione" style={{ width: 150 }} options={semestres.map((s) => ({ value: Number(s.id), label: s.descricao || s.nome }))} /></div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {canEdit && <Button size="middle" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ fontWeight: 600 }}>Salvar</Button>}

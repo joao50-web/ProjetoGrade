@@ -118,6 +118,7 @@ exports.update = async (req, res) => {
 };
 
 /* ================= COORDENADORES ================= */
+/* ================= COORDENADORES ================= */
 exports.findCoordenadores = async (req, res) => {
   try {
     const coordenadores = await Pessoa.findAll({
@@ -127,7 +128,13 @@ exports.findCoordenadores = async (req, res) => {
           as: "cargo",
           attributes: ["id", "descricao"],
           where: {
-            descricao: { [Op.like]: "%Coordenador%" },
+            // Agora busca quem é Coordenador OU Professor
+            descricao: { 
+              [Op.or]: [
+                { [Op.like]: "%Coordenador%" },
+                { [Op.like]: "%Professor%" }
+              ]
+            },
           },
         },
       ],

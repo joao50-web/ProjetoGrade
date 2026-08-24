@@ -13,9 +13,17 @@ const Curso = sequelize.define('tb_curso', {
   },
   departamento_id: {
     type: DataTypes.INTEGER,
-    allowNull: true, // Permite nulo caso existam cursos sem departamento definido
+    allowNull: true, 
     references: {
       model: 'tb_departamento', 
+      key: 'id'
+    }
+  },
+  coordenador_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // Permite nulo caso o curso seja criado sem coordenador inicialmente
+    references: {
+      model: 'tb_pessoa', // Confirme se o nome da sua tabela de pessoas é este
       key: 'id'
     }
   }

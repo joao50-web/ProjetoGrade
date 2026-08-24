@@ -46,10 +46,12 @@ module.exports = function renderGradeHTML({
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 9.5px; /* Aumentado de 8.5px */
+  font-size: 9.5px;
   color: #1f2d3d;
   margin: 0;
   padding: 0;
+  padding-bottom: 20px; /* Espaço extra para o rodapé fixo não cobrir a tabela */
+  background-color: #ffffff;
 }
 
 /* ======================================================
@@ -58,18 +60,18 @@ body {
 
 .header {
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 15px;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 13px; /* Aumentado de 11px */
+  font-size: 13px;
   color: #093e5e;
 }
 
 .header h2 {
   margin: 1px 0 0 0;
-  font-size: 10.5px; /* Aumentado de 9px */
+  font-size: 10.5px;
 }
 
 /* ======================================================
@@ -79,16 +81,37 @@ body {
 .info {
   border: 1px solid #bbb;
   padding: 4px 6px;
-  margin-bottom: 4px;
+  margin-bottom: 15px;
+  background-color: #f8fafc; /* Fundo bem leve para o cabeçalho de informações */
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px 6px;
-  font-size: 8.5px; /* Aumentado de 7.5px */
+  font-size: 8.5px;
 }
 
+/* ======================================================
+   SEMESTRE
+====================================================== */
+
+.semester {
+  margin-bottom: 15px;
+  page-break-inside: avoid; /* Evita que a tabela quebre no meio da página no PDF */
+}
+
+.semester-title {
+  background-color: #e2e8f0;
+  color: #093e5e;
+  font-weight: bold;
+  font-size: 10px;
+  padding: 3px 6px;
+  border: 1px solid #000;
+  border-bottom: none; /* Conecta o título visualmente à tabela */
+  text-transform: uppercase;
+  text-align: center;
+}
 
 /* ======================================================
    TABELA
@@ -112,7 +135,7 @@ td {
 thead th {
   background: #093e5e;
   color: #fff;
-  font-size: 9px; /* Aumentado de 7.8px */
+  font-size: 9px;
   padding: 4px 1px;
 }
 
@@ -125,12 +148,10 @@ td.horario {
   width: 60px;
   min-width: 60px;
   max-width: 60px;
-
   background: #093e5e;
   color: #fff;
-
   font-weight: bold;
-  font-size: 8px; /* Aumentado de 7px */
+  font-size: 8px;
 }
 
 /* ======================================================
@@ -138,16 +159,13 @@ td.horario {
 ====================================================== */
 
 td.disciplina {
-  height: 40px; /* Aumentado de 37px para comportar fonte maior */
+  height: 40px; 
   min-height: 40px;
   max-height: 40px;
-
   vertical-align: middle; 
   line-height: 1.1;
-
   word-break: break-word;
   overflow-wrap: break-word;
-
   padding: 1px 2px;
 }
 
@@ -166,19 +184,19 @@ td.disciplina {
 
 .linha1 {
   font-weight: bold;
-  font-size: 8.5px; /* Aumentado de 7.5px */
+  font-size: 8.5px;
   color: #000;
   margin-bottom: 1px;
 }
 
 .linha2 {
-  font-size: 8.5px; /* Aumentado de 7.5px */
+  font-size: 8.5px;
   color: #1f2937;
   margin-bottom: 1px;
 }
 
 .linha3 {
-  font-size: 7.8px; /* Aumentado de 6.8px */
+  font-size: 7.8px;
   color: #4b5563;
   font-weight: bold;
 }
@@ -188,9 +206,14 @@ td.disciplina {
 ====================================================== */
 
 footer {
-  margin-top: 5px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   text-align: center;
-  font-size: 7.5px; /* Aumentado de 6px */
+  font-size: 7.5px;
+  padding-bottom: 0px;
+  background-color: #ffffff; /* Evita conflitos com conteúdo que ultrapasse as margens */
 }
 
 </style>
@@ -226,10 +249,6 @@ ${(semestres || [])
     (semestre) => `
 <div class="semester">
 
-<div class="semester-title">
-  ${semestre.descricao || "-"}
-</div>
-
 <table>
 
 <thead>
@@ -246,7 +265,21 @@ ${(semestre.dias || []).map((d) => `<th>${d}</th>`).join("")}
 
 <tbody>
 
-${HORARIOS.map((horario) => {
+${HORARIOS.filter((horario) => {
+  // Encontra os dados desse horário no semestre
+  const linha = (semestre.linhas || []).find((l) => l.horario === horario);
+  
+  if (!linha || !linha.celulas) return false;
+
+  // Verifica se tem aula em algum dia neste horário (segunda a sábado/domingo)
+  const temAulaNaSemana = linha.celulas.some(celula => 
+    celula && (celula.nome || celula.codigo || celula.professor || celula.departamento)
+  );
+
+  // Retorna verdadeiro (mantém a linha) apenas se houver pelo menos uma aula
+  return temAulaNaSemana;
+
+}).map((horario) => {
   const linha = (semestre.linhas || []).find((l) => l.horario === horario);
 
   return `
@@ -261,8 +294,8 @@ ${HORARIOS.map((horario) => {
       const celula = linha?.celulas?.[colIndex] || {};
 
       /* =========================================
-        IGNORA DISCIPLINA INVÁLIDA
-    ========================================= */
+         IGNORA DISCIPLINA INVÁLIDA (DIA VAZIO)
+      ========================================= */
 
       const disciplinaValida =
         celula &&
@@ -273,7 +306,8 @@ ${HORARIOS.map((horario) => {
 
       if (!disciplinaValida) {
         return `
-      <td class="disciplina">
+      <!-- Mantém o espaço em branco apenas se os outros dias tiverem aula -->
+      <td class="disciplina" style="background-color: #ffffff;">
       </td>
       `;
       }
