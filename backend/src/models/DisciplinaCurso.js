@@ -11,6 +11,15 @@ const DisciplinaCurso = sequelize.define(
     disciplina_id: {
       type: DataTypes.INTEGER,
       primaryKey: true
+    },
+    // NOVAS COLUNAS ADICIONADAS ABAIXO:
+    semestre_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    curriculo_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
   },
   {

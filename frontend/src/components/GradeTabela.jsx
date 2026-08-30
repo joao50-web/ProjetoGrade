@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Table, Select, Input, Button, message, ConfigProvider, Typography } from "antd";
 import { SaveOutlined, FilePdfOutlined, ReloadOutlined } from "@ant-design/icons";
 import { api, getUsuarioLogado } from "../services/api";
@@ -13,26 +13,26 @@ const THEME = {
   separatorColor: "#cbd5e1",
 };
 
-const headerStyle = { 
-  backgroundColor: THEME.bgHeader, 
-  color: THEME.textWhite, 
-  fontWeight: "700", 
-  fontSize: "12px", 
-  textAlign: "center", 
-  padding: "8px 2px", 
-  textTransform: "uppercase", 
-  letterSpacing: "0.5px" 
+const headerStyle = {
+  backgroundColor: THEME.bgHeader,
+  color: THEME.textWhite,
+  fontWeight: "700",
+  fontSize: "12px",
+  textAlign: "center",
+  padding: "8px 2px",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px"
 };
 
-const horarioCellStyle = { 
-  backgroundColor: "#f9fafb", 
-  color: THEME.primary, 
-  fontWeight: "700", 
-  textAlign: "center", 
-  fontSize: "13px", 
-  padding: "4px 2px", 
-  borderRight: `2px solid ${THEME.separatorColor}`, 
-  borderBottom: `1px solid ${THEME.separatorColor}` 
+const horarioCellStyle = {
+  backgroundColor: "#f9fafb",
+  color: THEME.primary,
+  fontWeight: "700",
+  textAlign: "center",
+  fontSize: "13px",
+  padding: "4px 2px",
+  borderRight: `2px solid ${THEME.separatorColor}`,
+  borderBottom: `1px solid ${THEME.separatorColor}`
 };
 
 const filtroContainerStyle = { display: "flex", flexDirection: "column", gap: 1 };
@@ -41,10 +41,10 @@ const filtroLabelStyle = { fontSize: "11px", fontWeight: 700, color: THEME.prima
 export default function GradeTabela() {
   const usuario = getUsuarioLogado();
   const role = usuario?.role?.toLowerCase();
-  
+
   const isAdmin = role === "administrador";
   const canEdit = isAdmin || role === "edicao";
-  const canDelete = isAdmin || role === "edicao"; 
+  const canDelete = isAdmin || role === "edicao";
 
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
@@ -58,6 +58,7 @@ export default function GradeTabela() {
   const [departamentos, setDepartamentos] = useState([]);
   const [grade, setGrade] = useState([]);
   const [saving, setSaving] = useState(false);
+  
   const [cursoId, setCursoId] = useState(null);
   const [anoId, setAnoId] = useState(null);
   const [semestreId, setSemestreId] = useState(null);
@@ -78,35 +79,44 @@ export default function GradeTabela() {
   const loadInitialData = async () => {
     try {
       const [
-        cursosRes, anosRes, semestresRes, curriculosRes, horariosRes, 
+        cursosRes, anosRes, semestresRes, curriculosRes, horariosRes,
         professoresRes, coordenadoresRes, departamentosRes
       ] = await Promise.all([
-        api.get("/cursos"), api.get("/anos"), api.get("/semestres"), api.get("/curriculos"), api.get("/horarios"), 
+        api.get("/cursos"), api.get("/anos"), api.get("/semestres"), api.get("/curriculos"), api.get("/horarios"),
         api.get("/pessoas/professores"), api.get("/pessoas/coordenadores"), api.get("/departamentos")
       ]);
-      
-      setCursos(cursosRes.data || []); 
-      setAnos(anosRes.data || []); 
-      setSemestres(semestresRes.data || []); 
+
+      setCursos(cursosRes.data || []);
+      setAnos(anosRes.data || []);
+      setSemestres(semestresRes.data || []);
       setCurriculos(curriculosRes.data || []);
-      setProfessores(professoresRes.data || []); 
-      setCoordenadores(coordenadoresRes.data || []); 
+      setProfessores(professoresRes.data || []);
+      setCoordenadores(coordenadoresRes.data || []);
       setDepartamentos(departamentosRes.data || []);
 
       const horariosOrdenados = (horariosRes.data || []).sort((a, b) => a.id - b.id);
-      setHorarios(horariosOrdenados); 
+      setHorarios(horariosOrdenados);
       setHorariosOriginais(JSON.parse(JSON.stringify(horariosOrdenados)));
-    } catch { 
-      message.error("Erro ao carregar dados iniciais"); 
+    } catch {
+      message.error("Erro ao carregar dados iniciais");
     }
   };
 
   useEffect(() => {
-    if (!cursoId) { setDisciplinas([]); return; }
-    api.get(`/cursos/${cursoId}/disciplinas`)
+    if (!cursoId || !semestreId) {
+      setDisciplinas([]);
+      return;
+    }
+
+    api.get(`/cursos/${cursoId}/disciplinas`, {
+      params: {
+        semestre_id: semestreId,
+        curriculo_id: curriculoId 
+      }
+    })
       .then((res) => setDisciplinas(res.data || []))
       .catch(() => setDisciplinas([]));
-  }, [cursoId]);
+  }, [cursoId, semestreId, curriculoId]); 
 
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); return; }
@@ -115,22 +125,22 @@ export default function GradeTabela() {
 
   const loadGrade = async () => {
     try {
-      const response = await api.get("/grade-horaria", { 
-        params: { 
-          curso_id: cursoId, 
-          ano_id: anoId, 
-          semestre_id: semestreId, 
+      const response = await api.get("/grade-horaria", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
           curriculo_id: curriculoId
-        } 
+        }
       });
       setGrade(response.data || []);
-      
+
       if (response.data?.length > 0 && response.data[0].coordenador_id) {
         setCoordenadorId(Number(response.data[0].coordenador_id));
       }
-    } catch { 
-      setGrade([]); 
-      message.error("Erro ao carregar grade"); 
+    } catch {
+      setGrade([]);
+      message.error("Erro ao carregar grade");
     }
   };
 
@@ -140,11 +150,21 @@ export default function GradeTabela() {
     return map;
   }, [grade]);
 
+  // DICIONÁRIO DE DISCIPLINAS APRIMORADO
   const disciplinasMap = useMemo(() => {
     const map = {};
+    // 1. Adiciona as disciplinas que vieram do filtro atual
     disciplinas.forEach((d) => { map[d.id] = d; });
+    
+    // 2. Adiciona as disciplinas que vieram salvas no backend (previne erro visual de ID)
+    grade.forEach((g) => {
+      if (g.disciplina && g.disciplina.id) {
+        map[g.disciplina.id] = g.disciplina;
+      }
+    });
+    
     return map;
-  }, [disciplinas]);
+  }, [disciplinas, grade]);
 
   const updateSlot = (horarioId, diaId, field, value) => {
     if (!canEdit) return;
@@ -153,29 +173,28 @@ export default function GradeTabela() {
       const exists = prev.find(
         (g) => Number(g.horario_id) === Number(horarioId) && Number(g.dia_semana_id) === Number(diaId)
       );
-      
-      let novoSlot = exists 
-        ? { ...exists, [field]: value } 
-        : { 
-            horario_id: horarioId, 
-            dia_semana_id: diaId, 
-            disciplina_id: null, 
-            professor_id: null, 
-            departamento_id: null, 
-            turma: "", 
-            [field]: value 
-          };
+
+      let novoSlot = exists
+        ? { ...exists, [field]: value }
+        : {
+          horario_id: horarioId,
+          dia_semana_id: diaId,
+          disciplina_id: null,
+          professor_id: null,
+          departamento_id: null,
+          turma: "",
+          [field]: value
+        };
 
       if (field === "disciplina_id") {
         if (value) {
-          const disciplinaSelecionada = disciplinas.find((d) => Number(d.id) === Number(value));
-          
+          const disciplinaSelecionada = disciplinasMap[Number(value)];
+
           if (disciplinaSelecionada) {
             const depId = disciplinaSelecionada.departamento_id || disciplinaSelecionada.departamento?.id || null;
-            novoSlot.departamento_id = depId ? Number(depId) : null; 
+            novoSlot.departamento_id = depId ? Number(depId) : null;
           }
         } else {
-          // SE CLICAR NO "X", LIMPA AUTOMATICAMENTE O RESTO DA CÉLULA
           novoSlot.departamento_id = null;
           novoSlot.professor_id = null;
           novoSlot.turma = "";
@@ -183,7 +202,7 @@ export default function GradeTabela() {
       }
 
       if (!exists) return [...prev, novoSlot];
-      return prev.map((g) => 
+      return prev.map((g) =>
         Number(g.horario_id) === Number(horarioId) && Number(g.dia_semana_id) === Number(diaId) ? novoSlot : g
       );
     });
@@ -195,7 +214,7 @@ export default function GradeTabela() {
     const oldIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(oldHorarioId));
     const newIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(newHorarioId));
     if (oldIndex === -1 || newIndex === -1) return;
-    
+
     const temp = horariosAtualizados[oldIndex];
     horariosAtualizados[oldIndex] = horariosAtualizados[newIndex];
     horariosAtualizados[newIndex] = temp;
@@ -204,7 +223,6 @@ export default function GradeTabela() {
 
   const handleCursoChange = (value) => {
     setCursoId(value);
-    
     const cursoSelecionado = cursos.find((c) => c.id === value);
     if (cursoSelecionado && cursoSelecionado.coordenador_id) {
       setCoordenadorId(Number(cursoSelecionado.coordenador_id));
@@ -224,22 +242,21 @@ export default function GradeTabela() {
 
   const handleSave = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return message.warning("Selecione os filtros");
-    
-    // ENVIAR AS DELETADAS: Pega slots com disciplina OU slots que vieram do banco (têm ID) mas foram apagados (null)
+
     const slots = grade.filter((g) => g.disciplina_id || g.id);
-    
+
     setSaving(true);
     try {
-      await api.post("/grade-horaria/save", { 
-        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId }, 
-        slots 
+      await api.post("/grade-horaria/save", {
+        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId },
+        slots
       });
-      message.success("Grade salva com sucesso"); 
+      message.success("Grade salva com sucesso");
       loadGrade();
-    } catch { 
-      message.error("Erro ao salvar"); 
-    } finally { 
-      setSaving(false); 
+    } catch {
+      message.error("Erro ao salvar");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -248,13 +265,13 @@ export default function GradeTabela() {
       return message.warning("Selecione todos os filtros antes de excluir");
     }
     try {
-      await api.delete("/grade-horaria/delete", { 
-        data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId } 
+      await api.delete("/grade-horaria/delete", {
+        data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId }
       });
-      setGrade([]); 
+      setGrade([]);
       message.success("Grade excluída");
-    } catch { 
-      message.error("Erro ao excluir"); 
+    } catch {
+      message.error("Erro ao excluir");
     }
   };
 
@@ -262,40 +279,40 @@ export default function GradeTabela() {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
       return message.warning("Selecione todos os filtros superiores antes de gerar o PDF");
     }
-    
+
     try {
       message.loading({ content: "Gerando documento...", key: "pdfLoading" });
-      
+
       const coordObj = coordenadores.find(c => Number(c.id) === Number(coordenadorId));
       const coordenadorNome = coordObj ? coordObj.nome : "-";
-      
-      const response = await api.get("/api/relatorio-grade/pdf", { 
-        params: { 
-          curso_id: cursoId, 
-          ano_id: anoId, 
-          semestre_id: semestreId, 
+
+      const response = await api.get("/api/relatorio-grade/pdf", {
+        params: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
           curriculo_id: curriculoId,
           coordenador_id: coordenadorId,
           coordenador_nome: coordenadorNome
-        }, 
-        responseType: "blob" 
+        },
+        responseType: "blob"
       });
-      
+
       const file = new Blob([response.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(file); 
-      
+      const url = URL.createObjectURL(file);
+
       const link = document.createElement("a");
       link.href = url;
       link.target = "_blank";
-      link.download = `grade_horaria_${cursoId}_${anoId}.pdf`; 
+      link.download = `grade_horaria_${cursoId}_${anoId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       message.success({ content: "PDF gerado com sucesso!", key: "pdfLoading" });
-    } catch (err) { 
+    } catch (err) {
       console.error("Erro PDF:", err);
-      message.error({ content: "Erro ao gerar PDF. Certifique-se de que há dados salvos.", key: "pdfLoading" }); 
+      message.error({ content: "Erro ao gerar PDF. Certifique-se de que há dados salvos.", key: "pdfLoading" });
     }
   };
 
@@ -326,8 +343,11 @@ export default function GradeTabela() {
               value={item.disciplina_id ? Number(item.disciplina_id) : null}
               disabled={!canEdit}
               onChange={(v) => updateSlot(record.id, dia.id, "disciplina_id", v)}
-              style={{ width: "100%", fontSize: "12px" }} 
-              options={disciplinas.map((d) => ({ value: Number(d.id), label: `${d.codigo || ''} - ${d.nome}` }))}
+              style={{ width: "100%", fontSize: "12px" }}
+              options={Object.values(disciplinasMap).map((d) => ({
+                value: Number(d.id),
+                label: `${d.codigo ? d.codigo + ' - ' : ''}${d.nome}`
+              }))}
             />
             {item.disciplina_id && (
               <>
@@ -335,14 +355,14 @@ export default function GradeTabela() {
                   <span style={{ color: "rgba(0,0,0,0.45)", marginRight: 4 }}>Carga Horária:</span>
                   <span style={{ fontWeight: 600 }}>{disciplinasMap[item.disciplina_id]?.carga_horaria ?? 0}h</span>
                 </div>
-                
+
                 <Input
-                  size="middle" 
+                  size="middle"
                   placeholder="Escreva a Turma (Ex: A)"
                   value={item.turma}
                   disabled={!canEdit}
                   onChange={(e) => updateSlot(record.id, dia.id, "turma", e.target.value.toUpperCase())}
-                  style={{ width: "100%", fontSize: "12px" }} 
+                  style={{ width: "100%", fontSize: "12px" }}
                 />
 
                 <Select
@@ -350,7 +370,7 @@ export default function GradeTabela() {
                   value={item.professor_id ? Number(item.professor_id) : null}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "professor_id", v)}
-                  style={{ width: "100%", fontSize: "12px" }} 
+                  style={{ width: "100%", fontSize: "12px" }}
                   options={professores.map((p) => ({ value: Number(p.id), label: p.nome }))}
                 />
                 <Select
@@ -358,7 +378,7 @@ export default function GradeTabela() {
                   value={item.departamento_id ? Number(item.departamento_id) : null}
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
-                  style={{ width: "100%", fontSize: "12px" }} 
+                  style={{ width: "100%", fontSize: "12px" }}
                   options={departamentos.map((d) => ({ value: Number(d.id), label: `${d.sigla || ''} - ${d.nome}` }))}
                 />
               </>
@@ -370,23 +390,23 @@ export default function GradeTabela() {
   ];
 
   return (
-    <ConfigProvider 
-      theme={{ 
-        token: { 
-          colorPrimary: THEME.primary, 
-          borderRadius: 6, 
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: THEME.primary,
+          borderRadius: 6,
           colorBorder: THEME.borderColor,
-          colorTextDisabled: "#000000", 
-        }, 
-        components: { 
-          Table: { 
-            headerBg: THEME.bgHeader, 
-            headerColor: THEME.textWhite, 
-            borderColor: THEME.borderColor, 
-            cellPaddingInline: 0, 
-            cellPaddingBlock: 0 
-          }, 
-          Select: { 
+          colorTextDisabled: "#000000",
+        },
+        components: {
+          Table: {
+            headerBg: THEME.bgHeader,
+            headerColor: THEME.textWhite,
+            borderColor: THEME.borderColor,
+            cellPaddingInline: 0,
+            cellPaddingBlock: 0
+          },
+          Select: {
             fontSize: 12,
             colorTextDisabled: "#000000",
             colorBgContainerDisabled: "#f5f5f5"
@@ -396,22 +416,22 @@ export default function GradeTabela() {
             colorTextDisabled: "#000000",
             colorBgContainerDisabled: "#f5f5f5"
           }
-        } 
+        }
       }}
     >
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "12px", gap: "12px" }}>
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              
+
               <div style={filtroContainerStyle}>
                 <span style={filtroLabelStyle}>CURSO</span>
-                <Select 
-                  size="middle" 
-                  value={cursoId ? Number(cursoId) : null} 
-                  onChange={handleCursoChange} 
-                  style={{ width: 180 }} 
-                  options={cursos.map((c) => ({ value: Number(c.id), label: c.nome }))} 
+                <Select
+                  size="middle"
+                  value={cursoId ? Number(cursoId) : null}  
+                  onChange={handleCursoChange}
+                  style={{ width: 180 }}
+                  options={cursos.map((c) => ({ value: Number(c.id), label: c.nome }))}
                 />
               </div>
 

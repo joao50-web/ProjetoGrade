@@ -55,6 +55,8 @@ Object.values(models).forEach((model) => {
 Pessoa.belongsTo(Cargo, { foreignKey: "cargo_id", as: "cargo" });
 Cargo.hasMany(Pessoa, { foreignKey: "cargo_id", as: "pessoas" });
 
+
+
 // Pessoa ↔ Usuario
 Pessoa.hasOne(Usuario, { foreignKey: "pessoa_id", as: "usuario" });
 Usuario.belongsTo(Pessoa, { foreignKey: "pessoa_id", as: "pessoa" });

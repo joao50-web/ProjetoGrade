@@ -46,7 +46,7 @@ exports.findAll = async (req, res) => {
           model: Disciplina,
           as: "disciplinas",
           attributes: ["id", "codigo", "nome"],
-          // REMOVIDO: through: { attributes: [] } - Para evitar o crash 1:N idêntico ao da Grade
+          through: { attributes: [] } // Restaurado para deixar o JSON mais limpo
         },
       ],
       order: [["nome", "ASC"]],
@@ -72,7 +72,7 @@ exports.findById = async (req, res) => {
           model: Disciplina,
           as: "disciplinas",
           attributes: ["id", "codigo", "nome"],
-          // REMOVIDO: through - Para evitar crash
+          through: { attributes: [] }
         },
       ],
     });
@@ -156,17 +156,28 @@ exports.remove = async (req, res) => {
 };
 
 /* ===============================
-   LISTAR DISCIPLINAS
+   LISTAR DISCIPLINAS (Com Filtro)
 =============================== */
 exports.listDisciplinas = async (req, res) => {
   try {
+    const { semestre_id, curriculo_id } = req.query;
+
+    // Monta o filtro apenas se os parâmetros vierem na requisição
+    const wherePivot = {};
+    if (semestre_id && semestre_id !== "null" && semestre_id !== "undefined") wherePivot.semestre_id = semestre_id;
+    if (curriculo_id && curriculo_id !== "null" && curriculo_id !== "undefined") wherePivot.curriculo_id = curriculo_id;
+
     const curso = await Curso.findByPk(req.params.id, {
       include: [
         {
           model: Disciplina,
           as: "disciplinas",
           attributes: ["id", "nome", "codigo", "carga_horaria", "departamento_id"],
-          // REMOVIDO: through para evitar crash
+          // FILTRO APLICADO AQUI:
+          through: {
+            attributes: [], // Não exibe os dados da tabela pivot no JSON final
+            where: Object.keys(wherePivot).length > 0 ? wherePivot : undefined
+          },
           include: [
             {
               model: Departamento,
@@ -189,29 +200,38 @@ exports.listDisciplinas = async (req, res) => {
   }
 };
 
-/* ===============================
-   ATUALIZAR DISCIPLINAS
-=============================== */
+
+/* ================= SALVAR VÍNCULOS / ATUALIZAR DISCIPLINAS ================= */
+
 exports.updateDisciplinas = async (req, res) => {
+  const { sequelize } = require('../models');
+  const t = await sequelize.transaction(); // Inicia a transação
+
   try {
-    const { disciplinas } = req.body;
-    if (!Array.isArray(disciplinas)) {
-      return res.status(400).json({ error: "disciplinas deve ser um array" });
+    const { semestre_id, curriculo_id, disciplinas } = req.body; 
+    const curso_id = req.params.id;
+    const DisciplinaCurso = sequelize.models.tb_disciplina_curso;
+
+    await DisciplinaCurso.destroy({
+      where: { curso_id, semestre_id, curriculo_id },
+      transaction: t // Associa à transação
+    });
+
+    if (disciplinas && disciplinas.length > 0) {
+      const novosVinculos = disciplinas.map(disciplina_id => ({
+        curso_id, disciplina_id, semestre_id, curriculo_id
+      }));
+      await DisciplinaCurso.bulkCreate(novosVinculos, { transaction: t }); // Associa à transação
     }
 
-    const curso = await Curso.findByPk(req.params.id);
-    if (!curso) {
-      return res.status(404).json({ error: "Curso não encontrado" });
-    }
-
-    await curso.setDisciplinas(disciplinas);
-    res.json({ message: "Disciplinas associadas com sucesso" });
+    await t.commit(); // Confirma as alterações apenas se tudo deu certo
+    return res.json({ message: 'Grade do semestre atualizada com sucesso!' });
   } catch (error) {
+    await t.rollback(); // Desfaz a exclusão se a inserção falhar
     console.error("Erro ao associar disciplinas:", error);
-    res.status(500).json({ error: "Erro ao associar disciplinas" });
+    return res.status(500).json({ error: 'Erro ao salvar vínculos' });
   }
 };
-
 /* ===============================
    DISCIPLINAS + PROFESSORES
 =============================== */
@@ -264,16 +284,26 @@ exports.findDisciplinasComProfessores = async (req, res) => {
   }
 };
 
-/* ================= LISTAR (Alternativo) ================= */
+/* ================= LISTAR (Alternativo / Com Filtro) ================= */
 exports.listarPorCurso = async (req, res) => {
   try {
+    const { semestre_id, curriculo_id } = req.query;
+
+    // Monta o filtro apenas se os parâmetros vierem na requisição
+    const wherePivot = {};
+    if (semestre_id && semestre_id !== "null" && semestre_id !== "undefined") wherePivot.semestre_id = semestre_id;
+    if (curriculo_id && curriculo_id !== "null" && curriculo_id !== "undefined") wherePivot.curriculo_id = curriculo_id;
+
     const curso = await Curso.findByPk(req.params.id, {
       include: [
         {
           model: Disciplina,
           as: "disciplinas",
           attributes: ["id", "codigo", "nome", "carga_horaria", "departamento_id"],
-          // REMOVIDO: through para evitar crash
+          through: {
+            attributes: [],
+            where: Object.keys(wherePivot).length > 0 ? wherePivot : undefined // CORRETO
+          },
           include: [
             {
               model: Departamento,
@@ -299,17 +329,29 @@ exports.listarPorCurso = async (req, res) => {
 /* ================= SALVAR VÍNCULOS ================= */
 exports.salvarVinculos = async (req, res) => {
   try {
-    const { disciplinas } = req.body;
+    const { disciplinas } = req.body; 
     const curso = await Curso.findByPk(req.params.id);
 
-    if (!curso) {
-      return res.status(404).json({ error: "Curso não encontrado" });
+    if (!curso) return res.status(404).json({ error: 'Curso não encontrado' });
+
+    // O Frontend agora DEVE enviar um array de objetos. 
+    // Ex: [{ disciplina_id: 1, semestre_id: 2, curriculo_id: 1 }]
+    
+    if (disciplinas && disciplinas.length > 0) {
+      for (const item of disciplinas) {
+        // Se a disciplina já estiver no curso, atualiza. Se não, adiciona.
+        await curso.addDisciplina(item.disciplina_id, {
+          through: {
+            semestre_id: item.semestre_id || null,
+            curriculo_id: item.curriculo_id || null
+          }
+        });
+      }
     }
 
-    await curso.setDisciplinas(disciplinas);
-    return res.json({ message: "Vínculos atualizados" });
+    return res.json({ message: 'Vínculos atualizados com sucesso' });
   } catch (error) {
-    console.error("Erro ao salvar vínculos:", error);
-    return res.status(500).json({ error: "Erro ao salvar vínculos" });
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao salvar vínculos' });
   }
 };
