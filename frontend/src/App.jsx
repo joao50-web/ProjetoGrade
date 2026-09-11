@@ -3,18 +3,15 @@ import { getUsuarioLogado } from "./services/api";
 
 import Login from "./pages/Login";
 import Home from "./pages/Home";
-
 import Pessoas from "./pages/Pessoas";
 import Usuarios from "./pages/Usuarios";
 import Cargos from "./pages/Cargos";
-
 import Departamentos from "./pages/Departamentos";
 import Disciplinas from "./pages/Disciplinas";
 import Cursos from "./pages/Cursos";
 import CursoDisciplinas from "./pages/CursoDisciplinas";
-
 import GradeHoraria from "./pages/GradeHoraria";
-import GradeSemanal from "./pages/GradeSemanal"; // <--- Importação da nova página
+import GradeSemanal from "./pages/GradeSemanal"; 
 import Logs from "./pages/Logs";
 import Relatorios from "./pages/Relatorios";
 
@@ -24,10 +21,13 @@ function PrivateRoute({ children, roles }) {
 
   if (!usuario) return <Navigate to="/login" />;
 
-  // Pega a role do usuário e transforma tudo em minúsculo para garantir a comparação
-  const roleUsuario = String(usuario.role).toLowerCase();
+  const roleUsuario = String(usuario.role).toLowerCase().trim();
 
   if (roles && !roles.includes(roleUsuario)) {
+    if (window.location.pathname === "/grade-horaria") {
+      localStorage.clear(); 
+      return <Navigate to="/login" />;
+    }
     return <Navigate to="/grade-horaria" />;
   }
 
@@ -39,7 +39,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* ================= AUTH ================= */}
         <Route path="/login" element={<Login />} />
 
@@ -91,7 +90,6 @@ export default function App() {
         />
 
         {/* ================= ACADÊMICO ================= */}
-
         <Route
           path="/academico/departamentos"
           element={
@@ -132,17 +130,17 @@ export default function App() {
         <Route
           path="/grade-horaria"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador","chefe de departamento"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador", "chefe de departamento", "coordenador"]}>
               <GradeHoraria />
             </PrivateRoute>
           }
         />
 
-        {/*  ================= GRADE SEMANAL (DEPARTAMENTO) ================= */}
+        {/* ================= GRADE SEMANAL ================= */}
         <Route
           path="/grade-semanal"
           element={
-            <PrivateRoute roles={["visualizacao","edicao", "administrador","chefe de departamento"]}>
+            <PrivateRoute roles={["visualizacao", "edicao", "administrador", "chefe de departamento", "coordenador"]}>
               <GradeSemanal />
             </PrivateRoute>
           }
@@ -152,7 +150,7 @@ export default function App() {
         <Route
           path="/relatorios"
           element={
-            <PrivateRoute roles={["visualizacao", "edicao", "administrador"]}>
+            <PrivateRoute roles={["administrador"]}>
               <Relatorios />
             </PrivateRoute>
           }

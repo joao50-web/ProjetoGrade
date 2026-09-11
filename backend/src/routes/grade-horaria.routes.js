@@ -4,38 +4,38 @@ const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
 
 /* ======================================================
-   CONSULTA - Todos os níveis podem ver
+   CONSULTA - Admin, Edição, Visualização, Chefe e Coordenador
 ====================================================== */
 router.get("/", 
   authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "visualizacao","chefe de departamento"]), 
+  roleMiddleware(["administrador", "edicao", "visualizacao", "chefe de departamento", "coordenador"]), 
   controller.findByContext
 );
 
 /* ======================================================
-   SALVAR GRADE COMPLETA - Admin e Edição apenas
+   SALVAR GRADE COMPLETA - Admin, Edição e Coordenador
 ====================================================== */
 router.post("/save", 
   authMiddleware, 
-  roleMiddleware(["administrador", "edicao"]), 
+  roleMiddleware(["administrador", "edicao", "coordenador"]), 
   controller.saveGrade
 );
 
 /* ======================================================
-   EXCLUIR GRADE COMPLETA - Apenas Admin
+   EXCLUIR GRADE COMPLETA - Admin, Edição e Coordenador
 ====================================================== */
 router.delete("/delete", 
   authMiddleware, 
-  roleMiddleware(["administrador","edicao"]), 
+  roleMiddleware(["administrador", "edicao", "coordenador"]), 
   controller.deleteGrade
 );
 
 /* ======================================================
-   SLOT ISOLADO - Admin e Edição apenas
+   SLOT ISOLADO - Admin, Edição e Coordenador
 ====================================================== */
 router.post("/", 
   authMiddleware, 
-  roleMiddleware(["administrador", "edicao"]), 
+  roleMiddleware(["administrador", "edicao", "coordenador"]), 
   controller.saveSlot
 );
 

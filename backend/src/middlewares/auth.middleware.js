@@ -8,18 +8,15 @@ module.exports = (req, res, next) => {
   }
 
   const parts = authHeader.split(" ");
-
   if (parts.length !== 2) {
     return res.status(401).json({ error: "Token mal formatado" });
   }
 
   const [scheme, token] = parts;
-
   if (!/^Bearer$/i.test(scheme)) {
     return res.status(401).json({ error: "Token mal formatado" });
   }
 
-  // Previne falha silenciosa por falta de variável de ambiente
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     console.error("ERRO CRÍTICO: JWT_SECRET não está definida no arquivo .env");
@@ -29,15 +26,16 @@ module.exports = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, secret);
 
+    // Repassa o pessoa_id extraído do token para a requisição
     req.user = {
       id: decoded.id,
+      pessoa_id: decoded.pessoa_id,
       role: decoded.role
     };
 
     return next();
 
   } catch (err) {
-    // Imprime o erro exato no terminal do Node.js
     console.error("Falha na validação do JWT:", err.message);
 
     return res.status(401).json({

@@ -8,7 +8,7 @@ import { api } from '../services/api';
 const { Text } = Typography;
 
 /* =========================================
-   ESTILOS GERAIS DA TELA
+    ESTILOS GERAIS DA TELA
 ========================================= */
 const THEME = {
   primary: "#0b3d5c",
@@ -21,6 +21,26 @@ const THEME = {
   tagBg: "#f1f5f9",
   tagText: "#334155" 
 };
+
+// Paleta pastel suave aplicada aos departamentos
+const paletaPastelSuave = [
+  "#FFF6DF", // Creme
+  "#F9EBCF", // Bege
+  "#F3DDB5", // Areia
+  "#EBD3A9", // Ocre claro
+  "#F8D8C2", // Pêssego
+  "#F2C6B5", // Salmão claro
+  "#F2D5D5", // Rosa claro
+  "#EBD9E8", // Lilás claro
+  "#DED7ED", // Roxo pastel
+  "#D4DDF0", // Azul claro 1
+  "#C9DFED", // Azul claro 2
+  "#C4DDE3", // Azul claro 3
+  "#B3E5FC", // AZUL NOVO
+  "#BBDEFB", // AZUL NOVO
+  "#D0E8F2", // AZUL NOVO
+  "#E2E1DC"  // Cinza claro
+];
 
 const miniGradeHeaderStyle = { 
   backgroundColor: THEME.bgHeader, 
@@ -98,8 +118,18 @@ export default function GradeSemanal() {
 
   // Departamento selecionado
   const deptoSelecionado = useMemo(() => {
-    return departamentos.find(d => d.id === departamentoId);
+    return departamentos.find(d => Number(d.id) === Number(departamentoId));
   }, [departamentos, departamentoId]);
+
+  // HELPER DE COR DOS DEPARTAMENTOS UTILIZANDO A PALETA PASTEL SUAVE
+  const getDepartamentoCor = (depId) => {
+    if (!depId) return null;
+    const dep = departamentos.find((d) => Number(d.id) === Number(depId));
+    if (dep?.cor) return dep.cor;
+    if (dep?.cor_hex) return dep.cor_hex;
+    if (dep?.color) return dep.color;
+    return paletaPastelSuave[Number(depId) % paletaPastelSuave.length];
+  };
 
   /* ======================================================
      OPÇÕES DOS FILTROS
@@ -178,7 +208,6 @@ export default function GradeSemanal() {
           </thead>
           <tbody>
             ${horarios.map((horario, hIdx) => `
-              <!-- Adicionado page-break-inside e break-inside para evitar corte na quebra de página -->
               <tr style="background-color: ${hIdx % 2 === 0 ? THEME.rowEven : THEME.rowOdd}; page-break-inside: avoid; break-inside: avoid;">
                 <td style="width: 60px; border: 1px solid ${THEME.gridLine}; text-align: center; padding: 4px 2px; vertical-align: middle; background-color: #f1f5f9;">
                   <span style="color: #334155; font-size: 8px; font-weight: 700;">
@@ -195,8 +224,10 @@ export default function GradeSemanal() {
                           const cNome = item.curso?.nome || item.curso_nome || item.curso || "Curso";
                           const pNome = item.professor?.nome || item.professor_nome || item.professor || "";
                           const tNome = item.turma || "";
+                          const depId = item.departamento_id || item.departamento?.id || departamentoId;
+                          const depCor = getDepartamentoCor(depId);
                           return `
-                            <div style="background: #ffffff; border: 1px solid ${THEME.borderColor}; border-left: 3px solid ${THEME.primary}; padding: 3px 4px; border-radius: 3px;">
+                            <div style="background: ${depCor ? `${depCor}25` : '#ffffff'}; border: 1px solid ${THEME.borderColor}; border-left: 3px solid ${depCor || THEME.primary}; padding: 3px 4px; border-radius: 3px;">
                               <div style="font-weight: 700; font-size: 8px; color: #0f172a; line-height: 1.2;">${dNome}</div>
                               <div style="font-size: 7.5px; color: ${THEME.primary}; font-weight: 600; line-height: 1.2; margin-top: 1px;">${pNome}</div>
                               <div style="font-size: 7px; color: #475569; line-height: 1.2; margin-top: 2px;">
@@ -221,12 +252,11 @@ export default function GradeSemanal() {
     document.body.appendChild(containerOculto);
 
     const opt = {
-      margin:       [6, 6, 6, 6], 
-      filename:     `Grade_Semanal_${deptoSelecionado?.sigla || 'Depto'}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
+      margin:      [6, 6, 6, 6], 
+      filename:    `Grade_Semanal_${deptoSelecionado?.sigla || 'Depto'}.pdf`,
+      image:       { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2.5, useCORS: true, logging: false },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      // Adicionado configuração específica para evitar quebras em linhas de tabela
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
       pagebreak:    { mode: ['css', 'legacy'], avoid: 'tr' } 
     };
 
@@ -299,6 +329,9 @@ export default function GradeSemanal() {
               const cNome = item.curso?.nome || item.curso_nome || item.curso || "Curso";
               const pNome = item.professor?.nome || item.professor_nome || item.professor || "Professor(a)";
               const tNome = item.turma || "";
+              
+              const depId = item.departamento_id || item.departamento?.id || departamentoId;
+              const depCor = getDepartamentoCor(depId);
 
               return (
                 <Tooltip 
@@ -319,9 +352,9 @@ export default function GradeSemanal() {
                   <div 
                     className="modern-card"
                     style={{ 
-                      backgroundColor: "#ffffff", 
+                      backgroundColor: depCor ? `${depCor}25` : "#ffffff", 
                       border: `1px solid ${THEME.borderColor}`, 
-                      borderLeft: `4px solid ${THEME.primary}`, 
+                      borderLeft: `4px solid ${depCor || THEME.primary}`, 
                       borderRadius: "6px", 
                       padding: "10px", 
                       textAlign: "left", 
@@ -442,7 +475,6 @@ export default function GradeSemanal() {
           padding: 6px !important;
           background-color: transparent !important;
         }
-        /* Garantir que a primeira coluna (Horários) tenha a borda separando dos dias */
         .ant-table-tbody > tr > td:first-child {
           border-right: 1px solid ${THEME.gridLine} !important;
         }

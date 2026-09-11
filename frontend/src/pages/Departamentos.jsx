@@ -1,8 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, message, Popconfirm, Space } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, ApartmentOutlined } from '@ant-design/icons';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
+
+/* =========================================
+   PALETA DE CORES (Variada, sem verdes)
+========================================= */
+const paletaPastelSuave = [
+  "#FFF6DF", // Creme
+  "#F9EBCF", // Bege
+  "#F3DDB5", // Areia
+  "#EBD3A9", // Ocre claro
+  "#F8D8C2", // Pêssego
+  "#F2C6B5", // Salmão claro
+  "#F2D5D5", // Rosa claro
+  "#EBD9E8", // Lilás claro
+  "#DED7ED", // Roxo pastel
+  "#D4DDF0", // Azul claro 1
+  "#C9DFED", // Azul claro 2
+  "#C4DDE3", // Azul claro 3
+  "#B3E5FC", // AZUL NOVO (substituiu o verde)
+  "#BBDEFB", // AZUL NOVO (substituiu o verde)
+  "#D0E8F2", // AZUL NOVO (substituiu o verde)
+  "#E2E1DC"  // Cinza claro
+];
 
 /* =========================================
    ESTILOS GERAIS
@@ -39,6 +61,15 @@ export default function Departamentos() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // MAPEAMENTO DE CORES PARA OS DEPARTAMENTOS
+  const departamentoCoresMap = useMemo(() => {
+    const map = {};
+    departamentos.forEach((dep, index) => {
+      map[dep.id] = paletaPastelSuave[index % paletaPastelSuave.length];
+    });
+    return map;
+  }, [departamentos]);
 
   const save = async () => {
     try {
@@ -102,8 +133,54 @@ export default function Departamentos() {
         bordered
         pagination={{ pageSize: 6 }}
         columns={[
-          { title: 'Departamento', dataIndex: 'nome', onHeaderCell: () => ({ style: headerCellStyle }), render: (t) => <div style={{ padding: '8px 16px', fontSize: 16, fontWeight: 600 }}>{t}</div> },
-          { title: 'Sigla', dataIndex: 'sigla', align: 'center', onHeaderCell: () => ({ style: headerCellStyle }), render: (t) => <div style={{ padding: '8px 16px', fontSize: 16 }}>{t}</div> },
+          { 
+            title: 'Departamento', 
+            dataIndex: 'nome', 
+            onHeaderCell: () => ({ style: headerCellStyle }), 
+            render: (text, record) => {
+              const cor = departamentoCoresMap[record.id];
+              return (
+                <div style={{ padding: '8px 16px', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span 
+                    style={{ 
+                      width: 14, 
+                      height: 14, 
+                      borderRadius: '50%', 
+                      backgroundColor: cor, 
+                      display: 'inline-block',
+                      border: '1px solid rgba(0,0,0,0.1)' 
+                    }} 
+                  />
+                  {text}
+                </div>
+              );
+            } 
+          },
+          { 
+            title: 'Sigla', 
+            dataIndex: 'sigla', 
+            align: 'center', 
+            onHeaderCell: () => ({ style: headerCellStyle }), 
+            render: (text, record) => {
+              const cor = departamentoCoresMap[record.id];
+              return (
+                <div style={{ padding: '8px 16px', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ 
+                    backgroundColor: cor, 
+                    padding: '4px 16px', 
+                    borderRadius: '6px', 
+                    fontSize: 15, 
+                    fontWeight: 600, 
+                    color: '#333',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    display: 'inline-block'
+                  }}>
+                    {text}
+                  </div>
+                </div>
+              );
+            } 
+          },
           {
             title: 'Editar', align: 'center', width: 120, onHeaderCell: () => ({ style: headerCellStyle }),
             render: (_, r) => <Button icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setOpen(true); }} />

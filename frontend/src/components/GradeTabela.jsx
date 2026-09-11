@@ -13,6 +13,13 @@ const THEME = {
   separatorColor: "#cbd5e1",
 };
 
+// Paleta pastel suave aplicada aos departamentos
+const paletaPastelSuave = [
+  "#FFF6DF", "#F9EBCF", "#F3DDB5", "#EBD3A9", "#F8D8C2", 
+  "#F2C6B5", "#F2D5D5", "#EBD9E8", "#DED7ED", "#D4DDF0", 
+  "#C9DFED", "#C4DDE3", "#B3E5FC", "#BBDEFB", "#D0E8F2", "#E2E1DC"
+];
+
 const headerStyle = {
   backgroundColor: THEME.bgHeader,
   color: THEME.textWhite,
@@ -40,11 +47,6 @@ const filtroLabelStyle = { fontSize: "11px", fontWeight: 700, color: THEME.prima
 
 export default function GradeTabela() {
   const usuario = getUsuarioLogado();
-  const role = usuario?.role?.toLowerCase();
-
-  const isAdmin = role === "administrador";
-  const canEdit = isAdmin || role === "edicao";
-  const canDelete = isAdmin || role === "edicao";
 
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
@@ -64,6 +66,32 @@ export default function GradeTabela() {
   const [semestreId, setSemestreId] = useState(null);
   const [curriculoId, setCurriculoId] = useState(null);
   const [coordenadorId, setCoordenadorId] = useState(null);
+
+  // ========================================================
+  // LÓGICA DE PERMISSÕES DINÂMICA
+  // ========================================================
+  const canEdit = useMemo(() => {
+    if (!usuario) return false;
+    
+    const role = (usuario.role || "").toLowerCase();
+    
+    // Admin pode editar tudo
+    if (role.includes("admin")) return true;
+
+    // Coordenador só edita se for o dono do curso selecionado
+    if (role.includes("coordenador") && cursoId) {
+      const cursoSelecionado = cursos.find(c => Number(c.id) === Number(cursoId));
+      if (cursoSelecionado && Number(cursoSelecionado.coordenador_id) === Number(usuario.pessoa_id)) {
+        return true;
+      }
+    }
+
+    // Caso não seja admin nem o coordenador do curso, bloqueia edição
+    return false;
+  }, [usuario, cursoId, cursos]);
+
+  const canDelete = canEdit;
+  // ========================================================
 
   const diasFixos = [
     { id: 1, nome: "SEGUNDA" },
@@ -153,10 +181,8 @@ export default function GradeTabela() {
   // DICIONÁRIO DE DISCIPLINAS APRIMORADO
   const disciplinasMap = useMemo(() => {
     const map = {};
-    // 1. Adiciona as disciplinas que vieram do filtro atual
     disciplinas.forEach((d) => { map[d.id] = d; });
     
-    // 2. Adiciona as disciplinas que vieram salvas no backend (previne erro visual de ID)
     grade.forEach((g) => {
       if (g.disciplina && g.disciplina.id) {
         map[g.disciplina.id] = g.disciplina;
@@ -165,6 +191,16 @@ export default function GradeTabela() {
     
     return map;
   }, [disciplinas, grade]);
+
+  // HELPER DE COR DOS DEPARTAMENTOS UTILIZANDO A PALETA PASTEL SUAVE
+  const getDepartamentoCor = (depId) => {
+    if (!depId) return null;
+    const dep = departamentos.find((d) => Number(d.id) === Number(depId));
+    if (dep?.cor) return dep.cor;
+    if (dep?.cor_hex) return dep.cor_hex;
+    if (dep?.color) return dep.color;
+    return paletaPastelSuave[Number(depId) % paletaPastelSuave.length];
+  };
 
   const updateSlot = (horarioId, diaId, field, value) => {
     if (!canEdit) return;
@@ -336,8 +372,23 @@ export default function GradeTabela() {
       onHeaderCell: () => ({ style: { ...headerStyle, borderRight: `1px solid ${THEME.separatorColor}` } }),
       render: (_, record) => {
         const item = gradeMap[`${record.id}-${dia.id}`] || { horario_id: record.id, dia_semana_id: dia.id };
+        const depCor = getDepartamentoCor(item.departamento_id);
+
         return (
-          <div style={{ padding: "8px 5px", display: "flex", flexDirection: "column", gap: 4, minHeight: 145, backgroundColor: item.disciplina_id ? "#fff" : "transparent", borderRight: `1px solid ${THEME.separatorColor}`, borderBottom: `1px solid ${THEME.separatorColor}` }}>
+          <div
+            style={{
+              padding: "8px 5px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              minHeight: 145,
+              backgroundColor: item.disciplina_id ? (depCor ? `${depCor}25` : "#fff") : "transparent",
+              borderLeft: depCor ? `4px solid ${depCor}` : "none",
+              borderRight: `1px solid ${THEME.separatorColor}`,
+              borderBottom: `1px solid ${THEME.separatorColor}`,
+              transition: "all 0.2s ease"
+            }}
+          >
             <Select
               size="middle" allowClear showSearch optionFilterProp="label" placeholder="Disciplina"
               value={item.disciplina_id ? Number(item.disciplina_id) : null}
@@ -379,7 +430,27 @@ export default function GradeTabela() {
                   disabled={!canEdit}
                   onChange={(v) => updateSlot(record.id, dia.id, "departamento_id", v)}
                   style={{ width: "100%", fontSize: "12px" }}
-                  options={departamentos.map((d) => ({ value: Number(d.id), label: `${d.sigla || ''} - ${d.nome}` }))}
+                  options={departamentos.map((d) => {
+                    const color = getDepartamentoCor(d.id);
+                    return {
+                      value: Number(d.id),
+                      label: (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              backgroundColor: color,
+                              display: "inline-block",
+                              flexShrink: 0
+                            }}
+                          />
+                          <span>{`${d.sigla || ''} - ${d.nome}`}</span>
+                        </div>
+                      )
+                    };
+                  })}
                 />
               </>
             )}
@@ -420,6 +491,8 @@ export default function GradeTabela() {
       }}
     >
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "12px", gap: "12px" }}>
+        
+
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
