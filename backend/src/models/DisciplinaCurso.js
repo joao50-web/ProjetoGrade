@@ -4,15 +4,22 @@ const sequelize = require('../config/database');
 const DisciplinaCurso = sequelize.define(
   'tb_disciplina_curso',
   {
+    // 1. NOVA CHAVE PRIMÁRIA ADICIONADA:
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false
+    },
+    // 2. PRIMARY KEY REMOVIDA DE CURSO E DISCIPLINA:
     curso_id: {
       type: DataTypes.INTEGER,
-      primaryKey: true
+      allowNull: false
     },
     disciplina_id: {
       type: DataTypes.INTEGER,
-      primaryKey: true
+      allowNull: false
     },
-    // NOVAS COLUNAS ADICIONADAS ABAIXO:
     semestre_id: {
       type: DataTypes.INTEGER,
       allowNull: true

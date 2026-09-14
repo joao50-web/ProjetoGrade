@@ -86,14 +86,16 @@ Curso.belongsToMany(Disciplina, {
   foreignKey: "curso_id",
   otherKey: "disciplina_id",
   as: "disciplinas",
+  uniqueKey: false // <-- ADICIONADO AQUI
 });
+
 Disciplina.belongsToMany(Curso, {
   through: DisciplinaCurso,
   foreignKey: "disciplina_id",
   otherKey: "curso_id",
   as: "cursos",
+  uniqueKey: false // <-- ADICIONADO AQUI
 });
-
 // Disciplina ↔ Pessoa (N:N)
 Disciplina.belongsToMany(Pessoa, {
   through: DisciplinaPessoa,

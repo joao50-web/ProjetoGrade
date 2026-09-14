@@ -13,7 +13,6 @@ const THEME = {
   separatorColor: "#cbd5e1",
 };
 
-// Paleta pastel suave aplicada aos departamentos
 const paletaPastelSuave = [
   "#FFF6DF", "#F9EBCF", "#F3DDB5", "#EBD3A9", "#F8D8C2", 
   "#F2C6B5", "#F2D5D5", "#EBD9E8", "#DED7ED", "#D4DDF0", 
@@ -67,31 +66,22 @@ export default function GradeTabela() {
   const [curriculoId, setCurriculoId] = useState(null);
   const [coordenadorId, setCoordenadorId] = useState(null);
 
-  // ========================================================
-  // LÓGICA DE PERMISSÕES DINÂMICA
-  // ========================================================
   const canEdit = useMemo(() => {
     if (!usuario) return false;
-    
     const role = (usuario.role || "").toLowerCase();
     
-    // Admin pode editar tudo
-    if (role.includes("admin")) return true;
+    if (role.includes("admin") || role.includes("edicao") || role.includes("editor")) return true;
 
-    // Coordenador só edita se for o dono do curso selecionado
     if (role.includes("coordenador") && cursoId) {
       const cursoSelecionado = cursos.find(c => Number(c.id) === Number(cursoId));
       if (cursoSelecionado && Number(cursoSelecionado.coordenador_id) === Number(usuario.pessoa_id)) {
         return true;
       }
     }
-
-    // Caso não seja admin nem o coordenador do curso, bloqueia edição
     return false;
   }, [usuario, cursoId, cursos]);
 
   const canDelete = canEdit;
-  // ========================================================
 
   const diasFixos = [
     { id: 1, nome: "SEGUNDA" },
@@ -130,6 +120,7 @@ export default function GradeTabela() {
     }
   };
 
+  // Carrega disciplinas quando curso, semestre ou currículo mudam
   useEffect(() => {
     if (!cursoId || !semestreId) {
       setDisciplinas([]);
@@ -146,6 +137,7 @@ export default function GradeTabela() {
       .catch(() => setDisciplinas([]));
   }, [cursoId, semestreId, curriculoId]); 
 
+  // Carrega a grade horária ao preencher todos os filtros obrigatórios
   useEffect(() => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); return; }
     loadGrade();
@@ -163,8 +155,16 @@ export default function GradeTabela() {
       });
       setGrade(response.data || []);
 
+      // Atualiza o coordenador com base nos dados salvos ou no próprio cadastro do curso
       if (response.data?.length > 0 && response.data[0].coordenador_id) {
         setCoordenadorId(Number(response.data[0].coordenador_id));
+      } else {
+        const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
+        if (cursoSelecionado && cursoSelecionado.coordenador_id) {
+          setCoordenadorId(Number(cursoSelecionado.coordenador_id));
+        } else {
+          setCoordenadorId(null);
+        }
       }
     } catch {
       setGrade([]);
@@ -178,7 +178,6 @@ export default function GradeTabela() {
     return map;
   }, [grade]);
 
-  // DICIONÁRIO DE DISCIPLINAS APRIMORADO
   const disciplinasMap = useMemo(() => {
     const map = {};
     disciplinas.forEach((d) => { map[d.id] = d; });
@@ -188,11 +187,9 @@ export default function GradeTabela() {
         map[g.disciplina.id] = g.disciplina;
       }
     });
-    
     return map;
   }, [disciplinas, grade]);
 
-  // HELPER DE COR DOS DEPARTAMENTOS UTILIZANDO A PALETA PASTEL SUAVE
   const getDepartamentoCor = (depId) => {
     if (!depId) return null;
     const dep = departamentos.find((d) => Number(d.id) === Number(depId));
@@ -213,19 +210,18 @@ export default function GradeTabela() {
       let novoSlot = exists
         ? { ...exists, [field]: value }
         : {
-          horario_id: horarioId,
-          dia_semana_id: diaId,
-          disciplina_id: null,
-          professor_id: null,
-          departamento_id: null,
-          turma: "",
-          [field]: value
-        };
+            horario_id: horarioId,
+            dia_semana_id: diaId,
+            disciplina_id: null,
+            professor_id: null,
+            departamento_id: null,
+            turma: "",
+            [field]: value
+          };
 
       if (field === "disciplina_id") {
         if (value) {
           const disciplinaSelecionada = disciplinasMap[Number(value)];
-
           if (disciplinaSelecionada) {
             const depId = disciplinaSelecionada.departamento_id || disciplinaSelecionada.departamento?.id || null;
             novoSlot.departamento_id = depId ? Number(depId) : null;
@@ -257,14 +253,18 @@ export default function GradeTabela() {
     setHorarios(horariosAtualizados);
   };
 
+  // CORREÇÃO: Limpeza de filtros dependentes e comparação numérica correta
   const handleCursoChange = (value) => {
     setCursoId(value);
-    const cursoSelecionado = cursos.find((c) => c.id === value);
+    const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(value));
     if (cursoSelecionado && cursoSelecionado.coordenador_id) {
       setCoordenadorId(Number(cursoSelecionado.coordenador_id));
     } else {
       setCoordenadorId(null);
     }
+    // Reseta currículo e semestre para evitar buscas com IDs inválidos do curso anterior
+    setCurriculoId(null);
+    setSemestreId(null);
   };
 
   const handleReset = () => {
@@ -492,7 +492,6 @@ export default function GradeTabela() {
     >
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f3f4f6", padding: "12px", gap: "12px" }}>
         
-
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, background: "#fff", borderRadius: "8px", border: `1px solid ${THEME.borderColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>

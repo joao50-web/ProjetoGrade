@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import {
   Table,
@@ -24,7 +24,7 @@ import AppLayout from "../components/AppLayout";
 import { api } from "../services/api";
 
 /* ======================================================
-   ESTILOS INSTITUCIONAIS
+   ESTILOS INSTITUCIONAIS E PALETA DE CORES
 ====================================================== */
 
 const THEME = {
@@ -36,6 +36,26 @@ const THEME = {
   buttonExcel: "#4b5563",
   buttonPDF: "#6b7280",
 };
+
+/* Paleta idêntica à página de departamentos (sem verdes) */
+const paletaPastelSuave = [
+  "#FFF6DF", // Creme
+  "#F9EBCF", // Bege
+  "#F3DDB5", // Areia
+  "#EBD3A9", // Ocre claro
+  "#F8D8C2", // Pêssego
+  "#F2C6B5", // Salmão claro
+  "#F2D5D5", // Rosa claro
+  "#EBD9E8", // Lilás claro
+  "#DED7ED", // Roxo pastel
+  "#D4DDF0", // Azul claro 1
+  "#C9DFED", // Azul claro 2
+  "#C4DDE3", // Azul claro 3
+  "#B3E5FC", // AZUL NOVO
+  "#BBDEFB", // AZUL NOVO
+  "#D0E8F2", // AZUL NOVO
+  "#E2E1DC"  // Cinza claro
+];
 
 const headerCellStyle = {
   backgroundColor: THEME.bgHeader,
@@ -132,6 +152,22 @@ export default function Relatorios() {
       message.error("Erro ao carregar os dados");
     }
   };
+
+  /* =========================================
+     MAPEAMENTO DE CORES PARA OS DEPARTAMENTOS
+  ========================================= */
+  const departamentoCoresMap = useMemo(() => {
+    const map = {};
+    departamentos.forEach((dep, index) => {
+      // Mapeia tanto pelo ID quanto pelo nome para garantir correspondência no relatório
+      const cor = paletaPastelSuave[index % paletaPastelSuave.length];
+      map[dep.id] = cor;
+      if (dep.nome) {
+        map[dep.nome.trim()] = cor;
+      }
+    });
+    return map;
+  }, [departamentos]);
 
   /* =========================================
      FILTRAR CURSOS
@@ -241,32 +277,6 @@ export default function Relatorios() {
   });
 
   /* =========================================
-     TAGS
-  ========================================= */
-
-  const renderTags = (text, bg, color) => {
-    return (
-      <Tag
-        style={{
-          background: bg,
-          color,
-          border: "none",
-          fontSize: 13,
-          fontWeight: 600,
-          padding: "4px 12px",
-          borderRadius: 14,
-          maxWidth: 200,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {text}
-      </Tag>
-    );
-  };
-
-  /* =========================================
      COLUNAS
   ========================================= */
 
@@ -297,7 +307,7 @@ export default function Relatorios() {
               key={i}
               style={{
                 background: "#dbeafe",
-                color: "#000000", // Letra preta nos cursos
+                color: "#000000",
                 border: "none",
                 borderRadius: 14,
                 padding: "4px 10px",
@@ -316,7 +326,30 @@ export default function Relatorios() {
       width: 180,
       align: "center",
       onHeaderCell: () => ({ style: headerCellStyle }),
-      render: (_, r) => renderTags(r.departamento, "#f3f4f6", "#374151"), // Cinza institucional (igual professor)
+      render: (_, r) => {
+        // Busca a cor correspondente ao departamento pelo nome ou id retornado no registro
+        const corDepartamento = departamentoCoresMap[r.departamento_id] || departamentoCoresMap[r.departamento?.trim()] || "#f3f4f6";
+        
+        return (
+          <Tag
+            style={{
+              background: corDepartamento,
+              color: "#1f2937",
+              border: "1px solid rgba(0,0,0,0.08)",
+              fontSize: 13,
+              fontWeight: 600,
+              padding: "4px 12px",
+              borderRadius: 14,
+              maxWidth: 200,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {r.departamento}
+          </Tag>
+        );
+      },
     },
     {
       title: "Professor",

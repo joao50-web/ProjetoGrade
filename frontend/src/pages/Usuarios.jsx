@@ -55,7 +55,7 @@ export default function Usuarios() {
      LOAD
   ========================================= */
 
-  const load = async () => {
+const load = async () => {
     try {
       const [usuariosRes, pessoasRes, hierarquiasRes] = await Promise.all([
         api.get('/usuarios'),
@@ -64,13 +64,24 @@ export default function Usuarios() {
       ]);
       setUsuarios(usuariosRes.data || []);
       setPessoas(pessoasRes.data || []);
-      setHierarquias(hierarquiasRes.data || []);
+
+      // GARANTIA: Remove duplicatas ignorando maiúsculas/minúsculas e espaços
+      const dadosHierarquia = hierarquiasRes.data || [];
+      const hierarquiasUnicas = Array.from(
+        new Map(
+          dadosHierarquia.map(h => [
+            (h.descricao || '').trim().toLowerCase(), 
+            h
+          ])
+        ).values()
+      );
+      setHierarquias(hierarquiasUnicas);
+
     } catch (err) {
       console.error(err);
       message.error('Erro ao carregar dados');
     }
   };
-
   useEffect(() => {
     load();
   }, []);
@@ -122,19 +133,24 @@ export default function Usuarios() {
      EDITAR
   ========================================= */
 
-  const edit = (usuario) => {
+const edit = (usuario) => {
     setEditing(usuario);
+
+    // Busca o ID correto na lista de hierarquias únicas baseado na descrição do usuário
+    const hierarquiaEncontrada = hierarquias.find(
+      h => (h.descricao || '').trim().toLowerCase() === (usuario.hierarquia?.descricao || '').trim().toLowerCase()
+    );
 
     form.setFieldsValue({
       pessoa_id: usuario.pessoa?.id,
       login: usuario.login,
       senha: '',
-      hierarquia_id: usuario.hierarquia?.id
+      hierarquia_id: hierarquiaEncontrada ? hierarquiaEncontrada.id : usuario.hierarquia?.id
     });
 
     setOpen(true);
   };
-
+  
   const closeModal = () => {
     setOpen(false);
     setEditing(null);

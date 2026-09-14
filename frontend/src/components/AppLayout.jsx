@@ -34,6 +34,8 @@ const formatarRole = (role) => {
     case "edicao": return "Editor";
     case "visualizacao": return "Visualizador";
     case "chefe de departamento": return "Chefe de Departamento";
+    case "coordenador": return "Coordenador de Curso";
+    case "coordenador de curso": return "Coordenador de Curso";
     default: return role;
   }
 };
@@ -50,6 +52,7 @@ function AppLayout({ children }) {
   // Lógica de permissões baseada na hierarquia
   const role = usuario?.role?.toLowerCase();
   const isAdmin = role === "administrador";
+  const isCoordenador = role === "coordenador" || role === "coordenador de curso";
 
   const handleLogout = () => {
     localStorage.clear();
@@ -85,7 +88,7 @@ function AppLayout({ children }) {
     setOpenKeys([]);
   }, [location.pathname]);
 
- const menuItems = useMemo(() => {
+  const menuItems = useMemo(() => {
     // 1. Se for Chefe de Departamento, mostra apenas as grades
     if (role === "chefe de departamento") {
       return [
@@ -129,7 +132,7 @@ function AppLayout({ children }) {
       { key: "/grade-semanal", icon: <AppstoreOutlined />, label: "Quadro Semanal" },
       { key: "/relatorios", icon: <BarChartOutlined />, label: "Relatórios" },
     ];
-  }, [isAdmin, role]); // Adicionado o 'role' nas dependências do useMemo
+  }, [isAdmin, role]);
 
   const handleMenuClick = ({ key }) => {
     if (location.pathname !== key) navigate(key);
@@ -139,6 +142,9 @@ function AppLayout({ children }) {
     const latest = keys.find((k) => !openKeys.includes(k));
     setOpenKeys(latest ? [latest] : keys);
   };
+
+  // Extrai o nome do curso caso exista no objeto de usuário
+  const nomeCurso = usuario?.curso?.nome || usuario?.curso;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -152,11 +158,25 @@ function AppLayout({ children }) {
           <img src={logoCentral} alt="titulo" style={{ height: 18 }} />
         </div>
 
-        {/* --- ALTERAÇÃO AQUI: Exibição do cargo ao lado do botão Sair --- */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, letterSpacing: 0.5 }}>
-            {formatarRole(usuario?.role)}
-          </span>
+        {/* --- NOME DO USUÁRIO, CARGO, CURSO E BOTÃO SAIR --- */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1.2 }}>
+            <span style={{ color: "#ffffff", fontSize: 12, fontWeight: 600 }}>
+              {usuario?.nome || usuario?.username || "Usuário"}
+            </span>
+            
+            <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>
+              {formatarRole(usuario?.role)}
+            </span>
+
+            {/* Condicional para exibir o curso se for coordenador */}
+            {isCoordenador && nomeCurso && (
+              <span style={{ color: "#93c5fd", fontSize: 10, fontWeight: 500, marginTop: 2 }}>
+                {nomeCurso}
+              </span>
+            )}
+          </div>
+
           <Button size="small" icon={<LogoutOutlined />} onClick={handleLogout} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 6, height: 26, fontSize: 12 }}>
             Sair
           </Button>

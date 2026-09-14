@@ -14,15 +14,17 @@ const {
 } = require("../models");
 
 /* ======================================================
-   FUNÇÃO AUXILIAR DE PERMISSÃO DE EDIÇÃO
+   FUNÇÃO AUXILIAR DE PERMISSÃO DE EDIÇÃO (CORRIGIDA)
 ====================================================== */
 const verificarPermissaoEdicao = async (usuario, curso_id) => {
   if (!usuario) return false;
 
   const role = (usuario.role || "").toLowerCase();
 
-  // Admin pode editar qualquer curso
-  if (role.includes("admin")) return true;
+  // Admin e Editor podem editar qualquer curso/grade
+  if (role.includes("admin") || role.includes("edicao") || role.includes("editor")) {
+    return true;
+  }
 
   // Se for coordenador, verifica se é o coordenador deste curso específico
   if (role.includes("coordenador")) {

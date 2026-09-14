@@ -2,7 +2,7 @@ import { Layout, Button } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-// IMPORTAÇÃO NOVA PARA PEGAR O USUÁRIO LOGADO AQUI TAMBÉM
+// IMPORTAÇÃO PARA PEGAR O USUÁRIO LOGADO
 import { getUsuarioLogado } from "../services/api";
 
 import logoBranco from "../imagens/logo_branco.png";
@@ -67,11 +67,17 @@ export default function HomeLayout({ children }) {
           />
         </div>
 
-        {/* --- ALTERAÇÃO AQUI: Perfil + Botão de Sair agrupados --- */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, letterSpacing: 0.5 }}>
-            {formatarRole(usuario?.role)}
-          </span>
+        {/* --- NOME DO USUÁRIO, CARGO E BOTÃO SAIR --- */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1.2 }}>
+            <span style={{ color: "#ffffff", fontSize: 12, fontWeight: 600 }}>
+              {usuario?.nome || usuario?.username || "Usuário"}
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 10 }}>
+              {formatarRole(usuario?.role)}
+            </span>
+          </div>
+
           <Button
             size="small"
             icon={<LogoutOutlined />}

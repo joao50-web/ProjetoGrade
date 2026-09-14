@@ -42,7 +42,19 @@ export default function Pessoas() {
         api.get('/cargos')
       ]);
       setPessoas(pessoasRes.data || []);
-      setCargos(cargosRes.data || []);
+
+      // GARANTIA: Remove cargos duplicados ignorando maiúsculas/minúsculas e espaços
+      const dadosCargo = cargosRes.data || [];
+      const cargosUnicos = Array.from(
+        new Map(
+          dadosCargo.map(c => [
+            (c.descricao || '').trim().toLowerCase(),
+            c
+          ])
+        ).values()
+      );
+      setCargos(cargosUnicos);
+
     } catch (err) {
       console.error(err);
       message.error('Erro ao carregar dados');
@@ -108,10 +120,15 @@ export default function Pessoas() {
   const edit = (pessoa) => {
     setEditing(pessoa);
 
+    // Busca o ID correto na lista de cargos únicos baseado na descrição
+    const cargoEncontrado = cargos.find(
+      c => (c.descricao || '').trim().toLowerCase() === (pessoa.cargo?.descricao || '').trim().toLowerCase()
+    );
+
     form.setFieldsValue({
       nome: pessoa.nome,
       email: pessoa.email || undefined,
-      cargo_id: pessoa.cargo?.id
+      cargo_id: cargoEncontrado ? cargoEncontrado.id : pessoa.cargo?.id
     });
 
     setOpen(true);
@@ -123,8 +140,9 @@ export default function Pessoas() {
     form.resetFields();
   };
 
+  // Filtro atualizado para buscar apenas por nome e email
   const filtered = pessoas.filter(p =>
-    [p.nome, p.email, p.cargo?.descricao]
+    [p.nome, p.email]
       .some(v => v?.toLowerCase().includes(search.toLowerCase()))
   );
 
