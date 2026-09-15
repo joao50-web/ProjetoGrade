@@ -14,7 +14,7 @@ const {
 } = require("../models");
 
 /* ======================================================
-   FUNÇÃO AUXILIAR DE PERMISSÃO DE EDIÇÃO (CORRIGIDA)
+   FUNÇÃO AUXILIAR DE PERMISSÃO DE EDIÇÃO
 ====================================================== */
 const verificarPermissaoEdicao = async (usuario, curso_id) => {
   if (!usuario) return false;
@@ -39,7 +39,7 @@ const verificarPermissaoEdicao = async (usuario, curso_id) => {
 };
 
 /* ======================================================
-   BUSCAR GRADE (Livre para visualização de Coordenadores)
+   BUSCAR GRADE (Livre para visualização)
 ====================================================== */
 exports.findByContext = async (req, res) => {
   try {
@@ -51,8 +51,8 @@ exports.findByContext = async (req, res) => {
     const where = {};
     const usuario = req.user;
 
-    // Se for coordenador (e não admin), garantimos que se ele não mandou curso ou mandou um inválido, 
-    // pegamos o curso dele para evitar tela vazia ou erro.
+    // Se for coordenador (e não admin), garante que se não mandou curso ou mandou um inválido, 
+    // pega o curso dele para evitar tela vazia ou erro.
     if (usuario) {
       const role = (usuario.role || "").toLowerCase();
       const pessoaId = Number(usuario.pessoa_id || usuario.id);
@@ -64,7 +64,6 @@ exports.findByContext = async (req, res) => {
         });
         const idsCursosCoordenador = cursosDoCoordenador.map((c) => c.id);
 
-        // Se o curso solicitado não foi passado ou não pertence a ele, ajusta para o primeiro curso dele (se houver)
         if ((!curso_id || curso_id === "null" || curso_id === "undefined" || !idsCursosCoordenador.includes(Number(curso_id))) && idsCursosCoordenador.length > 0) {
           curso_id = idsCursosCoordenador[0];
         }
@@ -108,6 +107,7 @@ exports.findByContext = async (req, res) => {
       order: [
         ["dia_semana_id", "ASC"],
         ["horario_id", "ASC"],
+        ["id", "ASC"],
       ],
     });
 
@@ -148,7 +148,7 @@ exports.findByContext = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR GRADE (Protegido por permissão de edição)
+   SALVAR GRADE (Suporta múltiplas disciplinas por slot)
 ====================================================== */
 exports.saveGrade = async (req, res) => {
   const { contexto, slots } = req.body;
@@ -167,10 +167,12 @@ exports.saveGrade = async (req, res) => {
     return res.status(403).json({ error: "Acesso negado: Você só pode editar a grade do seu próprio curso." });
   }
 
+  // Permite múltiplos registros no mesmo dia e horário.
+  // A chave do Map inclui disciplina_id e turma para evitar apenas duplicatas idênticas exatas.
   const mapa = new Map();
   slots.forEach((slot) => {
     if (slot.disciplina_id && slot.horario_id && slot.dia_semana_id) {
-      const chave = `${slot.horario_id}-${slot.dia_semana_id}`;
+      const chave = `${slot.horario_id}-${slot.dia_semana_id}-${slot.disciplina_id}-${slot.turma || ''}-${slot.professor_id || ''}`;
       mapa.set(chave, slot);
     }
   });
@@ -179,16 +181,25 @@ exports.saveGrade = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
+    // Apaga a grade anterior deste contexto
     await GradeHoraria.destroy({
       where: { curso_id, ano_id, semestre_id, curriculo_id },
       transaction,
     });
 
+    // Insere todos os slots válidos (incluindo disciplinas em paralelo)
     const registros = slotsValidos.map((slot) => ({
-      curso_id, ano_id, semestre_id, curriculo_id,
-      coordenador_id: coordenador_id || null, professor_id: slot.professor_id || null,
-      departamento_id: slot.departamento_id || null, horario_id: slot.horario_id,
-      dia_semana_id: slot.dia_semana_id, disciplina_id: slot.disciplina_id, turma: slot.turma || null,
+      curso_id,
+      ano_id,
+      semestre_id,
+      curriculo_id,
+      coordenador_id: coordenador_id || null,
+      professor_id: slot.professor_id || null,
+      departamento_id: slot.departamento_id || null,
+      horario_id: slot.horario_id,
+      dia_semana_id: slot.dia_semana_id,
+      disciplina_id: slot.disciplina_id,
+      turma: slot.turma || null,
     }));
 
     if (registros.length > 0) {
@@ -205,7 +216,7 @@ exports.saveGrade = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR SLOT (Protegido por permissão de edição)
+   SALVAR SLOT INDIVIDUAL
 ====================================================== */
 exports.saveSlot = async (req, res) => {
   try {
@@ -224,9 +235,17 @@ exports.saveSlot = async (req, res) => {
     }
 
     const registro = await GradeHoraria.create({
-      curso_id, coordenador_id: coordenador_id || null, professor_id: professor_id || null,
-      departamento_id: departamento_id || null, ano_id, semestre_id, curriculo_id, 
-      horario_id, dia_semana_id, disciplina_id: disciplina_id || null, turma: turma || null,
+      curso_id,
+      coordenador_id: coordenador_id || null,
+      professor_id: professor_id || null,
+      departamento_id: departamento_id || null,
+      ano_id,
+      semestre_id,
+      curriculo_id, 
+      horario_id,
+      dia_semana_id,
+      disciplina_id: disciplina_id || null,
+      turma: turma || null,
     });
 
     return res.json(registro);
@@ -237,7 +256,7 @@ exports.saveSlot = async (req, res) => {
 };
 
 /* ======================================================
-   DELETE GRADE (Protegido por permissão de edição)
+   DELETE GRADE (Exclui a grade inteira do contexto)
 ====================================================== */
 exports.deleteGrade = async (req, res) => {
   try {

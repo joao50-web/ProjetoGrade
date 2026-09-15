@@ -57,11 +57,11 @@ const GradeHoraria = sequelize.define(
   {
     tableName: "tb_grade_horaria", 
     freezeTableName: true,
-    timestamps: true,
-  },
+    timestamps: true, // Utiliza `createdAt` e `updatedAt` por padrão
+  }
 );
 
-// Mapeamento das chaves estrangeiras (Sem o model antigo de Turma)
+// Mapeamento das associações/relacionamentos
 GradeHoraria.associate = (models) => {
   GradeHoraria.belongsTo(models.Disciplina, {
     foreignKey: "disciplina_id",
