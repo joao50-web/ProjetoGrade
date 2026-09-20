@@ -4,6 +4,15 @@ const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
 
 /* ======================================================
+   GERAR PDF (Posicionado antes de GET / para evitar colisões de rotas)
+====================================================== */
+router.get("/pdf", 
+  authMiddleware, 
+  roleMiddleware(["administrador", "edicao", "visualizacao", "chefe de departamento", "coordenador"]), 
+  controller.gerarPdf
+);
+
+/* ======================================================
    CONSULTA - Admin, Edição, Visualização, Chefe e Coordenador
 ====================================================== */
 router.get("/", 

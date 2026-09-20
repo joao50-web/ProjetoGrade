@@ -1,3 +1,12 @@
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 module.exports = function renderGradeHTML({
   universidade,
   curso,
@@ -5,399 +14,404 @@ module.exports = function renderGradeHTML({
   coordenador,
   anoLetivo,
   semestres,
+  turmaGrade,
   coresDepartamentos = {},
 }) {
-  const HORARIOS = [
-    "08:00-08:50",
-    "08:50-09:40",
-    "09:40-10:30",
-    "10:30-11:20",
-    "11:20-12:10",
-    "13:20-14:10",
-    "14:10-15:00",
-    "15:00-15:50",
-    "15:50-16:40",
-    "16:40-17:30",
-    "17:30-18:20",
-    "18:20-19:10",
-    "19:10-20:00",
-    "20:00-20:50",
-    "20:50-21:40",
-    "21:40-22:30",
-  ];
-
-  // Paleta Pastel Suave
   const PALETA_CORES = [
-    "#FFF6DF", // Creme
-    "#F9EBCF", // Bege
-    "#F3DDB5", // Areia
-    "#EBD3A9", // Ocre claro
-    "#F8D8C2", // Pêssego
-    "#F2C6B5", // Salmão claro
-    "#F2D5D5", // Rosa claro
-    "#EBD9E8", // Lilás claro
-    "#DED7ED", // Roxo pastel
-    "#D4DDF0", // Azul claro 1
-    "#C9DFED", // Azul claro 2
-    "#C4DDE3", // Azul claro 3
-    "#B3E5FC", // Azul pastel 4
-    "#BBDEFB", // Azul pastel 5
-    "#D0E8F2", // Azul pastel 6
-    "#E2E1DC", // Cinza claro
+    "#dcfce7", "#dbeafe", "#fae8ff", "#fef3c7", "#fee2e2",
+    "#ede9fe", "#e0f2fe", "#d1fae5", "#fce7f3", "#ffedd5",
   ];
 
-  // Função para obter uma cor pastel consistente por departamento
-  function obterCorPorDepartamento(dep) {
-    if (!dep) return "#E2E1DC";
+  const diasPadrao = [
+    "2ª feira", "3ª feira", "4ª feira",
+    "5ª feira", "6ª feira", "Sábado",
+  ];
+
+  const obterCorPorDepartamento = (departamento) => {
+    if (!departamento) return "#f1f5f9";
+
+    const chave = String(departamento).trim();
+    if (coresDepartamentos && coresDepartamentos[chave]) {
+      return coresDepartamentos[chave];
+    }
+
     let hash = 0;
-    for (let i = 0; i < dep.length; i++) {
-      hash = dep.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % PALETA_CORES.length;
-    return PALETA_CORES[index];
-  }
-
-  // Obter a cor da célula (da propriedade ou calculada)
-  function getCorCelula(celula) {
-    if (!celula) return "transparent";
-    if (celula.cor) return celula.cor;
-    if (celula.corFundo) return celula.corFundo;
-    if (celula.corDepartamento) return celula.corDepartamento;
-    if (celula.departamentoCor) return celula.departamentoCor;
-    if (celula.backgroundColor) return celula.backgroundColor;
-    if (celula.bg) return celula.bg;
-
-    const dep = celula.departamento;
-    if (dep && coresDepartamentos && coresDepartamentos[dep]) {
-      return coresDepartamentos[dep];
+    for (let i = 0; i < chave.length; i += 1) {
+      hash = chave.charCodeAt(i) + ((hash << 5) - hash);
     }
 
-    if (dep) {
-      return obterCorPorDepartamento(dep);
-    }
+    return PALETA_CORES[Math.abs(hash) % PALETA_CORES.length];
+  };
 
-    return "#E2E1DC";
-  }
+  const normalizarCelula = (celula) => {
+    if (Array.isArray(celula)) {
+      return celula.flat(Infinity).filter((item) => item && typeof item === "object");
+    }
+    if (celula && typeof celula === "object") return [celula];
+    return [];
+  };
+
+  const temDisciplina = (celula) => {
+    return normalizarCelula(celula).some((disciplina) => (
+      disciplina.nome ||
+      disciplina.codigo ||
+      disciplina.professor ||
+      disciplina.departamento ||
+      disciplina.turma
+    ));
+  };
+
+  const renderDisciplina = (disciplina) => {
+    const departamento = disciplina.departamento || "";
+    const fundo = obterCorPorDepartamento(departamento);
+    const codigo = disciplina.codigo || "";
+    const nome = disciplina.nome || "";
+    const carga = disciplina.cargaHoraria || disciplina.carga_horaria || "";
+    const professor = disciplina.professor || "";
+    const turma = disciplina.turma || "";
+
+    const temHeader = departamento || codigo || turma;
+
+    return `
+      <div class="disciplina-item" style="background-color: ${escapeHtml(fundo)};">
+        ${temHeader ? `
+        <div class="disciplina-header">
+          ${departamento ? `<span class="tag-moderna">${escapeHtml(departamento)}</span>` : ""}
+          ${codigo ? `<span class="tag-moderna">${escapeHtml(codigo)}</span>` : ""}
+          ${turma ? `<span class="tag-moderna">T.${escapeHtml(turma)}</span>` : ""}
+        </div>
+        ` : ""}
+        
+        ${nome ? `
+        <div class="disciplina-nome">
+          ${escapeHtml(nome)}${carga ? ` <span class="disciplina-carga">(${escapeHtml(carga)}h)</span>` : ""}
+        </div>
+        ` : ""}
+        
+        ${professor ? `
+        <div class="disciplina-professor">Prof. ${escapeHtml(professor)}</div>
+        ` : ""}
+      </div>
+    `;
+  };
+
+  const renderSemestre = (semestre) => {
+    const linhas = Array.isArray(semestre?.linhas) ? semestre.linhas : [];
+    const dias = Array.isArray(semestre?.dias) && semestre.dias.length
+      ? semestre.dias
+      : diasPadrao;
+
+    const linhasComAula = linhas.filter((linha) => (
+      Array.isArray(linha?.celulas) && linha.celulas.some(temDisciplina)
+    ));
+
+    const linhasRenderizadas = linhasComAula.length > 0
+      ? linhasComAula
+      : [{ horario: "", celulas: dias.map(() => []) }];
+
+    return `
+      <section class="semester">
+        <table class="grade-table">
+          <colgroup>
+            <col class="coluna-horario" />
+            ${dias.map(() => "<col />").join("")}
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="horario-th">Horário</th>
+              ${dias.map((dia) => `<th>${escapeHtml(dia)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${linhasRenderizadas.map((linha) => `
+              <tr>
+                <td class="horario">
+                  <div class="horario-conteudo">${escapeHtml(linha?.horario || "")}</div>
+                </td>
+                ${dias.map((_, indiceDia) => {
+                  const disciplinas = normalizarCelula(linha?.celulas?.[indiceDia]);
+                  return `
+                    <td class="celula-grade">
+                      <div class="celula-conteudo">
+                        ${disciplinas.map(renderDisciplina).join("")}
+                      </div>
+                    </td>
+                  `;
+                }).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </section>
+    `;
+  };
+
+  const listaSemestres = Array.isArray(semestres) ? semestres : [];
+  const semestreDescricao = listaSemestres
+    .map((semestre) => semestre?.descricao || semestre?.numero || semestre)
+    .filter(Boolean)
+    .join(" / ");
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-<meta charset="utf-8" />
+  <meta charset="utf-8" />
+  <title>Grade Horária</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-<style>
-* {
-  box-sizing: border-box;
-}
+    * { box-sizing: border-box; }
 
-@page {
-  size: A4 landscape;
-  margin: 6mm 6mm;
-}
+    :root {
+      --cor-borda-grade: #475569; 
+      --espessura-grade: 2px;     
+      --cor-borda-bloco: rgba(0, 0, 0, 0.15); 
+    }
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 9.5px;
-  color: #1e293b;
-  margin: 0;
-  padding: 0;
-  padding-bottom: 20px;
-  background-color: #ffffff;
-}
+    @page {
+      size: A4 landscape;
+      margin: 5mm 6mm;
+    }
 
-/* ======================================================
-   HEADER
-====================================================== */
+    html, body {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
 
-.header {
-  text-align: center;
-  margin-top: 4px;
-  margin-bottom: 18px;
-}
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #0f172a;
+      font-size: 9px;
+      -webkit-font-smoothing: antialiased;
+    }
 
-.header h1 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #093e5e;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  line-height: 1.3;
-}
+    .header {
+      text-align: center;
+      margin: 0 0 20px 0;
+      page-break-after: avoid;
+    }
 
-.header h2 {
-  margin: 6px 0 0 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: #475569;
-  letter-spacing: 0.4px;
-}
+    .header h1 {
+      margin: 0;
+      color: #093e5e; 
+      font-size: 13px;
+      line-height: 1.2;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-/* ======================================================
-   INFO
-====================================================== */
+    .header h2 {
+      margin: 8px 0 0 0;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-.info {
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin-bottom: 20px;
-  background-color: #f8fafc;
-}
+    .info {
+      width: 100%;
+      margin: 0 0 22px 0;
+      padding: 6px 8px;
+      border: var(--espessura-grade) solid var(--cor-borda-grade); 
+      border-radius: 6px;
+      background: #f8fafc;
+      page-break-inside: avoid;
+    }
 
-.info-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: none;
-  font-size: 9px;
-}
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
 
-.info-table td {
-  border: none;
-  padding: 2px 6px;
-  text-align: left;
-  color: #334155;
-}
+    .info-table td {
+      width: 16.66%;
+      padding: 2px 4px;
+      color: #334155;
+      font-size: 9px;
+      line-height: 1.2;
+      text-align: left;
+    }
 
-.info-table strong {
-  color: #093e5e;
-}
+    .info-table strong { 
+      color: #093e5e; 
+      font-weight: 600;
+    }
 
-/* ======================================================
-   SEMESTRE
-====================================================== */
+    .semester {
+      width: 100%;
+      margin: 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
 
-.semester {
-  margin-bottom: 16px;
-  page-break-inside: avoid;
-}
+    .grade-table {
+      width: 100%;
+      border: var(--espessura-grade) solid var(--cor-borda-grade);
+      border-collapse: collapse;
+      table-layout: fixed;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
 
-/* ======================================================
-   TABELA (LINHAS FINAS E PRETAS)
-====================================================== */
+    .grade-table thead { display: table-header-group; }
+    .grade-table tr { page-break-inside: avoid; break-inside: avoid; }
 
-table.grade-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  border: 1px solid #000000;
-}
+    .grade-table th,
+    .grade-table td {
+      border: var(--espessura-grade) solid var(--cor-borda-grade);
+      padding: 0;
+      vertical-align: top;
+    }
 
-table.grade-table th,
-table.grade-table td {
-  border: 1px solid #000000;
-  text-align: center;
-  padding: 0;
-  overflow: hidden;
-}
+    .grade-table th {
+      height: 20px;
+      padding: 3px 2px;
+      background: #093e5e; 
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      vertical-align: middle;
+      text-align: center;
+    }
 
-table.grade-table thead th {
-  background: #093e5e;
-  color: #ffffff;
-  font-size: 8.5px;
-  font-weight: 600;
-  padding: 5px 2px;
-}
+    .coluna-horario { width: 75px; }
+    .horario-th { width: 75px; }
 
-/* ======================================================
-   HORÁRIO
-====================================================== */
+    .horario {
+      width: 75px;
+      background: #093e5e;
+      color: #ffffff;
+      font-size: 8.5px;
+      font-weight: 700;
+      text-align: center;
+      vertical-align: middle;
+      height: 1px; 
+      padding: 0;
+    }
 
-th.horario,
-td.horario {
-  width: 65px;
-  min-width: 65px;
-  max-width: 65px;
-  background: #093e5e;
-  color: #ffffff;
-  font-weight: bold;
-  font-size: 8px;
-  vertical-align: middle;
-  text-align: center;
-  padding: 2px 1px;
-}
+    .horario-conteudo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 6px 4px;
+      line-height: 1.3;
+    }
 
-/* ======================================================
-   DISCIPLINA
-====================================================== */
+    .celula-grade {
+      background: #ffffff;
+      height: 1px; 
+    }
 
-td.disciplina {
-  height: 40px; 
-  min-height: 40px;
-  max-height: 40px;
-  vertical-align: middle; 
-  line-height: 1.15;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  padding: 3px 2px;
-  background-color: #ffffff;
-}
+    .celula-conteudo {
+      display: flex;
+      flex-direction: column;
+      justify-content: stretch;
+      width: 100%;
+      height: 100%;
+      padding: 3px; 
+      gap: 3px;
+    }
 
-.celula-content {
-  text-align: center;
-}
+    .disciplina-item {
+      flex: 1; 
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      margin: 0;
+      padding: 5px 6px;
+      text-align: left;
+      white-space: normal;
+      border: 1px solid var(--cor-borda-bloco); 
+      border-radius: 4px; 
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); 
+    }
 
-/* ======================================================
-   TEXTO
-====================================================== */
+    .disciplina-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-bottom: 4px;
+    }
 
-.linha1 {
-  font-size: 8.2px;
-  color: #0f172a;
-  margin-bottom: 2px;
-}
+    .tag-moderna {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 4px;
+      padding: 1px 4px;
+      color: #1e293b;
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
 
-.linha2 {
-  font-size: 8px;
-  color: #1e293b;
-  margin-bottom: 1px;
-}
+    .disciplina-nome {
+      color: #0f172a;
+      font-size: 8.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
 
-.linha3 {
-  font-size: 7.5px;
-  color: #334155;
-  font-weight: 600;
-}
+    .disciplina-carga {
+      color: #475569;
+      font-weight: 500;
+      font-size: 8px;
+    }
 
-/* ======================================================
-   FOOTER
-====================================================== */
+    .disciplina-professor {
+      color: #475569;
+      font-size: 7.5px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
 
-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-size: 7.5px;
-  color: #64748b;
-  padding-bottom: 2px;
-  background-color: #ffffff;
-}
-
-</style>
+    footer {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding-top: 4px;
+      background: #ffffff;
+      color: #94a3b8;
+      font-size: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="header">
+    <h1>${escapeHtml(universidade || "UNIVERSIDADE FEDERAL DE CIÊNCIAS DA SAÚDE DE PORTO ALEGRE")}</h1>
+    <h2>Grade Horária</h2>
+  </div>
 
-<div class="header">
-  <h1>${universidade || "Universidade Federal de Ciências da Saúde de Porto Alegre"}</h1>
-  <h2>Grade Horária</h2>
-</div>
-
-<div class="info">
-  <table class="info-table">
-    <tr>
-      <td><strong>Curso:</strong> ${curso || "-"}</td>
-      <td><strong>Currículo:</strong> ${curriculo || "-"}</td>
-      <td><strong>Ano:</strong> ${anoLetivo || "-"}</td>
-      <td><strong>Coord:</strong> ${coordenador || "-"}</td>
-      <td>
-        <strong>Sem:</strong>
-        ${
-          Array.isArray(semestres)
-            ? semestres.map((s) => s.descricao || s.numero || s).join(" / ")
-            : "-"
-        }
-      </td>
-    </tr>
-  </table>
-</div>
-
-${(semestres || [])
-  .map((semestre) => {
-    const horariosComAula = HORARIOS.filter((horario) => {
-      const linha = (semestre.linhas || []).find((l) => l.horario === horario);
-      if (!linha || !linha.celulas) return false;
-      return linha.celulas.some(
-        (celula) =>
-          celula && (celula.nome || celula.codigo || celula.professor || celula.departamento)
-      );
-    });
-
-    return `
-<div class="semester">
-  <table class="grade-table">
-    <thead>
+  <div class="info">
+    <table class="info-table">
       <tr>
-        <th class="horario">Horário</th>
-        ${(semestre.dias || []).map((d) => `<th>${d}</th>`).join("")}
+        <td><strong>Curso:</strong> ${escapeHtml(curso || "-")}</td>
+        <td><strong>Currículo:</strong> ${escapeHtml(curriculo || "-")}</td>
+        <td><strong>Ano:</strong> ${escapeHtml(anoLetivo || "-")}</td>
+        <td><strong>Coordenador:</strong> ${escapeHtml(coordenador || "-")}</td>
+        <td><strong>Semestre:</strong> ${escapeHtml(semestreDescricao || "-")}</td>
+        <td><strong>Turma:</strong> ${escapeHtml(turmaGrade || "-")}</td>
       </tr>
-    </thead>
+    </table>
+  </div>
 
-    <tbody>
-      ${horariosComAula
-        .map((horario) => {
-          const linha = (semestre.linhas || []).find((l) => l.horario === horario);
+  ${listaSemestres.map(renderSemestre).join("")}
 
-          return `
-      <tr>
-        <td class="horario">${horario}</td>
-
-        ${(semestre.dias || [])
-          .map((_, colIndex) => {
-            const celula = linha?.celulas?.[colIndex] || {};
-
-            const disciplinaValida =
-              celula &&
-              (celula.nome ||
-                celula.codigo ||
-                celula.professor ||
-                celula.departamento);
-
-            if (!disciplinaValida) {
-              return `<td class="disciplina"></td>`;
-            }
-
-            const corDep = getCorCelula(celula);
-
-            return `
-        <td class="disciplina" style="background-color: ${corDep};">
-          <div class="celula-content">
-            <div class="linha1">
-              ${celula.departamento ? `<strong>${celula.departamento}</strong>` : ""}
-              ${celula.codigo ? ` (${celula.codigo})` : ""}
-              ${celula.turma ? ` - ${celula.turma}` : ""}
-            </div>
-
-            ${
-              celula.nome
-                ? `<div class="linha2">
-                    ${celula.nome}
-                    ${celula.cargaHoraria ? ` (${celula.cargaHoraria}h)` : ""}
-                  </div>`
-                : ""
-            }
-
-            ${
-              celula.professor
-                ? `<div class="linha3">
-                    ${celula.professor}
-                  </div>`
-                : ""
-            }
-          </div>
-        </td>
-        `;
-          })
-          .join("")}
-
-      </tr>
-      `;
-        })
-        .join("")}
-    </tbody>
-  </table>
-</div>
-`;
-  })
-  .join("")}
-
-<footer>
-  ${universidade || "Universidade Federal de Ciências da Saúde de Porto Alegre"}
-</footer>
-
+  <footer>${escapeHtml(universidade || "Universidade Federal de Ciências da Saúde de Porto Alegre")}</footer>
 </body>
-</html>
-`;
+</html>`;
 };

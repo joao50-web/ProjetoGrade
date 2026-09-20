@@ -4,64 +4,77 @@ const sequelize = require("../config/database");
 const GradeHoraria = sequelize.define(
   "GradeHoraria",
   {
-    id: { 
-      type: DataTypes.INTEGER, 
-      autoIncrement: true, 
-      primaryKey: true 
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
     },
-    curso_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    curso_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    coordenador_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: true 
+    coordenador_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     },
-    disciplina_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: true 
+    disciplina_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     },
-    professor_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: true 
+    professor_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     },
-    departamento_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: true 
+    departamento_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     },
-    horario_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    horario_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    dia_semana_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    dia_semana_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    ano_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    ano_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    semestre_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    semestre_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    curriculo_id: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false 
+    curriculo_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     },
-    turma: { 
-      type: DataTypes.STRING, 
-      allowNull: true 
+    turma: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    turma_grade: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
     },
   },
   {
-    tableName: "tb_grade_horaria", 
+    tableName: "tb_grade_horaria",
     freezeTableName: true,
-    timestamps: true, // Utiliza `createdAt` e `updatedAt` por padrão
+    timestamps: true,
+    indexes: [
+      {
+        name: "idx_grade_contexto",
+        fields: ["curso_id", "ano_id", "semestre_id", "curriculo_id"],
+      },
+      {
+        name: "idx_grade_horario_dia",
+        fields: ["dia_semana_id", "horario_id"],
+      },
+    ],
   }
 );
 
-// Mapeamento das associações/relacionamentos
 GradeHoraria.associate = (models) => {
   GradeHoraria.belongsTo(models.Disciplina, {
     foreignKey: "disciplina_id",
@@ -91,13 +104,13 @@ GradeHoraria.associate = (models) => {
     foreignKey: "semestre_id",
     as: "semestre",
   });
-  GradeHoraria.belongsTo(models.Curso, { 
-    foreignKey: "curso_id", 
-    as: "curso" 
+  GradeHoraria.belongsTo(models.Curso, {
+    foreignKey: "curso_id",
+    as: "curso"
   });
-  GradeHoraria.belongsTo(models.Ano, { 
-    foreignKey: "ano_id", 
-    as: "ano" 
+  GradeHoraria.belongsTo(models.Ano, {
+    foreignKey: "ano_id",
+    as: "ano"
   });
   GradeHoraria.belongsTo(models.Curriculo, {
     foreignKey: "curriculo_id",

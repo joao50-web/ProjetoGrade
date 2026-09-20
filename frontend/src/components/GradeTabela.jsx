@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Table, Select, Input, Button, message, ConfigProvider, Typography, Tooltip, Popconfirm } from "antd";
+import { Table, Select, Input, Button, message, ConfigProvider, Tooltip, Popconfirm } from "antd";
 import { SaveOutlined, FilePdfOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { api, getUsuarioLogado } from "../services/api";
-
-const { Text } = Typography;
 
 const THEME = {
   primary: "#0b3d5c",
   bgHeader: "#0b3d5c",
   textWhite: "#ffffff",
-  gridBorderColor: "#94a3b8", // Bordas visíveis apenas para as linhas e colunas da tabela
+  gridBorderColor: "#94a3b8",
 };
 
 const paletaPastelSuave = [
-  "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", 
+  "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899",
   "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6"
 ];
 
@@ -55,17 +53,19 @@ export default function GradeTabela() {
   const [departamentos, setDepartamentos] = useState([]);
   const [grade, setGrade] = useState([]);
   const [saving, setSaving] = useState(false);
-  
+  const [loadingPDF, setLoadingPDF] = useState(false);
+
   const [cursoId, setCursoId] = useState(null);
   const [anoId, setAnoId] = useState(null);
   const [semestreId, setSemestreId] = useState(null);
   const [curriculoId, setCurriculoId] = useState(null);
   const [coordenadorId, setCoordenadorId] = useState(null);
+  const [turmaGrade, setTurmaGrade] = useState("");
 
   const canEdit = useMemo(() => {
     if (!usuario) return false;
     const role = (usuario.role || "").toLowerCase();
-    
+
     if (role.includes("admin") || role.includes("edicao") || role.includes("editor")) return true;
 
     if (role.includes("coordenador") && cursoId) {
@@ -125,15 +125,15 @@ export default function GradeTabela() {
     api.get(`/cursos/${cursoId}/disciplinas`, {
       params: {
         semestre_id: semestreId,
-        curriculo_id: curriculoId 
+        curriculo_id: curriculoId
       }
     })
       .then((res) => setDisciplinas(res.data || []))
       .catch(() => setDisciplinas([]));
-  }, [cursoId, semestreId, curriculoId]); 
+  }, [cursoId, semestreId, curriculoId]);
 
   useEffect(() => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); return; }
+    if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); setTurmaGrade(""); return; }
     loadGrade();
   }, [cursoId, anoId, semestreId, curriculoId]);
 
@@ -147,20 +147,20 @@ export default function GradeTabela() {
           curriculo_id: curriculoId
         }
       });
-      setGrade(response.data || []);
+      const data = response.data || [];
+      setGrade(data);
 
-      if (response.data?.length > 0 && response.data[0].coordenador_id) {
-        setCoordenadorId(Number(response.data[0].coordenador_id));
+      if (data.length > 0) {
+        if (data[0].coordenador_id) setCoordenadorId(Number(data[0].coordenador_id));
+        setTurmaGrade(data[0].turma_grade || "");
       } else {
         const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
-        if (cursoSelecionado && cursoSelecionado.coordenador_id) {
-          setCoordenadorId(Number(cursoSelecionado.coordenador_id));
-        } else {
-          setCoordenadorId(null);
-        }
+        setCoordenadorId(cursoSelecionado?.coordenador_id ? Number(cursoSelecionado.coordenador_id) : null);
+        setTurmaGrade("");
       }
     } catch {
       setGrade([]);
+      setTurmaGrade("");
       message.error("Erro ao carregar grade");
     }
   };
@@ -178,7 +178,7 @@ export default function GradeTabela() {
   const disciplinasMap = useMemo(() => {
     const map = {};
     disciplinas.forEach((d) => { map[d.id] = d; });
-    
+
     grade.forEach((g) => {
       if (g.disciplina && g.disciplina.id) {
         map[g.disciplina.id] = g.disciplina;
@@ -308,10 +308,11 @@ export default function GradeTabela() {
     }
     setCurriculoId(null);
     setSemestreId(null);
+    setTurmaGrade("");
   };
 
   const handleReset = () => {
-    setCursoId(null); setAnoId(null); setSemestreId(null); setCurriculoId(null); setCoordenadorId(null);
+    setCursoId(null); setAnoId(null); setSemestreId(null); setCurriculoId(null); setCoordenadorId(null); setTurmaGrade("");
     setGrade([]); setDisciplinas([]);
     const horariosResetados = JSON.parse(JSON.stringify(horariosOriginais));
     horariosResetados.sort((a, b) => a.id - b.id);
@@ -322,12 +323,14 @@ export default function GradeTabela() {
   const handleSave = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return message.warning("Selecione os filtros");
 
-    const slots = grade.filter((g) => g.disciplina_id || g.id);
+    const slots = grade
+      .filter((g) => g.horario_id && g.dia_semana_id)
+      .map((g) => ({ ...g, turma_grade: turmaGrade }));
 
     setSaving(true);
     try {
       await api.post("/grade-horaria/save", {
-        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId },
+        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId, turma_grade: turmaGrade },
         slots
       });
       message.success("Grade salva com sucesso");
@@ -348,6 +351,7 @@ export default function GradeTabela() {
         data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId }
       });
       setGrade([]);
+      setTurmaGrade("");
       message.success("Grade excluída");
     } catch {
       message.error("Erro ao excluir");
@@ -356,42 +360,63 @@ export default function GradeTabela() {
 
   const handlePDF = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
-      return message.warning("Selecione todos os filtros superiores antes de gerar o PDF");
+      return message.warning("Selecione os filtros (Curso, Currículo, Ano e Semestre) para gerar o PDF.");
     }
 
+    const pdfWindow = window.open("", "_blank");
+
+    if (!pdfWindow) {
+      return message.error("O navegador bloqueou o PDF. Permita popups para este site.");
+    }
+
+    pdfWindow.document.write(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head><meta charset="UTF-8" /><title>Gerando PDF</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 30px;">
+          Gerando PDF, aguarde...
+        </body>
+      </html>
+    `);
+    pdfWindow.document.close();
+
     try {
-      message.loading({ content: "Gerando documento...", key: "pdfLoading" });
-
-      const coordObj = coordenadores.find(c => Number(c.id) === Number(coordenadorId));
-      const coordenadorNome = coordObj ? coordObj.nome : "-";
-
-      const response = await api.get("/api/relatorio-grade/pdf", {
+      setLoadingPDF(true);
+      const response = await api.get("/grade-horaria/pdf", {
         params: {
-          curso_id: cursoId,
-          ano_id: anoId,
-          semestre_id: semestreId,
-          curriculo_id: curriculoId,
-          coordenador_id: coordenadorId,
-          coordenador_nome: coordenadorNome
+          curso_id: Number(cursoId),
+          ano_id: Number(anoId),
+          semestre_id: Number(semestreId),
+          curriculo_id: Number(curriculoId),
+          coordenador_id: coordenadorId ? Number(coordenadorId) : undefined,
+          turma_grade: turmaGrade || undefined,
         },
-        responseType: "blob"
+        responseType: "blob",
       });
 
-      const file = new Blob([response.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(file);
+      const contentType = String(response.headers?.["content-type"] || "").toLowerCase();
+      const blob = new Blob([response.data], { type: contentType || "application/pdf" });
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.download = `grade_horaria_${cursoId}_${anoId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (!contentType.includes("application/pdf")) {
+        const resposta = await blob.text();
+        console.error("O servidor não retornou PDF:", resposta);
+        throw new Error("A resposta do servidor não é um PDF.");
+      }
 
-      message.success({ content: "PDF gerado com sucesso!", key: "pdfLoading" });
+      if (!blob.size) {
+        throw new Error("O PDF retornado está vazio.");
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      pdfWindow.location.href = url;
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
     } catch (err) {
-      console.error("Erro PDF:", err);
-      message.error({ content: "Erro ao gerar PDF. Certifique-se de que há dados salvos.", key: "pdfLoading" });
+      console.error("Erro ao carregar PDF:", err);
+      pdfWindow.close();
+      message.error("Erro ao gerar PDF. Verifique o console e o backend.");
+    } finally {
+      setLoadingPDF(false);
     }
   };
 
@@ -415,8 +440,8 @@ export default function GradeTabela() {
       onHeaderCell: () => ({ style: headerStyle }),
       render: (_, record) => {
         const cellItems = gradeMap[`${record.id}-${dia.id}`] || [];
-        const displayItems = cellItems.length > 0 
-          ? cellItems 
+        const displayItems = cellItems.length > 0
+          ? cellItems
           : (canEdit ? [{ horario_id: record.id, dia_semana_id: dia.id, disciplina_id: null, turma: "", professor_id: null, departamento_id: null }] : []);
 
         const hasMultiple = displayItems.length > 1;
@@ -428,13 +453,45 @@ export default function GradeTabela() {
               flexDirection: "column",
               width: "100%",
               height: "100%",
-              minHeight: 105,
-              padding: "6px",
-              gap: 5,
+              minHeight: 90,
+              padding: "4px",
+              paddingBottom: canEdit ? "22px" : "4px",
+              gap: 4,
               boxSizing: "border-box",
-              backgroundColor: hasMultiple ? "#f8fafc" : "transparent"
+              backgroundColor: hasMultiple ? "#f8fafc" : "transparent",
+              position: "relative"
             }}
           >
+            {canEdit && (
+              <Tooltip title="Adicionar disciplina simultânea">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<PlusOutlined style={{ fontSize: "10px" }} />}
+                  onClick={() => addSlotItem(record.id, dia.id)}
+                  style={{
+                    position: "absolute",
+                    bottom: 3,
+                    right: 3,
+                    height: 18,
+                    width: 18,
+                    minWidth: 18,
+                    padding: 0,
+                    color: "#64748b",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                    zIndex: 2,
+                    opacity: 0.85
+                  }}
+                />
+              </Tooltip>
+            )}
+
             {displayItems.map((item, idx) => {
               const depCor = getDepartamentoCor(item.departamento_id);
               const disciplinaObj = disciplinasMap[item.disciplina_id];
@@ -444,10 +501,10 @@ export default function GradeTabela() {
                   key={idx}
                   style={{
                     width: "100%",
-                    padding: "5px 6px",
+                    padding: "4px 5px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 4,
+                    gap: 3,
                     backgroundColor: item.disciplina_id ? "#ffffff" : "#fafafa",
                     borderRadius: 4,
                     border: `1px solid ${depCor ? `${depCor}40` : "#e2e8f0"}`,
@@ -457,7 +514,6 @@ export default function GradeTabela() {
                     overflow: "hidden"
                   }}
                 >
-                  {/* Linha 1: Indicador (#1) + Seleção da Disciplina + Popconfirm */}
                   <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
                     {hasMultiple && (
                       <span style={{ fontSize: "10px", fontWeight: 700, color: "#94a3b8", flexShrink: 0 }}>
@@ -480,7 +536,6 @@ export default function GradeTabela() {
                       />
                     </div>
 
-                    {/* Confirmação anti-clique acidental */}
                     {canEdit && (item.disciplina_id || hasMultiple) && (
                       <Popconfirm
                         title="Remover disciplina"
@@ -498,18 +553,15 @@ export default function GradeTabela() {
                             danger
                             size="small"
                             icon={<DeleteOutlined style={{ fontSize: "11px" }} />}
-                            style={{ height: 20, width: 20, padding: 0, flexShrink: 0, opacity: 0.7 }}
+                            style={{ height: 18, width: 18, minWidth: 18, padding: 0, flexShrink: 0, opacity: 0.7 }}
                           />
                         </Tooltip>
                       </Popconfirm>
                     )}
                   </div>
 
-                  {/* Detalhes exibidos apenas ao escolher uma disciplina */}
                   {item.disciplina_id && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-                      
-                      {/* Linha 2: Turma + Carga Horária */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3, width: "100%" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, width: "100%" }}>
                         <Input
                           size="small"
@@ -524,7 +576,7 @@ export default function GradeTabela() {
                           fontWeight: 600,
                           color: "#64748b",
                           backgroundColor: "#f8fafc",
-                          padding: "1px 6px",
+                          padding: "1px 5px",
                           borderRadius: 3,
                           border: "1px solid #e2e8f0",
                           whiteSpace: "nowrap",
@@ -534,7 +586,6 @@ export default function GradeTabela() {
                         </div>
                       </div>
 
-                      {/* Linha 3: Professor */}
                       <div style={{ width: "100%", minWidth: 0 }}>
                         <Select
                           size="small" allowClear showSearch placeholder="Professor..."
@@ -547,7 +598,6 @@ export default function GradeTabela() {
                         />
                       </div>
 
-                      {/* Linha 4: Departamento */}
                       <div style={{ width: "100%", minWidth: 0 }}>
                         <Select
                           size="small" allowClear placeholder="Departamento..."
@@ -584,31 +634,6 @@ export default function GradeTabela() {
                 </div>
               );
             })}
-
-            {/* Botão para adicionar aula simultânea */}
-            {canEdit && (
-              <Button
-                type="text"
-                size="small"
-                block
-                icon={<PlusOutlined style={{ fontSize: "9px" }} />}
-                onClick={() => addSlotItem(record.id, dia.id)}
-                style={{
-                  fontSize: "10px",
-                  height: 20,
-                  color: "#94a3b8",
-                  border: "1px dashed #e2e8f0",
-                  borderRadius: 4,
-                  marginTop: "auto",
-                  padding: "0 4px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                Simultânea
-              </Button>
-            )}
           </div>
         );
       },
@@ -627,7 +652,7 @@ export default function GradeTabela() {
           Table: {
             headerBg: THEME.bgHeader,
             headerColor: THEME.textWhite,
-            borderColor: THEME.gridBorderColor, // Bordas aplicadas unicamente na tabela
+            borderColor: THEME.gridBorderColor,
             cellPaddingInline: 0,
             cellPaddingBlock: 0
           },
@@ -645,8 +670,7 @@ export default function GradeTabela() {
       }}
     >
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f1f5f9", padding: "10px", gap: "10px" }}>
-        
-        {/* Filtros Superiores Limpos (Sem borda destacada) */}
+
         <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 10, background: "#fff", borderRadius: "6px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -655,7 +679,7 @@ export default function GradeTabela() {
                 <span style={filtroLabelStyle}>CURSO</span>
                 <Select
                   size="middle"
-                  value={cursoId ? Number(cursoId) : null}  
+                  value={cursoId ? Number(cursoId) : null}
                   onChange={handleCursoChange}
                   style={{ width: 180 }}
                   options={cursos.map((c) => ({ value: Number(c.id), label: c.nome }))}
@@ -665,18 +689,30 @@ export default function GradeTabela() {
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId ? Number(curriculoId) : null} onChange={setCurriculoId} style={{ width: 160 }} options={curriculos.map((c) => ({ value: Number(c.id), label: c.descricao || c.nome }))} /></div>
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId ? Number(anoId) : null} onChange={setAnoId} style={{ width: 90 }} options={anos.map((a) => ({ value: Number(a.id), label: a.descricao || a.ano }))} /></div>
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId ? Number(semestreId) : null} onChange={setSemestreId} placeholder="Selecione" style={{ width: 140 }} options={semestres.map((s) => ({ value: Number(s.id), label: s.descricao || s.nome }))} /></div>
+              
+              <div style={filtroContainerStyle}>
+                <span style={filtroLabelStyle}>TURMA DA GRADE</span>
+                <Input
+                  size="middle"
+                  value={turmaGrade}
+                  onChange={(e) => setTurmaGrade(e.target.value.toUpperCase())}
+                  disabled={!canEdit}
+                  placeholder="Ex: T1, A"
+                  style={{ width: 120 }}
+                />
+              </div>
+
             </div>
 
             <div style={{ display: "flex", gap: 6 }}>
               {canEdit && <Button size="middle" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ fontWeight: 600 }}>Salvar</Button>}
-              <Button size="middle" icon={<FilePdfOutlined />} onClick={handlePDF}>PDF</Button>
+              <Button size="middle" icon={<FilePdfOutlined />} loading={loadingPDF} onClick={handlePDF}>PDF</Button>
               {canEdit && <Button size="middle" icon={<ReloadOutlined />} onClick={handleReset}>Redefinir</Button>}
               {canDelete && <Button size="middle" danger onClick={handleDeleteGrade}>Excluir</Button>}
             </div>
           </div>
         </div>
 
-        {/* Tabela de Grade Horária com Bordas Marcadas */}
         <div style={{ flex: 1, background: "#fff", borderRadius: "6px", border: `1px solid ${THEME.gridBorderColor}`, overflow: "hidden" }}>
           <Table rowKey={(record) => record.id} dataSource={horarios} columns={columns} pagination={false} bordered size="middle" sticky scroll={{ x: 2000, y: "calc(100vh - 165px)" }} />
         </div>
