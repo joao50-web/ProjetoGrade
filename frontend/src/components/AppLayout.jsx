@@ -143,8 +143,14 @@ function AppLayout({ children }) {
     setOpenKeys(latest ? [latest] : keys);
   };
 
-  // Extrai o nome do curso caso exista no objeto de usuário
-  const nomeCurso = usuario?.curso?.nome || usuario?.curso;
+  // Aceita os formatos mais comuns retornados pela API para o curso do usuário.
+  const nomeCurso = (
+    usuario?.curso?.nome ||
+    usuario?.curso_nome ||
+    usuario?.cursoNome ||
+    usuario?.curso?.descricao ||
+    (typeof usuario?.curso === "string" ? usuario.curso : "")
+  );
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -167,14 +173,14 @@ function AppLayout({ children }) {
             
             <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>
               {formatarRole(usuario?.role)}
+              
+              {/* Adiciona o curso na mesma linha do cargo, se for coordenador */}
+              {isCoordenador && nomeCurso && (
+                <span style={{ color: "#bfdbfe", fontWeight: 500 }}>
+                  {" - " + nomeCurso}
+                </span>
+              )}
             </span>
-
-            {/* Condicional para exibir o curso se for coordenador */}
-            {isCoordenador && nomeCurso && (
-              <span style={{ color: "#93c5fd", fontSize: 10, fontWeight: 500, marginTop: 2 }}>
-                {nomeCurso}
-              </span>
-            )}
           </div>
 
           <Button size="small" icon={<LogoutOutlined />} onClick={handleLogout} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 6, height: 26, fontSize: 12 }}>

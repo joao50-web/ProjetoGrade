@@ -163,14 +163,14 @@ module.exports = function renderGradeHTML({
     * { box-sizing: border-box; }
 
     :root {
-      --cor-borda-grade: #475569; 
-      --espessura-grade: 2px;     
-      --cor-borda-bloco: rgba(0, 0, 0, 0.15); 
+      --cor-borda-grade: #334155; 
+      --espessura-grade: 2px;    
+      --cor-borda-bloco: rgba(0, 0, 0, 0.18); 
     }
 
     @page {
       size: A4 landscape;
-      margin: 5mm 6mm;
+      margin: 4mm 6mm;
     }
 
     html, body {
@@ -183,30 +183,32 @@ module.exports = function renderGradeHTML({
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #0f172a;
-      font-size: 9px;
+      font-size: 8px;
       -webkit-font-smoothing: antialiased;
+      padding: 2mm 0;
     }
 
     .header {
       text-align: center;
-      margin: 0 0 20px 0;
+      margin: 0 0 4px 0;
       page-break-after: avoid;
+      break-after: avoid;
     }
 
     .header h1 {
       margin: 0;
       color: #093e5e; 
-      font-size: 13px;
-      line-height: 1.2;
+      font-size: 11.5px;
+      line-height: 1.1;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .header h2 {
-      margin: 8px 0 0 0;
+      margin: 2px 0 0 0;
       color: #475569;
-      font-size: 11px;
+      font-size: 9.5px;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -214,12 +216,13 @@ module.exports = function renderGradeHTML({
 
     .info {
       width: 100%;
-      margin: 0 0 22px 0;
-      padding: 6px 8px;
+      margin: 0 0 4px 0;
+      padding: 3px 5px;
       border: var(--espessura-grade) solid var(--cor-borda-grade); 
-      border-radius: 6px;
+      border-radius: 4px;
       background: #f8fafc;
       page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .info-table {
@@ -230,10 +233,10 @@ module.exports = function renderGradeHTML({
 
     .info-table td {
       width: 16.66%;
-      padding: 2px 4px;
+      padding: 1px 2px;
       color: #334155;
-      font-size: 9px;
-      line-height: 1.2;
+      font-size: 8px;
+      line-height: 1.1;
       text-align: left;
     }
 
@@ -244,9 +247,6 @@ module.exports = function renderGradeHTML({
 
     .semester {
       width: 100%;
-      margin: 0;
-      page-break-inside: avoid;
-      break-inside: avoid;
     }
 
     .grade-table {
@@ -254,12 +254,16 @@ module.exports = function renderGradeHTML({
       border: var(--espessura-grade) solid var(--cor-borda-grade);
       border-collapse: collapse;
       table-layout: fixed;
-      page-break-inside: avoid;
-      break-inside: avoid;
     }
 
-    .grade-table thead { display: table-header-group; }
-    .grade-table tr { page-break-inside: avoid; break-inside: avoid; }
+    .grade-table thead { 
+      display: table-header-group; 
+    }
+
+    .grade-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid; 
+    }
 
     .grade-table th,
     .grade-table td {
@@ -269,30 +273,29 @@ module.exports = function renderGradeHTML({
     }
 
     .grade-table th {
-      height: 20px;
-      padding: 3px 2px;
+      height: 18px;
+      padding: 2px;
       background: #093e5e; 
       color: #ffffff;
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       vertical-align: middle;
       text-align: center;
     }
 
-    .coluna-horario { width: 75px; }
-    .horario-th { width: 75px; }
+    .coluna-horario { width: 68px; }
+    .horario-th { width: 68px; }
 
     .horario {
-      width: 75px;
+      width: 68px;
       background: #093e5e;
       color: #ffffff;
-      font-size: 8.5px;
+      font-size: 7.5px;
       font-weight: 700;
       text-align: center;
       vertical-align: middle;
-      height: 1px; 
       padding: 0;
     }
 
@@ -301,92 +304,93 @@ module.exports = function renderGradeHTML({
       align-items: center;
       justify-content: center;
       height: 100%;
-      padding: 6px 4px;
-      line-height: 1.3;
+      padding: 2px 1px;
+      line-height: 1.15;
     }
 
     .celula-grade {
       background: #ffffff;
-      height: 1px; 
     }
 
     .celula-conteudo {
       display: flex;
-      flex-direction: column;
-      justify-content: stretch;
+      flex-direction: row; /* Alinha os itens lado a lado */
+      justify-content: flex-start;
+      align-items: stretch;
       width: 100%;
       height: 100%;
-      padding: 3px; 
-      gap: 3px;
+      padding: 2px; 
+      gap: 2px;
     }
 
     .disciplina-item {
-      flex: 1; 
+      flex: 1 1 0px; /* Divide o espaço da célula igualmente entre as disciplinas */
+      min-width: 0;   /* Permite que o flex reduz o bloco sem estourar a tabela */
       display: flex;
       flex-direction: column;
       justify-content: center;
-      width: 100%;
       margin: 0;
-      padding: 5px 6px;
+      padding: 2px 3px;
       text-align: left;
       white-space: normal;
       border: 1px solid var(--cor-borda-bloco); 
-      border-radius: 4px; 
+      border-radius: 3px; 
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); 
     }
 
     .disciplina-header {
       display: flex;
       flex-wrap: wrap;
-      gap: 3px;
-      margin-bottom: 4px;
+      gap: 2px;
+      margin-bottom: 1px;
+      line-height: 1;
     }
 
     .tag-moderna {
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      border-radius: 4px;
-      padding: 1px 4px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 2px;
+      padding: 1px 2px;
       color: #1e293b;
-      font-size: 7px;
+      font-size: 6px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
     }
 
     .disciplina-nome {
       color: #0f172a;
-      font-size: 8.5px;
+      font-size: 7.5px;
       font-weight: 700;
-      line-height: 1.25;
-      margin-bottom: 2px;
+      line-height: 1.1;
+      margin-bottom: 1px;
+      word-break: break-word;
     }
 
     .disciplina-carga {
       color: #475569;
       font-weight: 500;
-      font-size: 8px;
+      font-size: 7px;
     }
 
     .disciplina-professor {
       color: #475569;
-      font-size: 7.5px;
+      font-size: 6.5px;
       font-weight: 500;
-      line-height: 1.2;
+      line-height: 1.05;
+      word-break: break-word;
     }
 
     footer {
-      position: fixed;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      padding-top: 4px;
+      margin-top: 4px;
+      padding-top: 2px;
       background: #ffffff;
       color: #94a3b8;
       font-size: 6px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       text-align: center;
+      page-break-before: auto;
     }
   </style>
 </head>

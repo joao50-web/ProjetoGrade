@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Select, Typography, message, Tooltip, Button, Space } from 'antd';
+import { Table, Select, Typography, message, Button, Space } from 'antd';
 import { useLocation } from 'react-router-dom';
 import { FilePdfOutlined } from '@ant-design/icons';
 import AppLayout from '../components/AppLayout';
@@ -41,6 +41,16 @@ const paletaPastelSuave = [
   "#D0E8F2", // AZUL NOVO
   "#E2E1DC"  // Cinza claro
 ];
+
+// Mantém a paleta original, mas mistura cada cor com o branco no PDF para
+// evitar blocos visualmente pesados na impressão e na visualização do arquivo.
+const suavizarCorPastel = (hex, alpha = 0.42) => {
+  const valor = hex.replace("#", "");
+  const vermelho = parseInt(valor.slice(0, 2), 16);
+  const verde = parseInt(valor.slice(2, 4), 16);
+  const azul = parseInt(valor.slice(4, 6), 16);
+  return `rgba(${vermelho}, ${verde}, ${azul}, ${alpha})`;
+};
 
 const miniGradeHeaderStyle = { 
   backgroundColor: THEME.bgHeader, 
@@ -131,6 +141,26 @@ export default function GradeSemanal() {
     return paletaPastelSuave[Number(depId) % paletaPastelSuave.length];
   };
 
+  // No PDF, utiliza sempre a paleta pastel institucional, sem sobrescrever
+  // as cores com valores personalizados vindos da API.
+  const getDepartamentoCorPastel = (depId) => {
+    const indice = Number(depId);
+    if (Number.isFinite(indice)) {
+      return suavizarCorPastel(
+        paletaPastelSuave[Math.abs(indice) % paletaPastelSuave.length]
+      );
+    }
+
+    const texto = String(depId || "");
+    let hash = 0;
+    for (let i = 0; i < texto.length; i += 1) {
+      hash = texto.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return suavizarCorPastel(
+      paletaPastelSuave[Math.abs(hash) % paletaPastelSuave.length]
+    );
+  };
+
   /* ======================================================
      OPÇÕES DOS FILTROS
   ====================================================== */
@@ -182,68 +212,84 @@ export default function GradeSemanal() {
 
     setExporting(true);
 
+    // O PDF deve conter somente as linhas de horário que possuem ao menos
+    // uma disciplina, respeitando também os filtros aplicados na tela.
+    const horariosComDisciplinas = horarios.filter((horario) => (
+      diasFixos.some((dia) => (
+        (gradeMap[`${horario.id}-${dia.id}`] || []).length > 0
+      ))
+    ));
+
     const htmlTemplate = `
-      <div style="box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 8px; color: #1e293b; margin: 0; padding: 0;">
-        <div style="text-align: center; margin-bottom: 8px;">
-          <h1 style="margin: 0; font-size: 12px; color: ${THEME.primary}; text-transform: uppercase; font-weight: 700;">GRADE HORÁRIA SEMANAL</h1>
-          <h2 style="margin: 2px 0 0 0; font-size: 10px; color: #475569; font-weight: 500;">${deptoSelecionado?.nome || '-'} (${deptoSelecionado?.sigla || '-'})</h2>
-          ${filtroCurso || filtroProfessor ? `
-            <p style="margin: 4px 0 0 0; font-size: 8px; color: #64748b;">
-              <strong>Filtros aplicados:</strong> ${[filtroCurso, filtroProfessor].filter(Boolean).join(' | ')}
-            </p>
-          ` : ''}
+      <div style="box-sizing: border-box; width: 100%; font-family: Inter, 'Segoe UI', Tahoma, sans-serif; color: #0f172a; font-size: 8px; margin: 0; padding: 2mm 0;">
+        <style>
+          * { box-sizing: border-box; }
+          .pdf-header { text-align: center; margin: 0 0 4px 0; page-break-after: avoid; }
+          .pdf-header h1 { margin: 0; color: #093e5e; font-size: 11.5px; line-height: 1.1; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+          .pdf-header h2 { margin: 2px 0 0; color: #475569; font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+          .pdf-info { width: 100%; margin: 0 0 4px; padding: 3px 5px; border: 2px solid #334155; border-radius: 4px; background: #f8fafc; page-break-inside: avoid; }
+          .pdf-info table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          .pdf-info td { width: 33.33%; padding: 1px 2px; color: #334155; font-size: 8px; line-height: 1.1; text-align: left; }
+          .pdf-info strong { color: #093e5e; font-weight: 600; }
+          .pdf-grade { width: 100%; border: 2px solid #334155; border-collapse: collapse; table-layout: fixed; }
+          .pdf-grade tr { page-break-inside: avoid; break-inside: avoid; }
+          .pdf-grade th, .pdf-grade td { border: 2px solid #334155; padding: 0; vertical-align: top; }
+          .pdf-grade th { height: 18px; padding: 2px; background: #093e5e; color: #fff; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; vertical-align: middle; text-align: center; }
+          .pdf-grade .time-col, .pdf-grade .time-head { width: 68px; }
+          .pdf-grade .time-cell { width: 68px; background: #093e5e; color: #fff; font-size: 7.5px; font-weight: 700; text-align: center; vertical-align: middle; }
+          .pdf-grade .time-content { display: flex; align-items: center; justify-content: center; min-height: 30px; padding: 2px 1px; line-height: 1.15; }
+          .pdf-grade .cell { background: #fff; }
+          .pdf-grade .cell-content { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-height: 38px; padding: 5px; gap: 5px; }
+          .pdf-grade .item { width: 100%; display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 5px 6px; text-align: left; white-space: normal; border: 1px solid rgba(0,0,0,.18); border-left: 3px solid rgba(9,62,94,.7); border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+          .pdf-grade .item-header { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; line-height: 1.1; }
+          .pdf-grade .tag { background: rgba(255,255,255,.78); border: 1px solid rgba(0,0,0,.08); border-radius: 2px; padding: 2px 4px; color: #334155; font-size: 5.8px; font-weight: 700; text-transform: uppercase; letter-spacing: .2px; }
+          .pdf-grade .name { color: #0f172a; font-size: 8px; font-weight: 700; line-height: 1.2; margin-bottom: 3px; word-break: break-word; }
+          .pdf-grade .course { color: #475569; font-size: 6.8px; line-height: 1.2; word-break: break-word; }
+          .pdf-footer { margin-top: 4px; padding-top: 2px; color: #94a3b8; font-size: 6px; text-transform: uppercase; letter-spacing: .5px; text-align: center; }
+        </style>
+        <div class="pdf-header">
+          <h1>GRADE HORÁRIA SEMANAL</h1>
+          <h2>${deptoSelecionado?.nome || '-'} (${deptoSelecionado?.sigla || '-'})</h2>
         </div>
-        <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid ${THEME.gridLine};">
-          <thead>
-            <tr>
-              <th style="width: 60px; background: ${THEME.primary}; color: #fff; font-weight: 600; font-size: 8px; text-align: center; padding: 4px 2px; border: 1px solid #475569;">
-                HORÁRIO
-              </th>
-              ${diasFixos.map(d => `
-                <th style="background: ${THEME.primary}; color: #fff; font-size: 8px; padding: 4px 2px; text-align: center; font-weight: 600; border: 1px solid #475569;">
-                  ${d.nome}
-                </th>
-              `).join('')}
-            </tr>
-          </thead>
+        <div class="pdf-info">
+          <table><tr>
+            <td><strong>Departamento:</strong> ${deptoSelecionado?.nome || '-'}</td>
+            <td><strong>Sigla:</strong> ${deptoSelecionado?.sigla || '-'}</td>
+            <td><strong>Filtros:</strong> ${[filtroCurso, filtroProfessor].filter(Boolean).join(' / ') || 'Todos'}</td>
+          </tr></table>
+        </div>
+        <table class="pdf-grade">
+          <colgroup><col class="time-col" />${diasFixos.map(() => '<col />').join('')}</colgroup>
+          <thead><tr><th class="time-head">HORÁRIO</th>${diasFixos.map(d => `<th>${d.nome}</th>`).join('')}</tr></thead>
           <tbody>
-            ${horarios.map((horario, hIdx) => `
-              <tr style="background-color: ${hIdx % 2 === 0 ? THEME.rowEven : THEME.rowOdd}; page-break-inside: avoid; break-inside: avoid;">
-                <td style="width: 60px; border: 1px solid ${THEME.gridLine}; text-align: center; padding: 4px 2px; vertical-align: middle; background-color: #f1f5f9;">
-                  <span style="color: #334155; font-size: 8px; font-weight: 700;">
-                    ${horario.descricao}
-                  </span>
-                </td>
+            ${horariosComDisciplinas.map(horario => `
+              <tr>
+                <td class="time-cell"><div class="time-content">${horario.descricao}</div></td>
                 ${diasFixos.map(dia => {
                   const items = gradeMap[`${horario.id}-${dia.id}`] || [];
-                  return `
-                    <td style="border: 1px solid ${THEME.gridLine}; text-align: left; padding: 3px; vertical-align: top;">
-                      <div style="display: flex; flex-direction: column; gap: 4px;">
-                        ${items.map(item => {
-                          const dNome = item.disciplina?.nome || item.disciplina_nome || "Disciplina";
-                          const cNome = item.curso?.nome || item.curso_nome || item.curso || "Curso";
-                          const pNome = item.professor?.nome || item.professor_nome || item.professor || "";
-                          const tNome = item.turma || "";
-                          const depId = item.departamento_id || item.departamento?.id || departamentoId;
-                          const depCor = getDepartamentoCor(depId);
-                          return `
-                            <div style="background: ${depCor ? `${depCor}25` : '#ffffff'}; border: 1px solid ${THEME.borderColor}; border-left: 3px solid ${depCor || THEME.primary}; padding: 3px 4px; border-radius: 3px;">
-                              <div style="font-weight: 700; font-size: 8px; color: #0f172a; line-height: 1.2;">${dNome}</div>
-                              <div style="font-size: 7.5px; color: ${THEME.primary}; font-weight: 600; line-height: 1.2; margin-top: 1px;">${pNome}</div>
-                              <div style="font-size: 7px; color: #475569; line-height: 1.2; margin-top: 2px;">
-                                <strong>${cNome}</strong> ${tNome ? `<strong style="color: #0369a1;">(T: ${tNome})</strong>` : ''}
-                              </div>
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
-                    </td>
-                  `;
+                  return `<td class="cell"><div class="cell-content">
+                    ${items.map(item => {
+                      const dNome = item.disciplina?.nome || item.disciplina_nome || 'Disciplina';
+                      const cNome = item.curso?.nome || item.curso_nome || item.curso || 'Curso';
+                      const pNome = item.professor?.nome || item.professor_nome || item.professor || '';
+                      const tNome = item.turma || '';
+                      const depId = item.departamento_id || item.departamento?.id || departamentoId;
+                      const depCor = getDepartamentoCorPastel(depId);
+                      return `<div class="item" style="background-color: ${depCor};">
+                        <div class="name">${dNome}</div>
+                        <div class="item-header">
+                          <span class="tag">${cNome}</span>
+                          ${tNome ? `<span class="tag">T.${tNome}</span>` : ''}
+                        </div>
+                        ${pNome ? `<div class="course">Prof. ${pNome}</div>` : ''}
+                      </div>`;
+                    }).join('')}
+                  </div></td>`;
                 }).join('')}
-              </tr>
-            `).join('')}
+              </tr>`).join('')}
           </tbody>
         </table>
+        <div class="pdf-footer">${deptoSelecionado?.nome || 'Grade Horária'}</div>
       </div>
     `;
 
@@ -334,21 +380,6 @@ export default function GradeSemanal() {
               const depCor = getDepartamentoCor(depId);
 
               return (
-                <Tooltip 
-                  key={idx} 
-                  color={THEME.primary}
-                  placement="topLeft"
-                  title={
-                    <div style={{ fontSize: '13px', padding: '4px' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '6px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>
-                        {dNome}
-                      </div>
-                      <div style={{ marginBottom: '3px' }}><strong>Prof:</strong> {pNome}</div>
-                      <div style={{ marginBottom: '3px' }}><strong>Curso:</strong> {cNome}</div>
-                      {tNome && <div><strong>Turma:</strong> {tNome}</div>}
-                    </div>
-                  }
-                >
                   <div 
                     className="modern-card"
                     style={{ 
@@ -358,7 +389,7 @@ export default function GradeSemanal() {
                       borderRadius: "6px", 
                       padding: "10px", 
                       textAlign: "left", 
-                      cursor: "pointer", 
+                      cursor: "default", 
                       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                       display: "flex",
                       flexDirection: "column"
@@ -431,7 +462,6 @@ export default function GradeSemanal() {
                       )}
                     </div>
                   </div>
-                </Tooltip>
               );
             })}
           </div>
@@ -458,8 +488,15 @@ export default function GradeSemanal() {
           background: #cbd5e1;
           border-radius: 10px;
         }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
+
+        /* Hover minimalista: apenas sinaliza a passagem do mouse, sem deslocar o bloco. */
+        .modern-card {
+          transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .modern-card:hover {
+          background-color: #f8fafc !important;
+          border-color: #94a3b8 !important;
+          box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08) !important;
         }
 
         /* Tabela Institucional com Linhas Suaves mas Precisas (1px) */
@@ -486,16 +523,6 @@ export default function GradeSemanal() {
         
         .grid-row-even { background-color: ${THEME.rowEven}; }
         .grid-row-odd { background-color: ${THEME.rowOdd}; }
-
-        /* Animação Hover no Card */
-        .modern-card {
-          transition: all 0.2s ease;
-        }
-        .modern-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-          border-color: #cbd5e1 !important;
-        }
       `}</style>
 
       {/* Painel de Filtros e Ações */}

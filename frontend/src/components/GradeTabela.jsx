@@ -69,8 +69,9 @@ export default function GradeTabela() {
     if (role.includes("admin") || role.includes("edicao") || role.includes("editor")) return true;
 
     if (role.includes("coordenador") && cursoId) {
-      const cursoSelecionado = cursos.find(c => Number(c.id) === Number(cursoId));
-      if (cursoSelecionado && Number(cursoSelecionado.coordenador_id) === Number(usuario.pessoa_id)) {
+      const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
+      const pessoaId = Number(usuario.pessoa_id || usuario.id);
+      if (cursoSelecionado && Number(cursoSelecionado.coordenador_id) === pessoaId) {
         return true;
       }
     }
@@ -100,7 +101,8 @@ export default function GradeTabela() {
         api.get("/pessoas/professores"), api.get("/pessoas/coordenadores"), api.get("/departamentos")
       ]);
 
-      setCursos(cursosRes.data || []);
+      const listaCursos = cursosRes.data || [];
+      setCursos(listaCursos);
       setAnos(anosRes.data || []);
       setSemestres(semestresRes.data || []);
       setCurriculos(curriculosRes.data || []);
@@ -111,6 +113,19 @@ export default function GradeTabela() {
       const horariosOrdenados = (horariosRes.data || []).sort((a, b) => a.id - b.id);
       setHorarios(horariosOrdenados);
       setHorariosOriginais(JSON.parse(JSON.stringify(horariosOrdenados)));
+
+      // Se for coordenador e nenhum curso estiver selecionado, seleciona por padrão o seu curso
+      if (usuario && !cursoId) {
+        const role = (usuario.role || "").toLowerCase();
+        const pessoaId = Number(usuario.pessoa_id || usuario.id);
+        if (role.includes("coordenador") && !role.includes("admin")) {
+          const meuCurso = listaCursos.find((c) => Number(c.coordenador_id) === pessoaId);
+          if (meuCurso) {
+            setCursoId(Number(meuCurso.id));
+            setCoordenadorId(meuCurso.coordenador_id ? Number(meuCurso.coordenador_id) : null);
+          }
+        }
+      }
     } catch {
       message.error("Erro ao carregar dados iniciais");
     }
@@ -285,19 +300,6 @@ export default function GradeTabela() {
     });
   };
 
-  const updateHorario = (oldHorarioId, newHorarioId) => {
-    if (!canEdit || oldHorarioId === newHorarioId) return;
-    const horariosAtualizados = [...horarios];
-    const oldIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(oldHorarioId));
-    const newIndex = horariosAtualizados.findIndex((h) => Number(h.id) === Number(newHorarioId));
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const temp = horariosAtualizados[oldIndex];
-    horariosAtualizados[oldIndex] = horariosAtualizados[newIndex];
-    horariosAtualizados[newIndex] = temp;
-    setHorarios(horariosAtualizados);
-  };
-
   const handleCursoChange = (value) => {
     setCursoId(value);
     const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(value));
@@ -323,6 +325,10 @@ export default function GradeTabela() {
   const handleSave = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return message.warning("Selecione os filtros");
 
+    if (!canEdit) {
+      return message.error("Você não tem permissão para alterar este curso.");
+    }
+
     const slots = grade
       .filter((g) => g.horario_id && g.dia_semana_id)
       .map((g) => ({ ...g, turma_grade: turmaGrade }));
@@ -335,8 +341,9 @@ export default function GradeTabela() {
       });
       message.success("Grade salva com sucesso");
       loadGrade();
-    } catch {
-      message.error("Erro ao salvar");
+    } catch (err) {
+      const msg = err.response?.data?.error || "Erro ao salvar";
+      message.error(msg);
     } finally {
       setSaving(false);
     }
@@ -346,6 +353,9 @@ export default function GradeTabela() {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
       return message.warning("Selecione todos os filtros antes de excluir");
     }
+    if (!canEdit) {
+      return message.error("Você não tem permissão para excluir a grade deste curso.");
+    }
     try {
       await api.delete("/grade-horaria/delete", {
         data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId }
@@ -353,8 +363,9 @@ export default function GradeTabela() {
       setGrade([]);
       setTurmaGrade("");
       message.success("Grade excluída");
-    } catch {
-      message.error("Erro ao excluir");
+    } catch (err) {
+      const msg = err.response?.data?.error || "Erro ao excluir";
+      message.error(msg);
     }
   };
 
@@ -389,7 +400,7 @@ export default function GradeTabela() {
           semestre_id: Number(semestreId),
           curriculo_id: Number(curriculoId),
           coordenador_id: coordenadorId ? Number(coordenadorId) : undefined,
-          turma_grade: turmaGrade || undefined,
+          turma: turmaGrade || undefined,
         },
         responseType: "blob",
       });
@@ -425,15 +436,6 @@ export default function GradeTabela() {
       title: "HORÁRIO", dataIndex: "descricao", width: 110, fixed: "left", align: "center",
       onHeaderCell: () => ({ style: headerStyle }),
       onCell: () => ({ style: horarioCellStyle }),
-      render: (_, record) => (
-        <Select
-          size="small" variant="borderless" value={record.id}
-          disabled={!canEdit}
-          style={{ width: "100%", fontSize: "12px", fontWeight: "700" }}
-          onChange={(v) => updateHorario(record.id, v)}
-          options={horarios.map((h) => ({ value: h.id, label: h.descricao }))}
-        />
-      ),
     },
     ...diasFixos.map((dia) => ({
       title: dia.nome, width: 310, align: "center",
@@ -689,7 +691,7 @@ export default function GradeTabela() {
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>CURRÍCULO</span><Select size="middle" value={curriculoId ? Number(curriculoId) : null} onChange={setCurriculoId} style={{ width: 160 }} options={curriculos.map((c) => ({ value: Number(c.id), label: c.descricao || c.nome }))} /></div>
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>ANO</span><Select size="middle" value={anoId ? Number(anoId) : null} onChange={setAnoId} style={{ width: 90 }} options={anos.map((a) => ({ value: Number(a.id), label: a.descricao || a.ano }))} /></div>
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId ? Number(semestreId) : null} onChange={setSemestreId} placeholder="Selecione" style={{ width: 140 }} options={semestres.map((s) => ({ value: Number(s.id), label: s.descricao || s.nome }))} /></div>
-              
+
               <div style={filtroContainerStyle}>
                 <span style={filtroLabelStyle}>TURMA DA GRADE</span>
                 <Input

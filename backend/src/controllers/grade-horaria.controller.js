@@ -27,7 +27,7 @@ const montarDadosParaPDF = (registros, meta = {}) => {
   const anoNome = meta.anoLetivo || primeiro.ano?.descricao || primeiro.ano?.ano || (typeof primeiro.ano === "string" ? primeiro.ano : "-");
   const coordNome = meta.coordenador || primeiro.coordenador?.nome || (typeof primeiro.coordenador === "string" ? primeiro.coordenador : "-");
   const semestreNome = meta.semestre || primeiro.semestre?.descricao || primeiro.semestre?.nome || (typeof primeiro.semestre === "string" ? primeiro.semestre : "-");
-  const turmaNome = meta.turma || primeiro.turma_grade || ""; // NOVO: Capturando a turma
+  const turmaNome = meta.turma || primeiro.turma_grade || "";
 
   const DIAS_SEMANA = [
     { id: 1, nome: "2ª feira", nomesValidos: ["1", "2ª feira", "segunda", "segunda-feira"] },
@@ -100,7 +100,7 @@ const montarDadosParaPDF = (registros, meta = {}) => {
     curriculo: curriculoNome,
     coordenador: coordNome,
     anoLetivo: anoNome,
-    turmaGrade: turmaNome, // NOVO: Passando para o template
+    turmaGrade: turmaNome,
     semestres: [
       {
         descricao: semestreNome,
@@ -139,7 +139,7 @@ const verificarPermissaoEdicao = async (usuario, curso_id) => {
 ====================================================== */
 exports.gerarPdf = async (req, res) => {
   try {
-    const { curso_id, ano_id, semestre_id, curriculo_id, turma } = req.query; // NOVO: Capturando 'turma' do query
+    const { curso_id, ano_id, semestre_id, curriculo_id, turma } = req.query;
 
     if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
       return res.status(400).json({ error: "Parâmetros insuficientes para gerar o PDF." });
@@ -181,7 +181,7 @@ exports.gerarPdf = async (req, res) => {
       anoLetivo: primeiro.ano?.descricao || primeiro.ano?.ano,
       coordenador: primeiro.coordenador?.nome,
       semestre: primeiro.semestre?.descricao || primeiro.semestre?.nome,
-      turma: turma, // NOVO: Passando a turma recebida pro gerador do PDF
+      turma: turma || primeiro.turma_grade,
     });
     const htmlContent = renderGradeHTML(dadosParaPDF);
 
@@ -201,7 +201,7 @@ exports.gerarPdf = async (req, res) => {
 };
 
 /* ======================================================
-   BUSCAR GRADE
+   BUSCAR GRADE (VISUALIZAÇÃO LIBERADA PARA TODOS OS CURSOS)
 ====================================================== */
 exports.findByContext = async (req, res) => {
   try {
@@ -213,7 +213,8 @@ exports.findByContext = async (req, res) => {
     const where = {};
     const usuario = req.user;
 
-    if (usuario) {
+    // Se o curso_id não for informado e for coordenador, define o primeiro curso dele como padrão
+    if (usuario && (!curso_id || curso_id === "null" || curso_id === "undefined")) {
       const role = (usuario.role || "").toLowerCase();
       const pessoaId = Number(usuario.pessoa_id || usuario.id);
 
@@ -222,21 +223,19 @@ exports.findByContext = async (req, res) => {
           where: { coordenador_id: pessoaId },
           attributes: ["id"],
         });
-        const idsCursosCoordenador = cursosDoCoordenador.map((c) => c.id);
-
-        if ((!curso_id || curso_id === "null" || curso_id === "undefined" || !idsCursosCoordenador.includes(Number(curso_id))) && idsCursosCoordenador.length > 0) {
-          curso_id = idsCursosCoordenador[0];
+        if (cursosDoCoordenador.length > 0) {
+          curso_id = cursosDoCoordenador[0].id;
         }
       }
     }
 
-    if (curso_id && curso_id !== "null" && curso_id !== "undefined") where.curso_id = curso_id;
-    if (ano_id && ano_id !== "null" && ano_id !== "undefined") where.ano_id = ano_id;
-    if (semestre_id && semestre_id !== "null" && semestre_id !== "undefined") where.semestre_id = semestre_id;
-    if (curriculo_id && curriculo_id !== "null" && curriculo_id !== "undefined") where.curriculo_id = curriculo_id;
-    if (coordenador_id && coordenador_id !== "null" && coordenador_id !== "undefined") where.coordenador_id = coordenador_id;
-    if (professor_id && professor_id !== "null" && professor_id !== "undefined") where.professor_id = professor_id;
-    if (departamento_id && departamento_id !== "null" && departamento_id !== "undefined") where.departamento_id = departamento_id;
+    if (curso_id && curso_id !== "null" && curso_id !== "undefined") where.curso_id = Number(curso_id);
+    if (ano_id && ano_id !== "null" && ano_id !== "undefined") where.ano_id = Number(ano_id);
+    if (semestre_id && semestre_id !== "null" && semestre_id !== "undefined") where.semestre_id = Number(semestre_id);
+    if (curriculo_id && curriculo_id !== "null" && curriculo_id !== "undefined") where.curriculo_id = Number(curriculo_id);
+    if (coordenador_id && coordenador_id !== "null" && coordenador_id !== "undefined") where.coordenador_id = Number(coordenador_id);
+    if (professor_id && professor_id !== "null" && professor_id !== "undefined") where.professor_id = Number(professor_id);
+    if (departamento_id && departamento_id !== "null" && departamento_id !== "undefined") where.departamento_id = Number(departamento_id);
 
     let disciplinasValidas = [];
 
@@ -294,7 +293,7 @@ exports.findByContext = async (req, res) => {
         horario_id: r.horario_id,
         dia_semana_id: r.dia_semana_id,
         turma: r.turma || "",
-        turma_grade: r.turma_grade || "", // NOVO: Retorna a turma global da grade para o frontend
+        turma_grade: r.turma_grade || "",
         curso: r.curso?.nome || "-",
         ano: r.ano?.descricao || r.ano?.ano || "-",
         semestre: r.semestre?.descricao || r.semestre?.nome || "-",
@@ -318,7 +317,7 @@ exports.findByContext = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR GRADE
+   SALVAR GRADE (SOMENTE COORDENADOR DO PRÓPRIO CURSO)
 ====================================================== */
 exports.saveGrade = async (req, res) => {
   const { contexto, slots } = req.body;
@@ -327,16 +326,17 @@ exports.saveGrade = async (req, res) => {
     return res.status(400).json({ error: "Dados inválidos" });
   }
 
-  // NOVO: Pegando a turma do contexto
-  const { curso_id, ano_id, semestre_id, curriculo_id, coordenador_id, turma } = contexto;
+  const { curso_id, ano_id, semestre_id, curriculo_id, coordenador_id, turma, turma_grade } = contexto;
   if (!curso_id || !ano_id || !semestre_id || !curriculo_id) {
     return res.status(400).json({ error: "Preencha os filtros principais" });
   }
 
   const podeEditar = await verificarPermissaoEdicao(req.user, curso_id);
   if (!podeEditar) {
-    return res.status(403).json({ error: "Acesso negado: Você só pode editar a grade do seu próprio curso." });
+    return res.status(403).json({ error: "Acesso negado: Você só pode editar a grade do curso do qual é coordenador." });
   }
+
+  const turmaGradeFinal = turma_grade || turma || null;
 
   const slotsValidos = slots.filter(
     (slot) => slot && slot.disciplina_id && slot.horario_id && slot.dia_semana_id
@@ -367,7 +367,7 @@ exports.saveGrade = async (req, res) => {
       dia_semana_id: Number(slot.dia_semana_id),
       disciplina_id: Number(slot.disciplina_id),
       turma: slot.turma ? String(slot.turma).trim().toUpperCase() : null,
-      turma_grade: turma ? String(turma).trim().toUpperCase() : null, // NOVO: Salvando a turma global da grade no banco
+      turma_grade: turmaGradeFinal ? String(turmaGradeFinal).trim().toUpperCase() : null,
     }));
 
     if (registros.length > 0) {
@@ -384,10 +384,7 @@ exports.saveGrade = async (req, res) => {
 };
 
 /* ======================================================
-   SALVAR SLOT INDIVIDUAL
-====================================================== */
-/* ======================================================
-   SALVAR SLOT ISOLADO (Caso o frontend salve um a um)
+   SALVAR SLOT ISOLADO
 ====================================================== */
 exports.saveSlot = async (req, res) => {
   try {
@@ -402,7 +399,6 @@ exports.saveSlot = async (req, res) => {
       return res.status(403).json({ error: "Acesso negado para editar esta grade." });
     }
 
-    // Procura se já existe algo nesse mesmo dia/horário para sobrescrever, ou cria um novo
     const [slot, created] = await GradeHoraria.findOrCreate({
       where: {
         curso_id: Number(curso_id),
@@ -420,7 +416,6 @@ exports.saveSlot = async (req, res) => {
       }
     });
 
-    // Se já existia, a gente atualiza com os novos dados
     if (!created) {
       await slot.update({
         disciplina_id: Number(disciplina_id),
@@ -438,7 +433,7 @@ exports.saveSlot = async (req, res) => {
 };
 
 /* ======================================================
-   DELETE GRADE
+   DELETE GRADE (SOMENTE COORDENADOR DO PRÓPRIO CURSO)
 ====================================================== */
 exports.deleteGrade = async (req, res) => {
   try {
