@@ -7,9 +7,9 @@ const Curriculo = sequelize.define(
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
-
     descricao: {
       type: DataTypes.STRING(4),
       allowNull: false,
@@ -22,7 +22,14 @@ const Curriculo = sequelize.define(
   },
   {
     tableName: 'tb_curriculo',
-    timestamps: true
+    timestamps: true,
+    indexes: [
+      {
+        name: 'uk_curriculo_descricao',
+        unique: true,
+        fields: ['descricao']
+      }
+    ]
   }
 );
 

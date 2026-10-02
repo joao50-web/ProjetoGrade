@@ -3,6 +3,7 @@ const {
   Curso,
   GradeHoraria,
   Disciplina,
+  DisciplinaCurso,
   Pessoa,
   Horario,
   DiaSemana,
@@ -134,6 +135,29 @@ const verificarPermissaoEdicao = async (usuario, curso_id) => {
   return false;
 };
 
+
+/* ======================================================
+   BUSCAR DISCIPLINAS VÁLIDAS PARA O CONTEXTO ACADÊMICO
+====================================================== */
+const buscarDisciplinasDoContexto = async ({ curso_id, curriculo_id, semestre_id }, options = {}) => {
+  const cursoId = Number(curso_id);
+  const curriculoId = Number(curriculo_id);
+  const semestreId = Number(semestre_id);
+
+  if (![cursoId, curriculoId, semestreId].every(Number.isInteger) ||
+      cursoId <= 0 || curriculoId <= 0 || semestreId <= 0) {
+    return [];
+  }
+
+  const vinculos = await DisciplinaCurso.findAll({
+    where: { curso_id: cursoId, curriculo_id: curriculoId, semestre_id: semestreId },
+    attributes: ['disciplina_id'],
+    transaction: options.transaction
+  });
+
+  return [...new Set(vinculos.map((vinculo) => Number(vinculo.disciplina_id)))];
+};
+
 /* ======================================================
    GERAR E EXPORTAR PDF DA GRADE
 ====================================================== */
@@ -238,12 +262,16 @@ exports.findByContext = async (req, res) => {
     if (departamento_id && departamento_id !== "null" && departamento_id !== "undefined") where.departamento_id = Number(departamento_id);
 
     let disciplinasValidas = [];
+    const possuiContextoCompleto = Boolean(
+      where.curso_id && where.curriculo_id && where.semestre_id
+    );
 
-    if (where.curso_id) {
-      const curso = await Curso.findByPk(where.curso_id, {
-        include: [{ model: Disciplina, as: "disciplinas", attributes: ["id"] }],
+    if (possuiContextoCompleto) {
+      disciplinasValidas = await buscarDisciplinasDoContexto({
+        curso_id: where.curso_id,
+        curriculo_id: where.curriculo_id,
+        semestre_id: where.semestre_id
       });
-      disciplinasValidas = curso?.disciplinas?.map((d) => d.id) || [];
     }
 
     const registros = await GradeHoraria.findAll({
@@ -278,7 +306,7 @@ exports.findByContext = async (req, res) => {
       const chave = `${r.disciplina_id}-${r.curso_id}-${r.ano_id}-${r.semestre_id}-${r.curriculo_id}`;
       const multicurso = (mapaMulticurso.get(chave) || 0) > 1;
       const isDeptFilterOnly = !!where.departamento_id && !where.curso_id;
-      const disciplinaValida = isDeptFilterOnly || (r.disciplina && (!where.curso_id || disciplinasValidas.includes(r.disciplina.id)));
+      const disciplinaValida = isDeptFilterOnly || !where.curso_id || !possuiContextoCompleto || (r.disciplina && disciplinasValidas.includes(r.disciplina.id));
 
       return {
         id: r.id,
@@ -342,6 +370,27 @@ exports.saveGrade = async (req, res) => {
     (slot) => slot && slot.disciplina_id && slot.horario_id && slot.dia_semana_id
   );
 
+  const disciplinasValidas = await buscarDisciplinasDoContexto({
+    curso_id,
+    curriculo_id,
+    semestre_id
+  });
+  const disciplinasValidasSet = new Set(disciplinasValidas);
+  const disciplinasForaDoContexto = [
+    ...new Set(
+      slotsValidos
+        .map((slot) => Number(slot.disciplina_id))
+        .filter((disciplinaId) => !disciplinasValidasSet.has(disciplinaId))
+    )
+  ];
+
+  if (disciplinasForaDoContexto.length > 0) {
+    return res.status(400).json({
+      error: 'Existem disciplinas que não pertencem ao curso, currículo e semestre selecionados.',
+      disciplinas_invalidas: disciplinasForaDoContexto
+    });
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
@@ -397,6 +446,18 @@ exports.saveSlot = async (req, res) => {
     const podeEditar = await verificarPermissaoEdicao(req.user, curso_id);
     if (!podeEditar) {
       return res.status(403).json({ error: "Acesso negado para editar esta grade." });
+    }
+
+    const disciplinasValidas = await buscarDisciplinasDoContexto({
+      curso_id,
+      curriculo_id,
+      semestre_id
+    });
+
+    if (!disciplinasValidas.includes(Number(disciplina_id))) {
+      return res.status(400).json({
+        error: 'A disciplina não pertence ao curso, currículo e semestre selecionados.'
+      });
     }
 
     const [slot, created] = await GradeHoraria.findOrCreate({
