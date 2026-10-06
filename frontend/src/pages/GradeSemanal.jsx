@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { FilePdfOutlined } from '@ant-design/icons';
 import AppLayout from '../components/AppLayout';
 import { api } from '../services/api';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const { Text } = Typography;
 
@@ -202,7 +204,7 @@ export default function GradeSemanal() {
   }, [grade, filtroCurso, filtroProfessor]);
 
   /* ======================================================
-     GERAÇÃO DO PDF
+     GERAÇÃO DO PDF — DESIGN DO TEMPLATE INSTITUCIONAL
   ====================================================== */
   const handleExportPDF = () => {
     if (!departamentoId) {
@@ -210,123 +212,447 @@ export default function GradeSemanal() {
       return;
     }
 
-    setExporting(true);
-
-    // O PDF deve conter somente as linhas de horário que possuem ao menos
-    // uma disciplina, respeitando também os filtros aplicados na tela.
     const horariosComDisciplinas = horarios.filter((horario) => (
       diasFixos.some((dia) => (
         (gradeMap[`${horario.id}-${dia.id}`] || []).length > 0
       ))
     ));
 
+    if (horariosComDisciplinas.length === 0) {
+      message.warning("Não há aulas compatíveis com os filtros selecionados.");
+      return;
+    }
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    const obterCorPastel = (depId) => {
+      const indice = Number(depId);
+      if (Number.isFinite(indice)) {
+        return paletaPastelSuave[Math.abs(indice) % paletaPastelSuave.length];
+      }
+
+      const texto = String(depId || "");
+      let hash = 0;
+      for (let i = 0; i < texto.length; i += 1) {
+        hash = texto.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return paletaPastelSuave[Math.abs(hash) % paletaPastelSuave.length];
+    };
+
+    const renderDisciplinaPDF = (item) => {
+      const disciplina = item.disciplina || {};
+      const dNome = disciplina.nome || item.disciplina_nome || "Disciplina";
+      const codigo = disciplina.codigo || item.codigo || "";
+      const carga = disciplina.carga_horaria ?? disciplina.cargaHoraria ?? item.carga_horaria ?? "";
+      const cNome = item.curso?.nome || item.curso_nome || item.curso || "Curso";
+      const pNome = item.professor?.nome || item.professor_nome || item.professor || "";
+      const tNome = item.turma || "";
+      const departamento = item.departamento?.sigla || item.departamento?.nome || "";
+      const depId = item.departamento_id || disciplina.departamento_id || item.departamento?.id || departamentoId;
+      const fundo = obterCorPastel(depId);
+
+      return `
+        <div class="disciplina-item" style="background-color: ${escapeHtml(fundo)}; border-left: 3px solid ${escapeHtml(fundo)};">
+          <div class="disciplina-header">
+            ${departamento ? `<span class="tag-moderna">${escapeHtml(departamento)}</span>` : ""}
+            ${codigo ? `<span class="tag-moderna">${escapeHtml(codigo)}</span>` : ""}
+            ${cNome ? `<span class="tag-moderna">${escapeHtml(cNome)}</span>` : ""}
+            ${tNome ? `<span class="tag-moderna">T.${escapeHtml(tNome)}</span>` : ""}
+          </div>
+          <div class="disciplina-nome">
+            ${escapeHtml(dNome)}${carga !== "" ? ` <span class="disciplina-carga">(${escapeHtml(carga)}h)</span>` : ""}
+          </div>
+          ${pNome ? `<div class="disciplina-professor">Prof. ${escapeHtml(pNome)}</div>` : ""}
+        </div>
+      `;
+    };
+
     const htmlTemplate = `
-      <div style="box-sizing: border-box; width: 100%; font-family: Inter, 'Segoe UI', Tahoma, sans-serif; color: #0f172a; font-size: 8px; margin: 0; padding: 2mm 0;">
-        <style>
+      <style>
           * { box-sizing: border-box; }
-          .pdf-header { text-align: center; margin: 0 0 4px 0; page-break-after: avoid; }
-          .pdf-header h1 { margin: 0; color: #093e5e; font-size: 11.5px; line-height: 1.1; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-          .pdf-header h2 { margin: 2px 0 0; color: #475569; font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
-          .pdf-info { width: 100%; margin: 0 0 4px; padding: 3px 5px; border: 2px solid #334155; border-radius: 4px; background: #f8fafc; page-break-inside: avoid; }
-          .pdf-info table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          .pdf-info td { width: 33.33%; padding: 1px 2px; color: #334155; font-size: 8px; line-height: 1.1; text-align: left; }
-          .pdf-info strong { color: #093e5e; font-weight: 600; }
-          .pdf-grade { width: 100%; border: 2px solid #334155; border-collapse: collapse; table-layout: fixed; }
-          .pdf-grade tr { page-break-inside: avoid; break-inside: avoid; }
-          .pdf-grade th, .pdf-grade td { border: 2px solid #334155; padding: 0; vertical-align: top; }
-          .pdf-grade th { height: 18px; padding: 2px; background: #093e5e; color: #fff; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; vertical-align: middle; text-align: center; }
-          .pdf-grade .time-col, .pdf-grade .time-head { width: 68px; }
-          .pdf-grade .time-cell { width: 68px; background: #093e5e; color: #fff; font-size: 7.5px; font-weight: 700; text-align: center; vertical-align: middle; }
-          .pdf-grade .time-content { display: flex; align-items: center; justify-content: center; min-height: 30px; padding: 2px 1px; line-height: 1.15; }
-          .pdf-grade .cell { background: #fff; }
-          .pdf-grade .cell-content { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-height: 38px; padding: 5px; gap: 5px; }
-          .pdf-grade .item { width: 100%; display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 5px 6px; text-align: left; white-space: normal; border: 1px solid rgba(0,0,0,.18); border-left: 3px solid rgba(9,62,94,.7); border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-          .pdf-grade .item-header { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; line-height: 1.1; }
-          .pdf-grade .tag { background: rgba(255,255,255,.78); border: 1px solid rgba(0,0,0,.08); border-radius: 2px; padding: 2px 4px; color: #334155; font-size: 5.8px; font-weight: 700; text-transform: uppercase; letter-spacing: .2px; }
-          .pdf-grade .name { color: #0f172a; font-size: 8px; font-weight: 700; line-height: 1.2; margin-bottom: 3px; word-break: break-word; }
-          .pdf-grade .course { color: #475569; font-size: 6.8px; line-height: 1.2; word-break: break-word; }
-          .pdf-footer { margin-top: 4px; padding-top: 2px; color: #94a3b8; font-size: 6px; text-transform: uppercase; letter-spacing: .5px; text-align: center; }
+          @page { size: A4 landscape; margin: 4mm 6mm; }
+          html, body { width: 100%; margin: 0; padding: 0; background: #fff; }
+          body {
+            font-family: Inter, 'Segoe UI', Arial, sans-serif;
+            color: #0f172a;
+            font-size: 8px;
+            -webkit-font-smoothing: antialiased;
+          }
+          .header {
+            text-align: center;
+            margin: 0 0 4px;
+            padding: 0 2px 3px;
+            border-bottom: 1px solid transparent;
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+          .header h1 {
+            margin: 0;
+            color: #334155;
+            font-size: 10.5px;
+            line-height: 1.15;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .1px;
+          }
+          .header h2 {
+            margin: 2px 0 0;
+            color: #64748b;
+            font-size: 8.5px;
+            line-height: 1.15;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+          }
+          .info {
+            width: 100%;
+            margin: 14px 0 9px;
+            padding: 3px 0;
+            border-top: 1px solid #dbe3ec;
+            border-bottom: 1px solid #dbe3ec;
+            background: #f8fafc;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+          .info-table td {
+            padding: 3px 5px;
+            color: #64748b;
+            font-size: 7px;
+            line-height: 1.15;
+            text-align: left;
+            vertical-align: middle;
+            overflow-wrap: anywhere;
+            border-right: 1px solid #e2e8f0;
+          }
+          .info-table td:last-child { border-right: 0; }
+          .info-table td:nth-child(odd) { background: #fff; }
+          .info-table td:nth-child(even) { background: #f8fafc; }
+          .info-table strong { color: #64748b; font-weight: 500; white-space: nowrap; }
+          .grade-table {
+            width: 100%;
+            border: 2.4px solid #0b3d5c;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+          .grade-table thead { display: table-header-group; }
+          .grade-table tr { page-break-inside: avoid; break-inside: avoid; }
+          .grade-table tbody tr { min-height: 25px; }
+          .grade-table th, .grade-table td {
+            border: 1.5px solid #94a3b8;
+            padding: 0;
+            vertical-align: top;
+          }
+          .grade-table th + th, .grade-table td + td { border-left: 2px solid #64748b; }
+          .grade-table thead th { border-bottom: 2.5px solid #0b3d5c; }
+          .grade-table th {
+            height: 22px;
+            padding: 3px 2px;
+            background: #0b3d5c;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .35px;
+            vertical-align: middle;
+            text-align: center;
+          }
+          .coluna-horario, .horario-th, .horario { width: 68px; }
+          .horario {
+            background: #0b3d5c;
+            color: #fff;
+            font-size: 8.2px;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+          }
+          .horario-conteudo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 3px 1px;
+            line-height: 1.15;
+          }
+          .celula-grade { background: #fff; }
+          .celula-conteudo {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            width: 100%;
+            min-height: 36px;
+            padding: 4px;
+            gap: 5px;
+          }
+          .disciplina-item {
+            width: 100%;
+            min-width: 0;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin: 0;
+            padding: 6px 7px;
+            text-align: left;
+            white-space: normal;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            box-shadow: none;
+          }
+          .disciplina-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-bottom: 4px;
+            line-height: 1.1;
+          }
+          .tag-moderna {
+            background: #eef2f6;
+            border: 1px solid #d8e0e8;
+            border-radius: 3px;
+            padding: 2px 4px;
+            color: #1e293b;
+            font-size: 7.2px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .15px;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+          }
+          .disciplina-nome {
+            color: #0f172a;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 3px;
+            word-break: break-word;
+          }
+          .disciplina-carga { color: #334155; font-weight: 600; font-size: 8px; }
+          .disciplina-professor {
+            color: #334155;
+            font-size: 8px;
+            font-weight: 600;
+            line-height: 1.2;
+            word-break: break-word;
+          }
+          footer {
+            margin-top: 4px;
+            padding-top: 2px;
+            color: #94a3b8;
+            font-size: 6px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            text-align: center;
+          }
         </style>
-        <div class="pdf-header">
-          <h1>GRADE HORÁRIA SEMANAL</h1>
-          <h2>${deptoSelecionado?.nome || '-'} (${deptoSelecionado?.sigla || '-'})</h2>
+        <div class="header">
+          <h1>${escapeHtml("UNIVERSIDADE FEDERAL DE CIÊNCIAS DA SAÚDE DE PORTO ALEGRE")}</h1>
+          <h2>Grade Horária Semanal</h2>
         </div>
-        <div class="pdf-info">
-          <table><tr>
-            <td><strong>Departamento:</strong> ${deptoSelecionado?.nome || '-'}</td>
-            <td><strong>Sigla:</strong> ${deptoSelecionado?.sigla || '-'}</td>
-            <td><strong>Filtros:</strong> ${[filtroCurso, filtroProfessor].filter(Boolean).join(' / ') || 'Todos'}</td>
-          </tr></table>
-        </div>
-        <table class="pdf-grade">
-          <colgroup><col class="time-col" />${diasFixos.map(() => '<col />').join('')}</colgroup>
-          <thead><tr><th class="time-head">HORÁRIO</th>${diasFixos.map(d => `<th>${d.nome}</th>`).join('')}</tr></thead>
-          <tbody>
-            ${horariosComDisciplinas.map(horario => `
+        <div class="info">
+          <table class="info-table">
+            <colgroup>
+              <col style="width: 30%" />
+              <col style="width: 35%" />
+              <col style="width: 35%" />
+            </colgroup>
+            <tbody>
               <tr>
-                <td class="time-cell"><div class="time-content">${horario.descricao}</div></td>
-                ${diasFixos.map(dia => {
+                <td><strong>Departamento:</strong> ${escapeHtml(deptoSelecionado?.nome || "-")}</td>
+                <td><strong>Sigla:</strong> ${escapeHtml(deptoSelecionado?.sigla || "-")}</td>
+                <td><strong>Filtros:</strong> ${escapeHtml([filtroCurso, filtroProfessor].filter(Boolean).join(" / ") || "Todos")}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <table class="grade-table">
+          <colgroup>
+            <col class="coluna-horario" />
+            ${diasFixos.map(() => "<col />").join("")}
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="horario-th">Horário</th>
+              ${diasFixos.map((dia) => `<th>${escapeHtml(dia.nome)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${horariosComDisciplinas.map((horario) => `
+              <tr>
+                <td class="horario"><div class="horario-conteudo">${escapeHtml(horario.descricao || "")}</div></td>
+                ${diasFixos.map((dia) => {
                   const items = gradeMap[`${horario.id}-${dia.id}`] || [];
-                  return `<td class="cell"><div class="cell-content">
-                    ${items.map(item => {
-                      const dNome = item.disciplina?.nome || item.disciplina_nome || 'Disciplina';
-                      const cNome = item.curso?.nome || item.curso_nome || item.curso || 'Curso';
-                      const pNome = item.professor?.nome || item.professor_nome || item.professor || '';
-                      const tNome = item.turma || '';
-                      const depId = item.departamento_id || item.departamento?.id || departamentoId;
-                      const depCor = getDepartamentoCorPastel(depId);
-                      return `<div class="item" style="background-color: ${depCor};">
-                        <div class="name">${dNome}</div>
-                        <div class="item-header">
-                          <span class="tag">${cNome}</span>
-                          ${tNome ? `<span class="tag">T.${tNome}</span>` : ''}
-                        </div>
-                        ${pNome ? `<div class="course">Prof. ${pNome}</div>` : ''}
-                      </div>`;
-                    }).join('')}
-                  </div></td>`;
-                }).join('')}
-              </tr>`).join('')}
+                  return `
+                    <td class="celula-grade">
+                      <div class="celula-conteudo">
+                        ${items.map(renderDisciplinaPDF).join("")}
+                      </div>
+                    </td>
+                  `;
+                }).join("")}
+              </tr>
+            `).join("")}
           </tbody>
         </table>
-        <div class="pdf-footer">${deptoSelecionado?.nome || 'Grade Horária'}</div>
-      </div>
+        <footer>${escapeHtml(deptoSelecionado?.nome || "Grade Horária")}</footer>
     `;
 
-    const containerOculto = document.createElement('div');
+    // O html2canvas não captura corretamente elementos posicionados fora do viewport.
+    // Mantemos o container dentro da área visível, sem interação, e o removemos ao final.
+    const containerOculto = document.createElement("div");
+    containerOculto.style.position = "fixed";
+    containerOculto.style.left = "0";
+    containerOculto.style.top = "0";
+    containerOculto.style.width = "1120px";
+    containerOculto.style.maxWidth = "1120px";
+    containerOculto.style.background = "#ffffff";
+    containerOculto.style.zIndex = "2147483647";
+    containerOculto.style.pointerEvents = "none";
     containerOculto.innerHTML = htmlTemplate;
     document.body.appendChild(containerOculto);
 
-    const opt = {
-      margin:      [6, 6, 6, 6], 
-      filename:    `Grade_Semanal_${deptoSelecionado?.sigla || 'Depto'}.pdf`,
-      image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2.5, useCORS: true, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak:    { mode: ['css', 'legacy'], avoid: 'tr' } 
+    const limpar = () => {
+      if (containerOculto.parentNode) containerOculto.parentNode.removeChild(containerOculto);
+      setExporting(false);
     };
 
-    const executarImpressao = () => {
-      window.html2pdf().set(opt).from(containerOculto).save()
-        .then(() => {
-          document.body.removeChild(containerOculto);
-          setExporting(false);
-        })
-        .catch(() => {
-          message.error("Erro ao gerar PDF");
-          document.body.removeChild(containerOculto);
-          setExporting(false);
+    setExporting(true);
+
+    // Cada página recebe o cabeçalho e o cabeçalho da tabela novamente.
+    // Os horários são divididos somente entre linhas completas, nunca no meio de uma linha.
+    const executarImpressao = async () => {
+      const paginas = [];
+      try {
+        if (document.fonts?.ready) await document.fonts.ready;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+        const linhasOriginais = Array.from(containerOculto.querySelectorAll(".grade-table tbody tr"));
+        const tabela = containerOculto.querySelector(".grade-table");
+        if (!linhasOriginais.length || !tabela) {
+          throw new Error("A grade não possui linhas renderizadas para exportação.");
+        }
+
+        const containerRect = containerOculto.getBoundingClientRect();
+        const primeiraLinhaRect = linhasOriginais[0].getBoundingClientRect();
+        const ultimaLinhaRect = linhasOriginais[linhasOriginais.length - 1].getBoundingClientRect();
+        const alturaBase = Math.max(1, primeiraLinhaRect.top - containerRect.top);
+        const alturaRodape = Math.max(0, containerRect.bottom - ultimaLinhaRect.bottom);
+        const larguraPagina = 297;
+        const alturaPagina = 210;
+        const margem = 6;
+        const larguraUtil = larguraPagina - (margem * 2);
+        const alturaUtil = alturaPagina - (margem * 2);
+        const larguraCSS = containerOculto.getBoundingClientRect().width || 1120;
+        const alturaMaximaCSS = (alturaUtil / larguraUtil) * larguraCSS;
+        const alturas = linhasOriginais.map((linha) => linha.getBoundingClientRect().height);
+        const limiteLinhas = Math.max(1, alturaMaximaCSS - alturaBase - alturaRodape);
+
+        let paginaAtual = [];
+        let alturaPaginaAtual = 0;
+        alturas.forEach((altura, indice) => {
+          if (paginaAtual.length && alturaPaginaAtual + altura > limiteLinhas) {
+            paginas.push(paginaAtual);
+            paginaAtual = [];
+            alturaPaginaAtual = 0;
+          }
+          paginaAtual.push(indice);
+          alturaPaginaAtual += altura;
         });
+        if (paginaAtual.length) paginas.push(paginaAtual);
+
+        const pdf = new jsPDF({
+          unit: "mm",
+          format: "a4",
+          orientation: "landscape",
+          compress: true,
+        });
+
+        for (let paginaIndex = 0; paginaIndex < paginas.length; paginaIndex += 1) {
+          const indicesPermitidos = new Set(paginas[paginaIndex]);
+          const pagina = containerOculto.cloneNode(true);
+          const linhasPagina = Array.from(pagina.querySelectorAll(".grade-table tbody tr"));
+          linhasPagina.forEach((linha, indice) => {
+            if (!indicesPermitidos.has(indice)) linha.remove();
+          });
+
+          pagina.style.position = "fixed";
+          pagina.style.left = "0";
+          pagina.style.top = "0";
+          pagina.style.width = `${larguraCSS}px`;
+          pagina.style.maxWidth = `${larguraCSS}px`;
+          pagina.style.zIndex = "2147483646";
+          pagina.style.pointerEvents = "none";
+          pagina.style.background = "#ffffff";
+          document.body.appendChild(pagina);
+
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          const canvas = await html2canvas(pagina, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: Math.ceil(larguraCSS),
+            windowHeight: Math.ceil(pagina.scrollHeight || alturaMaximaCSS),
+          });
+          if (pagina.parentNode) pagina.parentNode.removeChild(pagina);
+
+          if (!canvas.width || !canvas.height) {
+            throw new Error(`A captura da página ${paginaIndex + 1} retornou uma imagem vazia.`);
+          }
+
+          const alturaProporcional = (canvas.height * larguraUtil) / canvas.width;
+          const alturaImagem = Math.min(alturaProporcional, alturaUtil);
+          if (paginaIndex > 0) pdf.addPage();
+          pdf.addImage(
+            canvas.toDataURL("image/jpeg", 0.98),
+            "JPEG",
+            margem,
+            margem,
+            larguraUtil,
+            alturaImagem,
+            undefined,
+            "FAST",
+          );
+        }
+
+        // Download direto: não abre a pré-visualização do PDF no navegador.
+        const nomeArquivo = `Grade_Semanal_${deptoSelecionado?.sigla || "Depto"}.pdf`;
+        const blob = pdf.output("blob");
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = nomeArquivo;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        limpar();
+      } catch (error) {
+        paginas.forEach(() => {});
+        console.error("Erro ao gerar PDF paginado da grade semanal:", error);
+        message.error("Erro ao gerar PDF. Verifique o console para mais detalhes.");
+        limpar();
+      }
     };
 
-    if (window.html2pdf) {
-      executarImpressao();
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = executarImpressao;
-      document.body.appendChild(script);
-    }
+    executarImpressao().catch((error) => {
+      console.error("Erro ao preparar PDF da grade semanal:", error);
+      message.error("Erro ao preparar PDF.");
+      limpar();
+    });
   };
 
   /* =========================================
@@ -380,7 +706,8 @@ export default function GradeSemanal() {
               const depCor = getDepartamentoCor(depId);
 
               return (
-                  <div 
+                  <div
+                    key={item.id || `${item.horario_id}-${item.dia_semana_id}-${item.disciplina_id || idx}-${idx}`}
                     className="modern-card"
                     style={{ 
                       backgroundColor: depCor ? `${depCor}25` : "#ffffff", 
@@ -543,7 +870,7 @@ export default function GradeSemanal() {
       >
         <Space size="large" style={{ flexWrap: 'wrap' }}>
           
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             <Text strong style={{ color: "#475569", fontSize: '12px' }}>Departamento</Text>
             <Select
               placeholder="Selecione..."
@@ -555,7 +882,7 @@ export default function GradeSemanal() {
             />
           </Space>
 
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             <Text strong style={{ color: "#475569", fontSize: '12px' }}>Curso</Text>
             <Select
               placeholder="Todos os Cursos"
@@ -568,7 +895,7 @@ export default function GradeSemanal() {
             />
           </Space>
 
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             <Text strong style={{ color: "#475569", fontSize: '12px' }}>Professor(a)</Text>
             <Select
               placeholder="Todos os Professores"

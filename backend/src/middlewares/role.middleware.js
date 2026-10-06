@@ -1,28 +1,31 @@
+const normalizarPapel = (valor) => String(valor || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\(a\)/g, "a")
+  .replace(/[_-]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .toLowerCase();
+
+const papelEhEditor = (papel) => /\beditora?\b/.test(papel);
+
 module.exports = (rolesPermitidos = []) => {
+  const permitidos = new Set(rolesPermitidos.map(normalizarPapel));
+  const permiteEditor = permitidos.has("editor") || permitidos.has("editora");
 
   return (req, res, next) => {
-
     if (!req.user) {
-      return res.status(401).json({
-        error: 'Usuário não autenticado'
-      });
+      return res.status(401).json({ error: "Usuário não autenticado" });
     }
 
-    // CORREÇÃO ESSENCIAL: Transforma todas as roles permitidas em minúsculo
-    const rolesLower = rolesPermitidos.map(role => role.toLowerCase());
-    
-    // Transforma a role do usuário logado em minúsculo também
-    const userRoleLower = req.user.role ? req.user.role.toLowerCase() : '';
+    const papelUsuario = normalizarPapel(req.user.role);
+    const permitido = permitidos.has(papelUsuario) ||
+      (permiteEditor && papelEhEditor(papelUsuario));
 
-    // Agora a comparação ignora se começou com letra maiúscula ou minúscula
-    if (!rolesLower.includes(userRoleLower)) {
-      return res.status(403).json({
-        error: 'Acesso negado'
-      });
+    if (!permitido) {
+      return res.status(403).json({ error: "Acesso negado" });
     }
 
     return next();
-
   };
-
 };

@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const sequelize = require('../src/config/database');
 const Horario = require('../src/models/Horario');
 const DiaSemana = require('../src/models/DiaSemana');
@@ -14,15 +15,16 @@ async function seedGradeBase() {
       '4ª feira',
       '5ª feira',
       '6ª feira',
-      `Sábado`
+      'Sábado',
     ];
 
     for (const descricao of dias) {
       await DiaSemana.findOrCreate({
-        where: { descricao }
+        where: { descricao },
       });
     }
 
+    // ===== HORÁRIOS =====
     const horarios = [
       // MANHÃ
       '08:00-08:50',
@@ -30,6 +32,9 @@ async function seedGradeBase() {
       '09:40-10:30',
       '10:30-11:20',
       '11:20-12:10',
+
+      // INTERVALO / TRANSIÇÃO
+      '12:30-13:20',
 
       // TARDE
       '13:20-14:10',
@@ -44,19 +49,19 @@ async function seedGradeBase() {
       '19:10-20:00',
       '20:00-20:50',
       '20:50-21:40',
-      '21:40-22:30'
+      '21:40-22:30',
     ];
 
     for (const descricao of horarios) {
       await Horario.findOrCreate({
-        where: { descricao }
+        where: { descricao },
       });
     }
 
-    console.log('✅ Dias da semana e horários inseridos com sucesso');
-    process.exit();
+    console.log('✅ Dias da semana e horários inseridos/confirmados com sucesso');
+    process.exit(0);
   } catch (err) {
-    console.error('❌ Erro ao inserir horários/dias', err);
+    console.error('❌ Erro ao inserir horários/dias:', err);
     process.exit(1);
   }
 }

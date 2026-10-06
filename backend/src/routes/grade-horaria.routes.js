@@ -3,49 +3,59 @@ const controller = require("../controllers/grade-horaria.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const roleMiddleware = require("../middlewares/role.middleware");
 
-/* ======================================================
-   GERAR PDF (Posicionado antes de GET / para evitar colisões de rotas)
-====================================================== */
-router.get("/pdf", 
-  authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "visualizacao", "chefe de departamento", "coordenador"]), 
-  controller.gerarPdf
+// Leitura da grade e PDF: edicao pode consultar; escrita é restrita aos papéis abaixo.
+const ROLES_LEITURA_GRADE = [
+  "administrador",
+  "edicao",
+  "visualizacao",
+  "chefe de departamento",
+  "coordenador",
+];
+
+const ROLES_EDICAO_GRADE = [
+  "administrador",
+  "edicao",
+  "coordenador",
+];
+
+/* GERAR PDF (antes de GET / para evitar colisões de rota) */
+router.get(
+  "/pdf",
+  authMiddleware,
+  roleMiddleware(ROLES_LEITURA_GRADE),
+  controller.gerarPdf,
 );
 
-/* ======================================================
-   CONSULTA - Admin, Edição, Visualização, Chefe e Coordenador
-====================================================== */
-router.get("/", 
-  authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "visualizacao", "chefe de departamento", "coordenador"]), 
-  controller.findByContext
+/* CONSULTAR GRADE */
+router.get(
+  "/",
+  authMiddleware,
+  roleMiddleware(ROLES_LEITURA_GRADE),
+  controller.findByContext,
 );
 
-/* ======================================================
-   SALVAR GRADE COMPLETA - Admin, Edição e Coordenador
-====================================================== */
-router.post("/save", 
-  authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "coordenador"]), 
-  controller.saveGrade
+/* SALVAR GRADE COMPLETA */
+router.post(
+  "/save",
+  authMiddleware,
+  roleMiddleware(ROLES_EDICAO_GRADE),
+  controller.saveGrade,
 );
 
-/* ======================================================
-   EXCLUIR GRADE COMPLETA - Admin, Edição e Coordenador
-====================================================== */
-router.delete("/delete", 
-  authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "coordenador"]), 
-  controller.deleteGrade
+/* EXCLUIR GRADE COMPLETA */
+router.delete(
+  "/delete",
+  authMiddleware,
+  roleMiddleware(ROLES_EDICAO_GRADE),
+  controller.deleteGrade,
 );
 
-/* ======================================================
-   SLOT ISOLADO - Admin, Edição e Coordenador
-====================================================== */
-router.post("/", 
-  authMiddleware, 
-  roleMiddleware(["administrador", "edicao", "coordenador"]), 
-  controller.saveSlot
+/* SALVAR SLOT ISOLADO */
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware(ROLES_EDICAO_GRADE),
+  controller.saveSlot,
 );
 
 module.exports = router;

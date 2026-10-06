@@ -3,6 +3,50 @@ import { Table, Select, Input, Button, message, ConfigProvider, Tooltip, Popconf
 import { SaveOutlined, FilePdfOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { api, getUsuarioLogado } from "../services/api";
 
+const GROUP_NEW = "__GRADE_NOVA__";
+const GROUP_SINGLE = "__GRADE_UNICA__";
+const GROUP_NAMED_PREFIX = "nome:";
+
+const normalizarPapel = (valor) => String(valor || "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/\(a\)/g, "a")
+  .replace(/[_-]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .toLowerCase();
+
+// Aceita tanto o campo direto quanto associações serializadas pelo Sequelize/API.
+const obterDepartamentoIdDaDisciplina = (disciplina) => {
+  const valor = disciplina?.departamento_id
+    ?? disciplina?.departamentoId
+    ?? disciplina?.departamento?.id
+    ?? disciplina?.departamento?.departamento_id;
+  const id = Number(valor);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+};
+const PAPEIS_ADMINISTRADOR = new Set([
+  "admin", "administrador", "administradora", "admin do sistema",
+  "administrador do sistema", "administradora do sistema",
+]);
+const PAPEIS_COORDENADOR = new Set([
+  "coordenador", "coordenadora", "coordenador de curso",
+  "coordenadora de curso", "coordenador do curso", "coordenadora do curso",
+]);
+
+// Ordena pelo horário inicial, e não pelo ID do banco.
+// Assim, um horário inserido depois, como 12:30-13:20, fica na posição cronológica correta.
+const minutosDoInicio = (descricao) => {
+  const inicio = String(descricao || "").split("-")[0] || "00:00";
+  const [hora, minuto] = inicio.split(":").map(Number);
+  return (Number.isFinite(hora) ? hora : 0) * 60 + (Number.isFinite(minuto) ? minuto : 0);
+};
+
+const ordenarHorariosCronologicamente = (lista) => [...(lista || [])].sort((a, b) => {
+  const diferenca = minutosDoInicio(a.descricao) - minutosDoInicio(b.descricao);
+  return diferenca || Number(a.id || 0) - Number(b.id || 0);
+});
+
 const THEME = {
   primary: "#0b3d5c",
   bgHeader: "#0b3d5c",
@@ -38,8 +82,23 @@ const horarioCellStyle = {
 const filtroContainerStyle = { display: "flex", flexDirection: "column", gap: 2 };
 const filtroLabelStyle = { fontSize: "11px", fontWeight: 700, color: THEME.primary };
 
+// O login pode armazenar a resposta inteira { token, usuario: { role, ... } }.
+// Esta tela também aceita o formato simples { role, ... } usado por versões antigas.
+const obterUsuarioAutenticado = () => {
+  const sessao = getUsuarioLogado();
+  if (!sessao || typeof sessao !== "object") return sessao;
+
+  const usuarioAninhado = sessao.usuario || sessao.user || sessao.data?.usuario;
+  if (!usuarioAninhado || typeof usuarioAninhado !== "object") return sessao;
+
+  return {
+    ...usuarioAninhado,
+    token: usuarioAninhado.token || sessao.token,
+  };
+};
+
 export default function GradeTabela() {
-  const usuario = getUsuarioLogado();
+  const usuario = obterUsuarioAutenticado();
 
   const [cursos, setCursos] = useState([]);
   const [anos, setAnos] = useState([]);
@@ -61,21 +120,41 @@ export default function GradeTabela() {
   const [curriculoId, setCurriculoId] = useState(null);
   const [coordenadorId, setCoordenadorId] = useState(null);
   const [turmaGrade, setTurmaGrade] = useState("");
+  const [grupoGradeKey, setGrupoGradeKey] = useState(null);
+  const [gruposGrade, setGruposGrade] = useState([]);
+  const [gradesDoContexto, setGradesDoContexto] = useState([]);
 
   const canEdit = useMemo(() => {
     if (!usuario) return false;
-    const role = (usuario.role || "").toLowerCase();
 
-    if (role.includes("admin") || role.includes("edicao") || role.includes("editor")) return true;
+    const roleOriginal = String(usuario.role || "").toLowerCase();
+    const role = normalizarPapel(usuario.role);
+    if (roleOriginal.includes("admin") || role === "edicao") return true;
 
-    if (role.includes("coordenador") && cursoId) {
+    if (PAPEIS_COORDENADOR.has(role) && cursoId) {
       const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
       const pessoaId = Number(usuario.pessoa_id || usuario.id);
-      if (cursoSelecionado && Number(cursoSelecionado.coordenador_id) === pessoaId) {
-        return true;
-      }
+      const coordenadorCursoId = Number(cursoSelecionado?.coordenador_id);
+      return Number.isSafeInteger(pessoaId) && pessoaId > 0 &&
+        Number.isSafeInteger(coordenadorCursoId) && coordenadorCursoId > 0 &&
+        pessoaId === coordenadorCursoId;
     }
     return false;
+  }, [usuario, cursoId, cursos]);
+
+  const canCreateGradeGroup = useMemo(() => {
+    if (!usuario) return false;
+
+    const role = normalizarPapel(usuario.role);
+    if (PAPEIS_ADMINISTRADOR.has(role) || role === "edicao") return true;
+    if (!PAPEIS_COORDENADOR.has(role) || !cursoId) return false;
+
+    const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
+    const pessoaId = Number(usuario.pessoa_id || usuario.id);
+    const coordenadorCursoId = Number(cursoSelecionado?.coordenador_id);
+    return Number.isSafeInteger(pessoaId) && pessoaId > 0 &&
+      Number.isSafeInteger(coordenadorCursoId) && coordenadorCursoId > 0 &&
+      pessoaId === coordenadorCursoId;
   }, [usuario, cursoId, cursos]);
 
   const canDelete = canEdit;
@@ -110,15 +189,15 @@ export default function GradeTabela() {
       setCoordenadores(coordenadoresRes.data || []);
       setDepartamentos(departamentosRes.data || []);
 
-      const horariosOrdenados = (horariosRes.data || []).sort((a, b) => a.id - b.id);
+      const horariosOrdenados = ordenarHorariosCronologicamente(horariosRes.data);
       setHorarios(horariosOrdenados);
       setHorariosOriginais(JSON.parse(JSON.stringify(horariosOrdenados)));
 
       // Se for coordenador e nenhum curso estiver selecionado, seleciona por padrão o seu curso
       if (usuario && !cursoId) {
-        const role = (usuario.role || "").toLowerCase();
+        const role = normalizarPapel(usuario.role);
         const pessoaId = Number(usuario.pessoa_id || usuario.id);
-        if (role.includes("coordenador") && !role.includes("admin")) {
+        if (PAPEIS_COORDENADOR.has(role)) {
           const meuCurso = listaCursos.find((c) => Number(c.coordenador_id) === pessoaId);
           if (meuCurso) {
             setCursoId(Number(meuCurso.id));
@@ -147,12 +226,35 @@ export default function GradeTabela() {
       .catch(() => setDisciplinas([]));
   }, [cursoId, semestreId, curriculoId]);
 
-  useEffect(() => {
-    if (!cursoId || !anoId || !semestreId || !curriculoId) { setGrade([]); setTurmaGrade(""); return; }
-    loadGrade();
-  }, [cursoId, anoId, semestreId, curriculoId]);
+  const chaveGrupoDaLinha = (linha) => {
+    const valor = String(linha?.turma_grade || "").trim();
+    return valor ? `${GROUP_NAMED_PREFIX}${valor.toUpperCase()}` : GROUP_SINGLE;
+  };
 
-  const loadGrade = async () => {
+  const selecionarGrupoGrade = (chave, dados = gradesDoContexto) => {
+    if (!chave) {
+      setGrupoGradeKey(null);
+      setTurmaGrade("");
+      setGrade([]);
+      return;
+    }
+    setGrupoGradeKey(chave);
+    if (chave === GROUP_NEW) {
+      setTurmaGrade("");
+      setGrade([]);
+      return;
+    }
+    if (chave === GROUP_SINGLE) {
+      setTurmaGrade("");
+      setGrade(dados.filter((linha) => chaveGrupoDaLinha(linha) === GROUP_SINGLE));
+      return;
+    }
+    const nome = chave.slice(GROUP_NAMED_PREFIX.length);
+    setTurmaGrade(nome);
+    setGrade(dados.filter((linha) => chaveGrupoDaLinha(linha) === chave));
+  };
+
+  const loadGrade = async (grupoPreferido = null) => {
     try {
       const response = await api.get("/grade-horaria", {
         params: {
@@ -163,22 +265,67 @@ export default function GradeTabela() {
         }
       });
       const data = response.data || [];
-      setGrade(data);
+      setGradesDoContexto(data);
 
-      if (data.length > 0) {
-        if (data[0].coordenador_id) setCoordenadorId(Number(data[0].coordenador_id));
-        setTurmaGrade(data[0].turma_grade || "");
+      const opcoesMap = new Map();
+      data.forEach((linha) => {
+        const chave = chaveGrupoDaLinha(linha);
+        if (!opcoesMap.has(chave)) {
+          opcoesMap.set(chave, {
+            value: chave,
+            label: chave === GROUP_SINGLE ? "Grade única, sem turma da grade" : chave.slice(GROUP_NAMED_PREFIX.length)
+          });
+        }
+      });
+      const opcoes = [...opcoesMap.values()];
+      setGruposGrade(opcoes);
+
+      const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
+      // O coordenador da grade salva pode estar desatualizado; usar o vínculo oficial do curso.
+      setCoordenadorId(cursoSelecionado?.coordenador_id ? Number(cursoSelecionado.coordenador_id) : null);
+
+      if (grupoPreferido && opcoesMap.has(grupoPreferido)) {
+        selecionarGrupoGrade(grupoPreferido, data);
+      } else if (opcoes.length === 1) {
+        selecionarGrupoGrade(opcoes[0].value, data);
+      } else if (opcoes.length === 0) {
+        selecionarGrupoGrade(GROUP_SINGLE, data);
       } else {
-        const cursoSelecionado = cursos.find((c) => Number(c.id) === Number(cursoId));
-        setCoordenadorId(cursoSelecionado?.coordenador_id ? Number(cursoSelecionado.coordenador_id) : null);
-        setTurmaGrade("");
+        // Não misturar grades distintas: exigir a escolha explícita do usuário.
+        selecionarGrupoGrade(null, data);
       }
     } catch {
       setGrade([]);
+      setGradesDoContexto([]);
+      setGruposGrade([]);
+      setGrupoGradeKey(null);
       setTurmaGrade("");
       message.error("Erro ao carregar grade");
     }
   };
+
+  const handleGrupoGradeChange = (value) => {
+    if (value === GROUP_NEW && !canCreateGradeGroup) {
+      message.error("Seu perfil não pode criar uma nova turma da grade.");
+      return;
+    }
+    selecionarGrupoGrade(value, gradesDoContexto);
+  };
+
+  useEffect(() => {
+    if (!cursoId || !anoId || !semestreId || !curriculoId) {
+      setGrade([]);
+      setGradesDoContexto([]);
+      setGruposGrade([]);
+      setGrupoGradeKey(null);
+      setTurmaGrade("");
+      return;
+    }
+    setGrade([]);
+    setGrupoGradeKey(null);
+    setTurmaGrade("");
+    loadGrade();
+  }, [cursoId, anoId, semestreId, curriculoId]);
 
   const gradeMap = useMemo(() => {
     const map = {};
@@ -196,7 +343,16 @@ export default function GradeTabela() {
 
     grade.forEach((g) => {
       if (g.disciplina && g.disciplina.id) {
-        map[g.disciplina.id] = g.disciplina;
+        const disciplinaAtual = map[g.disciplina.id] || {};
+        const departamentoId = obterDepartamentoIdDaDisciplina(g.disciplina)
+          || obterDepartamentoIdDaDisciplina(disciplinaAtual);
+
+        // Mantém os dados completos já carregados e complementa com os da grade.
+        map[g.disciplina.id] = {
+          ...disciplinaAtual,
+          ...g.disciplina,
+          departamento_id: departamentoId,
+        };
       }
     });
     return map;
@@ -230,12 +386,9 @@ export default function GradeTabela() {
           [field]: value
         };
 
-        if (field === "disciplina_id" && value) {
+        if (field === "disciplina_id") {
           const disciplinaSelecionada = disciplinasMap[Number(value)];
-          if (disciplinaSelecionada) {
-            const depId = disciplinaSelecionada.departamento_id || disciplinaSelecionada.departamento?.id || null;
-            newItem.departamento_id = depId ? Number(depId) : null;
-          }
+          newItem.departamento_id = obterDepartamentoIdDaDisciplina(disciplinaSelecionada);
         }
 
         return [...prev, newItem];
@@ -251,10 +404,9 @@ export default function GradeTabela() {
             if (field === "disciplina_id") {
               if (value) {
                 const disciplinaSelecionada = disciplinasMap[Number(value)];
-                if (disciplinaSelecionada) {
-                  const depId = disciplinaSelecionada.departamento_id || disciplinaSelecionada.departamento?.id || null;
-                  updated.departamento_id = depId ? Number(depId) : null;
-                }
+                // Ao trocar a disciplina, substitui também o departamento;
+                // assim nunca fica o departamento da disciplina anterior.
+                updated.departamento_id = obterDepartamentoIdDaDisciplina(disciplinaSelecionada);
               } else {
                 updated.departamento_id = null;
                 updated.professor_id = null;
@@ -315,35 +467,64 @@ export default function GradeTabela() {
 
   const handleReset = () => {
     setCursoId(null); setAnoId(null); setSemestreId(null); setCurriculoId(null); setCoordenadorId(null); setTurmaGrade("");
+    setGrupoGradeKey(null); setGruposGrade([]); setGradesDoContexto([]);
     setGrade([]); setDisciplinas([]);
     const horariosResetados = JSON.parse(JSON.stringify(horariosOriginais));
-    horariosResetados.sort((a, b) => a.id - b.id);
-    setHorarios(horariosResetados);
+    const horariosEmOrdem = ordenarHorariosCronologicamente(horariosResetados);
+    setHorarios(horariosEmOrdem);
     message.success("Página redefinida");
   };
 
   const handleSave = async () => {
     if (!cursoId || !anoId || !semestreId || !curriculoId) return message.warning("Selecione os filtros");
+    if (!canEdit) return message.error("Você não tem permissão para alterar este curso.");
+    if (!grupoGradeKey) return message.warning("Selecione uma turma da grade ou escolha criar uma nova.");
 
-    if (!canEdit) {
-      return message.error("Você não tem permissão para alterar este curso.");
+    const nomeGrupo = turmaGrade.trim().toUpperCase();
+    const modoGrade = grupoGradeKey === GROUP_NEW
+      ? "new"
+      : grupoGradeKey === GROUP_SINGLE
+        ? (nomeGrupo ? (grade.length > 0 ? "migrate" : "new") : "single")
+        : "existing";
+    if ((modoGrade === "new" || modoGrade === "migrate") && !canCreateGradeGroup) {
+      return message.error("Seu perfil não pode criar uma nova turma da grade.");
+    }
+    if (modoGrade !== "single" && !nomeGrupo) {
+      return message.warning("Informe o nome da turma da grade (por exemplo, CD).");
+    }
+    if (nomeGrupo.length > 100) return message.warning("O nome da turma da grade aceita até 100 caracteres.");
+    if (modoGrade === "new" && gruposGrade.some((grupo) => grupo.value === `${GROUP_NAMED_PREFIX}${nomeGrupo}`)) {
+      return message.warning("Essa turma da grade já existe. Selecione-a na lista para editar.");
+    }
+    if (modoGrade === "migrate" && !window.confirm(`Isso moverá todos os registros sem turma_grade deste contexto para "${nomeGrupo}". Faça backup antes. Continuar?`)) {
+      return;
     }
 
     const slots = grade
       .filter((g) => g.horario_id && g.dia_semana_id)
-      .map((g) => ({ ...g, turma_grade: turmaGrade }));
+      .map((g) => ({ ...g, turma_grade: modoGrade === "single" ? null : nomeGrupo }));
+    if (slots.length === 0) {
+      return message.warning("A grade está vazia. Use Excluir para remover somente esta turma da grade.");
+    }
 
     setSaving(true);
     try {
       await api.post("/grade-horaria/save", {
-        contexto: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId, coordenador_id: coordenadorId, turma_grade: turmaGrade },
-        slots
+        contexto: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+          coordenador_id: coordenadorId,
+          turma_grade: modoGrade === "single" ? null : nomeGrupo,
+          turma_grade_mode: modoGrade,
+        },
+        slots,
       });
       message.success("Grade salva com sucesso");
-      loadGrade();
+      await loadGrade(modoGrade === "single" ? GROUP_SINGLE : `${GROUP_NAMED_PREFIX}${nomeGrupo}`);
     } catch (err) {
-      const msg = err.response?.data?.error || "Erro ao salvar";
-      message.error(msg);
+      message.error(err.response?.data?.error || "Erro ao salvar");
     } finally {
       setSaving(false);
     }
@@ -353,19 +534,29 @@ export default function GradeTabela() {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
       return message.warning("Selecione todos os filtros antes de excluir");
     }
-    if (!canEdit) {
-      return message.error("Você não tem permissão para excluir a grade deste curso.");
+    if (!canDelete) return message.error("Você não tem permissão para excluir a grade deste curso.");
+    if (!grupoGradeKey || grupoGradeKey === GROUP_NEW) {
+      return message.warning("Selecione uma grade existente antes de excluir.");
     }
+
+    const modoGrade = grupoGradeKey === GROUP_SINGLE ? "single" : "existing";
+    const rotulo = modoGrade === "single" ? "a grade única sem turma da grade" : `a turma da grade ${turmaGrade}`;
+    if (!window.confirm(`Excluir somente ${rotulo} neste contexto?`)) return;
     try {
       await api.delete("/grade-horaria/delete", {
-        data: { curso_id: cursoId, ano_id: anoId, semestre_id: semestreId, curriculo_id: curriculoId }
+        data: {
+          curso_id: cursoId,
+          ano_id: anoId,
+          semestre_id: semestreId,
+          curriculo_id: curriculoId,
+          turma_grade: modoGrade === "single" ? null : turmaGrade,
+          turma_grade_mode: modoGrade,
+        },
       });
-      setGrade([]);
-      setTurmaGrade("");
-      message.success("Grade excluída");
+      message.success("Turma da grade excluída");
+      await loadGrade();
     } catch (err) {
-      const msg = err.response?.data?.error || "Erro ao excluir";
-      message.error(msg);
+      message.error(err.response?.data?.error || "Erro ao excluir");
     }
   };
 
@@ -373,6 +564,12 @@ export default function GradeTabela() {
     if (!cursoId || !anoId || !semestreId || !curriculoId) {
       return message.warning("Selecione os filtros (Curso, Currículo, Ano e Semestre) para gerar o PDF.");
     }
+
+    if (!grupoGradeKey || grupoGradeKey === GROUP_NEW) return message.warning("Selecione uma grade existente para gerar o PDF.");
+    if (grupoGradeKey === GROUP_SINGLE && turmaGrade.trim()) {
+      return message.warning("Salve a migração dos dados sem rótulo antes de gerar o PDF.");
+    }
+    if (grade.length === 0) return message.warning("Não há aulas cadastradas nesta turma da grade.");
 
     const pdfWindow = window.open("", "_blank");
 
@@ -400,7 +597,9 @@ export default function GradeTabela() {
           semestre_id: Number(semestreId),
           curriculo_id: Number(curriculoId),
           coordenador_id: coordenadorId ? Number(coordenadorId) : undefined,
-          turma: turmaGrade || undefined,
+          turma: grupoGradeKey === GROUP_SINGLE ? undefined : (turmaGrade || undefined),
+          turma_grade: grupoGradeKey && grupoGradeKey !== GROUP_SINGLE && grupoGradeKey !== GROUP_NEW ? turmaGrade : undefined,
+          turma_grade_legada: grupoGradeKey === GROUP_SINGLE ? "true" : undefined,
         },
         responseType: "blob",
       });
@@ -693,14 +892,27 @@ export default function GradeTabela() {
               <div style={filtroContainerStyle}><span style={filtroLabelStyle}>SEMESTRE</span><Select size="middle" value={semestreId ? Number(semestreId) : null} onChange={setSemestreId} placeholder="Selecione" style={{ width: 140 }} options={semestres.map((s) => ({ value: Number(s.id), label: s.descricao || s.nome }))} /></div>
 
               <div style={filtroContainerStyle}>
-                <span style={filtroLabelStyle}>TURMA DA GRADE</span>
+                <span style={filtroLabelStyle}>TURMA</span>
+                <Select
+                  size="middle"
+                  value={grupoGradeKey || undefined}
+                  onChange={handleGrupoGradeChange}
+                  placeholder="Selecione ou crie"
+                  style={{ width: 220 }}
+                  options={[
+                    { value: GROUP_SINGLE, label: "Grade única" },
+                    ...(canCreateGradeGroup ? [{ value: GROUP_NEW, label: "Criar nova turma da grade" }] : []),
+                    ...gruposGrade.filter((grupo) => grupo.value !== GROUP_SINGLE),
+                  ]}
+                />
                 <Input
                   size="middle"
                   value={turmaGrade}
                   onChange={(e) => setTurmaGrade(e.target.value.toUpperCase())}
-                  disabled={!canEdit}
-                  placeholder="Ex: T1, A"
-                  style={{ width: 120 }}
+                  disabled={!canEdit || grupoGradeKey !== GROUP_NEW || !canCreateGradeGroup}
+                  maxLength={100}
+                  placeholder="Nome do grupo (ex.: CD)"
+                  style={{ width: 220 }}
                 />
               </div>
 

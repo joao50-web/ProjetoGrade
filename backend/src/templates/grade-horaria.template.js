@@ -3,7 +3,7 @@ function escapeHtml(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
 
@@ -151,6 +151,10 @@ module.exports = function renderGradeHTML({
     .map((semestre) => semestre?.descricao || semestre?.numero || semestre)
     .filter(Boolean)
     .join(" / ");
+  const turmaGradeTexto = String(turmaGrade ?? "").trim();
+  const largurasInfo = turmaGradeTexto
+    ? [19, 13, 26, 11, 17, 14]
+    : [22, 14, 31, 13, 20];
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -183,32 +187,39 @@ module.exports = function renderGradeHTML({
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #0f172a;
-      font-size: 8px;
+      font-size: 8.5px;
       -webkit-font-smoothing: antialiased;
-      padding: 2mm 0;
+      text-rendering: optimizeLegibility;
+      padding: 0;
     }
 
     .header {
       text-align: center;
-      margin: 0 0 4px 0;
+      margin: 0 0 4px;
+      padding: 0 2px 3px;
+      /* Reserva o espaço original, mas sem linha visível: o intervalo fica em branco. */
+      border-bottom: 1px solid transparent;
       page-break-after: avoid;
       break-after: avoid;
     }
 
+    /* A instituição fica como identificação secundária; o título da grade assume o foco. */
     .header h1 {
       margin: 0;
-      color: #093e5e; 
-      font-size: 11.5px;
-      line-height: 1.1;
+      color: #334155;
+      font-size: 11px;
+      line-height: 1.2;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.1px;
+      word-spacing: 0;
     }
 
     .header h2 {
-      margin: 2px 0 0 0;
-      color: #475569;
-      font-size: 9.5px;
+      margin: 2px 0 0;
+      color: #64748b;
+      font-size: 9px;
+      line-height: 1.2;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -216,11 +227,14 @@ module.exports = function renderGradeHTML({
 
     .info {
       width: 100%;
-      margin: 0 0 4px 0;
-      padding: 3px 5px;
-      border: var(--espessura-grade) solid var(--cor-borda-grade); 
-      border-radius: 4px;
+      margin: 14px 0 9px;
+      padding: 3px 0;
+      border: 0;
+      border-top: 1px solid #dbe3ec;
+      border-bottom: 1px solid #dbe3ec;
+      border-radius: 0;
       background: #f8fafc;
+      overflow: hidden;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -232,17 +246,26 @@ module.exports = function renderGradeHTML({
     }
 
     .info-table td {
-      width: 16.66%;
-      padding: 1px 2px;
-      color: #334155;
+      padding: 4px 6px;
+      color: #475569;
       font-size: 8px;
-      line-height: 1.1;
+      line-height: 1.25;
       text-align: left;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
+      border-right: 1px solid #e2e8f0;
     }
 
-    .info-table strong { 
-      color: #093e5e; 
-      font-weight: 600;
+    .info-table td:last-child { border-right: 0; }
+
+    /* Alternância bem sutil para separar visualmente cada campo de informação. */
+    .info-row td:nth-child(odd) { background: #ffffff; }
+    .info-row td:nth-child(even) { background: #fdfdfd; }
+
+    .info-row strong {
+      color: #64748b;
+      font-weight: 500;
+      white-space: nowrap;
     }
 
     .semester {
@@ -251,7 +274,7 @@ module.exports = function renderGradeHTML({
 
     .grade-table {
       width: 100%;
-      border: var(--espessura-grade) solid var(--cor-borda-grade);
+      border: 2.4px solid #0b3d5c;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -262,25 +285,41 @@ module.exports = function renderGradeHTML({
 
     .grade-table tr {
       page-break-inside: avoid;
-      break-inside: avoid; 
+      break-inside: avoid;
+    }
+
+    /* Altura mínima confortável para a leitura rápida dos horários. */
+    .grade-table tbody tr {
+      height: 25px;
     }
 
     .grade-table th,
     .grade-table td {
-      border: var(--espessura-grade) solid var(--cor-borda-grade);
+      /* Divisórias horizontais mais suaves; a moldura externa permanece mais forte. */
+      border: 1.5px solid #94a3b8;
       padding: 0;
       vertical-align: top;
     }
 
+    /* Reforça as divisórias verticais para separar com clareza os dias/colunas. */
+    .grade-table th + th,
+    .grade-table td + td {
+      border-left: 2px solid #64748b;
+    }
+
+    .grade-table thead th {
+      border-bottom: 2.5px solid #0b3d5c;
+    }
+
     .grade-table th {
-      height: 18px;
-      padding: 2px;
-      background: #093e5e; 
+      height: 24px;
+      padding: 4px 3px;
+      background: #0b3d5c;
       color: #ffffff;
-      font-size: 8px;
-      font-weight: 600;
+      font-size: 9.5px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.35px;
       vertical-align: middle;
       text-align: center;
     }
@@ -290,9 +329,9 @@ module.exports = function renderGradeHTML({
 
     .horario {
       width: 68px;
-      background: #093e5e;
+      background: #0b3d5c;
       color: #ffffff;
-      font-size: 7.5px;
+      font-size: 8.8px;
       font-weight: 700;
       text-align: center;
       vertical-align: middle;
@@ -304,8 +343,8 @@ module.exports = function renderGradeHTML({
       align-items: center;
       justify-content: center;
       height: 100%;
-      padding: 2px 1px;
-      line-height: 1.15;
+      padding: 4px 2px;
+      line-height: 1.25;
     }
 
     .celula-grade {
@@ -319,8 +358,8 @@ module.exports = function renderGradeHTML({
       align-items: stretch;
       width: 100%;
       height: 100%;
-      padding: 2px; 
-      gap: 2px;
+      padding: 4px;
+      gap: 4px;
     }
 
     .disciplina-item {
@@ -330,54 +369,56 @@ module.exports = function renderGradeHTML({
       flex-direction: column;
       justify-content: center;
       margin: 0;
-      padding: 2px 3px;
+      padding: 5px 6px;
       text-align: left;
       white-space: normal;
-      border: 1px solid var(--cor-borda-bloco); 
-      border-radius: 3px; 
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); 
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      box-shadow: none; 
     }
 
     .disciplina-header {
       display: flex;
       flex-wrap: wrap;
-      gap: 2px;
-      margin-bottom: 1px;
-      line-height: 1;
+      gap: 3px;
+      margin-bottom: 3px;
+      line-height: 1.1;
     }
 
     .tag-moderna {
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 2px;
-      padding: 1px 2px;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 3px;
+      padding: 2px 4px;
       color: #1e293b;
-      font-size: 6px;
+      font-size: 7px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.15px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
     }
 
     .disciplina-nome {
       color: #0f172a;
-      font-size: 7.5px;
+      font-size: 9.5px;
       font-weight: 700;
-      line-height: 1.1;
-      margin-bottom: 1px;
+      line-height: 1.2;
+      margin-bottom: 3px;
       word-break: break-word;
     }
 
     .disciplina-carga {
       color: #475569;
-      font-weight: 500;
-      font-size: 7px;
+      font-weight: 600;
+      font-size: 8px;
     }
 
     .disciplina-professor {
-      color: #475569;
-      font-size: 6.5px;
-      font-weight: 500;
-      line-height: 1.05;
+      color: #334155;
+      font-size: 7.5px;
+      font-weight: 600;
+      line-height: 1.2;
       word-break: break-word;
     }
 
@@ -402,14 +443,17 @@ module.exports = function renderGradeHTML({
 
   <div class="info">
     <table class="info-table">
-      <tr>
-        <td><strong>Curso:</strong> ${escapeHtml(curso || "-")}</td>
-        <td><strong>Currículo:</strong> ${escapeHtml(curriculo || "-")}</td>
-        <td><strong>Ano:</strong> ${escapeHtml(anoLetivo || "-")}</td>
-        <td><strong>Coordenador:</strong> ${escapeHtml(coordenador || "-")}</td>
-        <td><strong>Semestre:</strong> ${escapeHtml(semestreDescricao || "-")}</td>
-        <td><strong>Turma:</strong> ${escapeHtml(turmaGrade || "-")}</td>
-      </tr>
+      <colgroup>${largurasInfo.map((largura) => `<col style="width: ${largura}%" />`).join("")}</colgroup>
+      <tbody>
+        <tr class="info-row">
+          <td><strong>Curso:</strong> ${escapeHtml(curso || "-")}</td>
+          <td><strong>Currículo:</strong> ${escapeHtml(curriculo || "-")}</td>
+          <td><strong>Coordenador(a):</strong> ${escapeHtml(coordenador || "-")}</td>
+          <td><strong>Ano:</strong> ${escapeHtml(anoLetivo || "-")}</td>
+          <td><strong>Semestre:</strong> ${escapeHtml(semestreDescricao || "-")}</td>
+          ${turmaGradeTexto ? `<td><strong>Turma:</strong> ${escapeHtml(turmaGradeTexto)}</td>` : ""}
+        </tr>
+      </tbody>
     </table>
   </div>
 

@@ -115,7 +115,7 @@ function AppLayout({ children }) {
           { key: "/pessoas", icon: <UserOutlined />, label: "Pessoas" },
           { key: "/usuarios", icon: <IdcardOutlined />, label: "Usuários" },
           { key: "/cargos", icon: <TeamOutlined />, label: "Cargos" },
-          { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
+         // { key: "/logs", icon: <HistoryOutlined />, label: "Histórico" },
         ],
       },
       {
